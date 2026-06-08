@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Net Worth{% endblock %}
+{% block page_title %}Net Worth Tracker{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h2 style="font-size:1.4rem;font-weight:700;">Net Worth</h2>
+</div>
+
+<div class="stat-grid mb-6">
+  <div class="stat-card {% if net_worth >= 0 %}glow-green{% else %}glow-red{% endif %}">
+    <div class="stat-icon" style="background:{% if net_worth >= 0 %}var(--green-soft){% else %}var(--red-soft){% endif %};color:{% if net_worth >= 0 %}var(--green){% else %}var(--red){% endif %}"><i class="fas fa-scale-balanced"></i></div>
+    <div class="stat-label">Net Worth</div>
+    <div class="stat-value {% if net_worth >= 0 %}text-green{% else %}text-red{% endif %}">{{ "{:,.0f}".format(net_worth) }}</div>
+    <div class="stat-change">{{ currency_symbol }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--green-soft);color:var(--green)"><i class="fas fa-building-columns"></i></div>
+    <div class="stat-label">Total Assets</div>
+    <div class="stat-value text-green">{{ "{:,.0f}".format(total_assets) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--red-soft);color:var(--red)"><i class="fas fa-file-invoice-dollar"></i></div>
+    <div class="stat-label">Total Liabilities</div>
+    <div class="stat-value text-red">{{ "{:,.0f}".format(total_liabilities) }}</div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="card mb-6">
+  <div class="card-title">Net Worth History</div>
+  <div class="chart-wrap"><canvas id="nwChart"></canvas></div>
+</div>
+
+<!-- Breakdown -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title text-green">Assets — Wallets</div>
+    {% for w in wallets %}
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.875rem;">
+      <div class="flex items-center gap-2">
+        <div style="width:8px;height:8px;border-radius:50%;background:{{ w.color }};"></div>
+        {{ w.name }} <span class="text-muted text-xs">({{ w.wallet_type }})</span>
+      </div>
+      <span class="font-mono font-bold text-green">{{ "{:,.0f}".format(w.balance) }}</span>
+    </div>
+    {% endfor %}
+    <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-weight:700;">
+      <span>Total</span>
+      <span class="font-mono text-green">{{ "{:,.0f}".format(total_assets) }}</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title text-red">Liabilities</div>
+    {% for l in loans %}
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.875rem;">
+      <div>{{ l.loan_name }} <span class="text-muted text-xs">({{ l.lender_name }})</span></div>
+      <span class="font-mono font-bold text-red">{{ "{:,.0f}".format(l.outstanding_balance) }}</span>
+    </div>
+    {% endfor %}
+    {% for c in cards %}
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.875rem;">
+      <div>{{ c.bank_name }} Card <span class="text-muted text-xs">(Credit)</span></div>
+      <span class="font-mono font-bold text-red">{{ "{:,.0f}".format(c.credit_limit - c.available_balance) }}</span>
+    </div>
+    {% endfor %}
+    <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-weight:700;">
+      <span>Total</span>
+      <span class="font-mono text-red">{{ "{:,.0f}".format(total_liabilities) }}</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const dates = {{ dates | tojson }};
+const nwVals = {{ net_worth_values | tojson }};
+const assetVals = {{ assets_values | tojson }};
+const liabVals = {{ liab_values | tojson }};
+new Chart(document.getElementById('nwChart'), {
+  type: 'line',
+  data: {
+    labels: dates,
+    datasets: [
+      { label: 'Net Worth', data: nwVals, borderColor: '#6c63ff', backgroundColor: 'rgba(108,99,255,0.08)', fill: true, tension: 0.4, pointRadius: 3 },
+      { label: 'Assets', data: assetVals, borderColor: '#00d68f', backgroundColor: 'transparent', tension: 0.4, pointRadius: 3, borderDash: [4,2] },
+      { label: 'Liabilities', data: liabVals, borderColor: '#ff4d6d', backgroundColor: 'transparent', tension: 0.4, pointRadius: 3, borderDash: [4,2] },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, labels: { color: '#9196a8', font: { size: 11 }, boxWidth: 10 } }, tooltip: { backgroundColor: '#1c1f2a', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#9196a8', bodyColor: '#e8eaf0', padding: 10 } },
+    scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9196a8', font: { size: 11 } } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9196a8', font: { size: 11 }, callback: v => v.toLocaleString() } } }
+  }
+});
+</script>
+{% endblock %}

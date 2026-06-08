@@ -1,0 +1,94 @@
+{% extends "base_public.html" %}
+{% block title %}FinanceOS — Personal Finance Command Center{% endblock %}
+
+{% block extra_style %}
+.hero { padding: 100px 20px 80px; text-align: center; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-glow); border: 1px solid rgba(108,99,255,0.3);
+  color: var(--accent2); padding: 6px 14px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 600; margin-bottom: 28px;
+}
+.hero h1 { font-size: 3.6rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 20px; }
+.hero h1 span { color: var(--accent2); }
+.hero p { font-size: 1.15rem; color: var(--text2); max-width: 520px; margin: 0 auto 40px; line-height: 1.7; }
+.hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+.hero-btns .btn { padding: 14px 32px; font-size: 1rem; }
+.features { max-width: 1100px; margin: 0 auto; padding: 0 20px 100px; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: transform 0.2s, border-color 0.2s; }
+.feature-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.feature-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.1rem; margin-bottom: 14px; }
+.feature-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+.feature-card p { font-size: 0.82rem; color: var(--text2); line-height: 1.6; }
+.stats { max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px 20px; text-align: center; }
+.stat-box-value { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px; }
+.stat-box-label { font-size: 0.8rem; color: var(--text2); }
+.cta-section { max-width: 600px; margin: 0 auto; padding: 0 20px 100px; text-align: center; }
+.cta-card { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid rgba(108,99,255,0.3); border-radius: 24px; padding: 60px 40px; box-shadow: 0 0 60px var(--accent-glow); }
+.cta-card h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+.cta-card p { color: var(--text2); margin-bottom: 32px; }
+@media (max-width: 768px) { .hero h1 { font-size: 2.2rem; } .stats-grid { grid-template-columns: 1fr; } }
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-badge"><i class="fas fa-shield-halved"></i> Secure · Private · Free to start</div>
+  <h1>Your money.<br><span>Your command center.</span></h1>
+  <p>Track income, expenses, loans, goals and net worth — all in one beautiful dashboard. Built for people who take their finances seriously.</p>
+  <div class="hero-btns">
+    <a href="{{ url_for('auth_signup') }}" class="btn btn-primary"><i class="fas fa-rocket"></i> Get Started Free</a>
+    <a href="{{ url_for('auth_login') }}" class="btn btn-ghost">Sign In <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+    {% for f in ['💳 Credit Cards','🏦 Loans','🎯 Goals','📊 Analytics','🔔 Smart Alerts','🔄 Recurring','📈 Net Worth','💼 Wallets'] %}
+    <span style="background:var(--surface);border:1px solid var(--border);padding:5px 14px;border-radius:999px;font-size:0.78rem;color:var(--text2);">{{ f }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stats-grid">
+    <div class="stat-box"><div class="stat-box-value" style="color:var(--accent2);">100%</div><div class="stat-box-label">Private & Secure<br>Auth0 powered login</div></div>
+    <div class="stat-box"><div class="stat-box-value" style="color:var(--green);">Free</div><div class="stat-box-label">No credit card needed<br>Start in seconds</div></div>
+    <div class="stat-box"><div class="stat-box-value" style="color:var(--orange);">Live</div><div class="stat-box-label">Real-time health score<br>Always up to date</div></div>
+  </div>
+</div>
+
+<section class="features">
+  <div style="text-align:center;margin-bottom:48px;">
+    <h2 style="font-size:2rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:10px;">Everything you need</h2>
+    <p style="color:var(--text2);">One app to replace five spreadsheets</p>
+  </div>
+  <div class="features-grid">
+    {% for color,icon,title,desc in [
+      ('#6c63ff','fas fa-chart-pie','Dashboard','See your full financial picture at a glance. Income, expenses, balance and upcoming payments in one view.'),
+      ('#00d68f','fas fa-wallet','Wallets','Track cash, bank accounts and digital wallets. Transfer between them instantly.'),
+      ('#ff4d6d','fas fa-credit-card','Credit Cards','Monitor utilization, minimum payments and due dates. Never miss a payment again.'),
+      ('#ff9500','fas fa-hand-holding-dollar','Loans','Track repayment progress, outstanding balances and payment schedules for all your loans.'),
+      ('#0ea5e9','fas fa-bullseye','Goals','Set savings targets and track progress. Emergency fund, vacation, car — anything.'),
+      ('#a78bfa','fas fa-chart-line','Analytics','12-month spending trends, category breakdowns and a financial health score out of 100.'),
+      ('#ffd60a','fas fa-rotate','Recurring','Auto-track subscriptions and recurring bills. Never forget what goes out each month.'),
+      ('#f472b6','fas fa-bell','Smart Alerts','Get notified before loans are due, when credit utilization is high and budget limits are reached.'),
+      ('#00d68f','fas fa-sliders','Budget Planner','Set monthly budgets per category and track how close you are in real time.'),
+    ] %}
+    <div class="feature-card">
+      <div class="feature-icon" style="background:{{ color }}18;color:{{ color }};"><i class="{{ icon }}"></i></div>
+      <h3>{{ title }}</h3>
+      <p>{{ desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="cta-card">
+    <h2>Ready to take control?</h2>
+    <p>Start tracking your finances in under a minute.</p>
+    <a href="{{ url_for('auth_signup') }}" class="btn btn-primary" style="padding:14px 40px;font-size:1rem;justify-content:center;"><i class="fas fa-rocket"></i> Start for Free</a>
+    <p style="margin-top:16px;font-size:0.78rem;color:var(--text3);">No credit card · No setup fees</p>
+  </div>
+</section>
+{% endblock %}

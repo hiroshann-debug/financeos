@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Recurring Payments{% endblock %}
+{% block page_title %}Recurring Payments{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:700;">Recurring Payments</h2>
+    <p class="text-muted text-sm">Monthly total: <strong class="font-mono" style="color:var(--orange)">{{ currency_symbol }} {{ "{:,.0f}".format(total_monthly) }}</strong></p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addRecModal').classList.add('open')"><i class="fas fa-plus"></i> Add</button>
+</div>
+
+{% if recurring %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Amount</th><th>Frequency</th><th>Category</th><th>Next Date</th><th>Auto</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for r in recurring %}
+        <tr>
+          <td style="font-weight:500;">{{ r.name }}</td>
+          <td class="font-mono font-bold" style="color:var(--orange)">{{ "{:,.0f}".format(r.amount) }}</td>
+          <td><span class="badge-pill badge-accent">{{ r.frequency.title() }}</span></td>
+          <td class="text-muted text-sm">{{ r.category }}</td>
+          <td class="font-mono text-xs {% if r.next_date <= today %}text-red{% else %}text-muted{% endif %}">{{ r.next_date.strftime('%d %b %Y') }}</td>
+          <td>{% if r.auto_apply %}<span class="badge-pill badge-green">Auto</span>{% else %}<span class="badge-pill" style="background:var(--surface2);color:var(--text2);">Manual</span>{% endif %}</td>
+          <td>{% if r.is_active %}<span class="badge-pill badge-green">Active</span>{% else %}<span class="badge-pill badge-red">Inactive</span>{% endif %}</td>
+          <td>
+            <div class="flex gap-2">
+              <form method="POST" action="{{ url_for('apply_recurring', rec_id=r.id) }}">
+                <button class="btn btn-primary btn-sm btn-icon" title="Apply now"><i class="fas fa-play"></i></button>
+              </form>
+              <form method="POST" action="{{ url_for('delete_recurring', rec_id=r.id) }}" onsubmit="return confirm('Delete?')">
+                <button class="btn btn-danger btn-icon btn-sm"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px;">
+  <div style="font-size:3rem;margin-bottom:16px;">🔄</div>
+  <h3 style="font-weight:700;margin-bottom:8px;">No recurring payments</h3>
+  <p style="color:var(--text2);margin-bottom:8px;max-width:360px;margin-left:auto;margin-right:auto;">
+    Track subscriptions, memberships and bills that repeat automatically.
+  </p>
+  <p style="font-size:0.78rem;color:var(--text3);margin-bottom:20px;">
+    Examples: Netflix, Spotify, Gym, Insurance, Internet
+  </p>
+  <button class="btn btn-primary" onclick="document.getElementById('addRecModal').classList.add('open')">
+    <i class="fas fa-plus"></i> Add First Recurring
+  </button>
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="addRecModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Add Recurring Payment</div>
+    <form method="POST" action="{{ url_for('recurring_payments') }}">
+      <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required placeholder="e.g. Netflix, Gym..."></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required></div>
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select name="frequency" class="form-control"><option value="weekly">Weekly</option><option value="biweekly">Bi-Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Next Date</label><input type="date" name="next_date" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">End Date (optional)</label><input type="date" name="end_date" class="form-control"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input type="text" name="category" class="form-control" list="rec-cats">
+          <datalist id="rec-cats"><option value="Subscription"><option value="Utilities"><option value="Insurance"><option value="Entertainment"><option value="Health"><option value="Other"></datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pay From (Wallet)</label>
+          <select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}</select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;">
+          <input type="checkbox" name="auto_apply" style="width:16px;height:16px;accent-color:var(--accent);"> Auto-apply on due date
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addRecModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Recurring</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

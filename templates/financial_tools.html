@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+{% block title %}Financial Tools{% endblock %}
+{% block page_title %}Financial Tools{% endblock %}
+
+{% block extra_style %}
+.tool-card { background:var(--surface); border:0.5px solid var(--border2); border-radius:12px; padding:24px; box-shadow:0 2px 5px rgba(0,0,0,0.02); }
+.tool-header { font-size:1.05rem; font-weight:600; color:var(--text); margin-bottom:2px; }
+.tool-sub { font-size:0.78rem; color:var(--text2); margin-bottom:18px; }
+.tool-note { background:var(--surface2); border-left:3px solid var(--accent); border-radius:0 6px 6px 0; padding:10px 14px; margin-top:16px; font-size:0.78rem; color:var(--text2); line-height:1.6; }
+.tool-note strong { color:var(--text); display:block; margin-bottom:3px; font-size:0.78rem; }
+.result-box { background:var(--surface2); border:0.5px solid var(--border2); border-radius:8px; padding:16px; margin-top:16px; }
+.result-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--border); font-size:0.83rem; }
+.result-row:last-child { border-bottom:none; }
+.result-row .label { color:var(--text2); }
+.result-row .value { font-family:var(--mono); font-weight:600; color:var(--text); }
+.result-row .value.highlight { color:var(--accent); font-size:1.05rem; }
+.result-row .value.green { color:var(--green); }
+.result-row .value.red { color:var(--red); }
+.result-row .value.orange { color:var(--orange); }
+.verdict-box { margin-top:14px; padding:10px 14px; border-radius:8px; font-size:0.82rem; font-weight:500; text-align:center; }
+.verdict-green { background:var(--green-soft); color:var(--green); }
+.verdict-orange { background:var(--orange-soft); color:var(--orange); }
+.verdict-red { background:var(--red-soft); color:var(--red); }
+.tools-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:768px) { .tools-grid { grid-template-columns:1fr; } }
+.tab-tools { display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:24px; scrollbar-width:none; }
+.tab-tools::-webkit-scrollbar { display:none; }
+.tab-tool-btn { white-space:nowrap; padding:7px 16px; border-radius:20px; border:0.5px solid var(--border2); background:var(--surface); color:var(--text2); font-size:0.8rem; font-weight:500; cursor:pointer; transition:all 0.2s; }
+.tab-tool-btn:hover { background:var(--surface2); color:var(--text); }
+.tab-tool-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.tool-pane { display:none; }
+.tool-pane.active { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:768px) { .tool-pane.active { grid-template-columns:1fr; } }
+.progress-track { width:100%; height:8px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:10px; }
+.progress-fill { height:100%; border-radius:4px; transition:width 0.5s ease; background:var(--accent); }
+.tip-row { display:flex; gap:6px; align-items:flex-start; font-size:0.76rem; color:var(--text2); margin-bottom:5px; }
+.tip-row::before { content:'💡'; flex-shrink:0; }
+.info-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.72rem; font-weight:500; }
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h2 style="font-size:1.4rem;font-weight:500;">Financial Calculators</h2>
+  <p class="text-muted text-sm">Tools to make smarter financial decisions — powered by your real data.</p>
+</div>
+
+<div class="tab-tools">
+  <button class="tab-tool-btn active" onclick="showTool('loan')">🏦 Loan EMI</button>
+  <button class="tab-tool-btn" onclick="showTool('installment')">💳 CC Installment</button>
+  <button class="tab-tool-btn" onclick="showTool('fd')">📈 Fixed Deposit</button>
+  <button class="tab-tool-btn" onclick="showTool('emergency')">🛡️ Emergency Fund</button>
+  <button class="tab-tool-btn" onclick="showTool('retirement')">🏖️ Retirement</button>
+  <button class="tab-tool-btn" onclick="showTool('afford')">🎯 Can I Afford It?</button>
+</div>
+
+<!-- ── 1. LOAN EMI ── -->
+<div class="tool-pane active" id="tool-loan">
+  <div class="tool-card">
+    <div class="tool-header">🏦 Loan EMI Calculator</div>
+    <div class="tool-sub">Calculate your monthly payment, total cost and interest burden for any loan</div>
+
+    <div class="form-group"><label class="form-label">Loan Amount</label><input type="number" id="lc_amount" class="form-control" placeholder="e.g. 500,000" oninput="calcLoan()"></div>
+    <div class="form-group"><label class="form-label">Annual Interest Rate (%)</label><input type="number" step="0.1" id="lc_rate" class="form-control" placeholder="e.g. 12" oninput="calcLoan()"></div>
+    <div class="form-group"><label class="form-label">Loan Term (months)</label><input type="number" id="lc_term" class="form-control" placeholder="e.g. 36" oninput="calcLoan()"></div>
+    <div class="form-group">
+      <label class="form-label">Loan Type</label>
+      <select id="lc_type" class="form-control" onchange="calcLoan()">
+        <option value="reducing">Reducing Balance (most bank loans)</option>
+        <option value="flat">Flat Rate (some personal loans)</option>
+      </select>
+    </div>
+
+    <div class="tool-note">
+      <strong>📌 How to use</strong>
+      Enter the loan amount, the bank's annual interest rate, and tenure in months.
+      Choose <em>Reducing Balance</em> for home/car/personal loans from banks — this is the standard method.
+      Choose <em>Flat Rate</em> only if your lender specifically states it.<br><br>
+      <div class="tip-row">Compare 24 vs 36 months — shorter tenure means higher EMI but less total interest.</div>
+      <div class="tip-row">A good EMI should be below 40% of your monthly income.</div>
+      <div class="tip-row">Your current loan commitments: <strong>{{ currency_symbol }} {{ "{:,.0f}".format(total_monthly_commitments) }}/mo</strong></div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-header">Repayment Breakdown</div>
+    <div class="result-box" id="lc_result" style="display:none;">
+      <div class="result-row"><span class="label">Monthly EMI</span><span class="value highlight" id="lc_emi">—</span></div>
+      <div class="result-row"><span class="label">Total Payment</span><span class="value" id="lc_total">—</span></div>
+      <div class="result-row"><span class="label">Total Interest</span><span class="value red" id="lc_interest">—</span></div>
+      <div class="result-row"><span class="label">Interest % of Loan</span><span class="value" id="lc_ratio">—</span></div>
+      <div class="result-row"><span class="label">Your Income Impact</span><span class="value" id="lc_impact">—</span></div>
+
+      <div style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text2);margin-bottom:4px;">
+          <span>Principal</span><span>Interest</span>
+        </div>
+        <div class="progress-track"><div id="lc_bar" class="progress-fill" style="width:50%;background:var(--accent);"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text3);margin-top:4px;">
+          <span id="lc_p_pct">—</span><span id="lc_i_pct">—</span>
+        </div>
+      </div>
+    </div>
+    <div id="lc_empty" style="text-align:center;padding:40px;color:var(--text3);font-size:0.82rem;">Enter loan details to see breakdown</div>
+  </div>
+</div>
+
+<!-- ── 2. CC INSTALLMENT ── -->
+<div class="tool-pane" id="tool-installment">
+  <div class="tool-card">
+    <div class="tool-header">💳 CC Installment Checker</div>
+    <div class="tool-sub">Analyse if a 0% installment plan is truly affordable for your budget</div>
+
+    <div class="form-group"><label class="form-label">Item Price</label><input type="number" id="cc_price" class="form-control" placeholder="e.g. 150,000" oninput="calcCC()"></div>
+    <div class="form-group"><label class="form-label">Down Payment / Already Saved</label><input type="number" id="cc_down" class="form-control" placeholder="0" value="{{ total_savings|int }}" oninput="calcCC()"></div>
+    <div class="form-group">
+      <label class="form-label">Installment Period</label>
+      <select id="cc_months" class="form-control" onchange="calcCC()">
+        <option value="3">3 Months</option>
+        <option value="6">6 Months</option>
+        <option value="12" selected>12 Months</option>
+        <option value="24">24 Months</option>
+        <option value="36">36 Months</option>
+        <option value="48">48 Months</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Monthly Income</label><input type="number" id="cc_income" class="form-control" value="{{ monthly_income_avg|int }}" oninput="calcCC()"></div>
+
+    <input type="hidden" id="cc_commit" value="{{ total_monthly_commitments|int }}">
+
+    <div class="tool-note">
+      <strong>📌 How to use</strong>
+      Enter the item price, how much you already have saved, and pick the installment period.
+      The calculator uses your real income and existing commitments from the app.<br><br>
+      <div class="tip-row">0% plans sound great — but the monthly payment still affects your cash flow every month.</div>
+      <div class="tip-row">Aim to keep ALL debt payments (including this) below 40% of income.</div>
+      <div class="tip-row">Your existing commitments: <strong>{{ currency_symbol }} {{ "{:,.0f}".format(total_monthly_commitments) }}/mo</strong></div>
+      {% if cards %}
+      <div style="margin-top:8px;font-size:0.75rem;color:var(--text2);">Your cards available balance:</div>
+      {% for c in cards %}
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;padding:3px 0;">
+        <span>{{ c.bank_name }}</span>
+        <span class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(c.available_balance) }}</span>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-header">Affordability Analysis</div>
+    <div id="cc_result" class="result-box" style="display:none;">
+      <div class="result-row"><span class="label">Amount to Finance</span><span class="value" id="cc_finance">—</span></div>
+      <div class="result-row"><span class="label">Monthly Installment</span><span class="value highlight" id="cc_monthly">—</span></div>
+      <div class="result-row"><span class="label">Existing Commitments</span><span class="value red" id="cc_existing">—</span></div>
+      <div class="result-row"><span class="label">Total Monthly Outflow</span><span class="value" id="cc_outflow">—</span></div>
+      <div class="result-row"><span class="label">% of Income</span><span class="value" id="cc_pct">—</span></div>
+      <div class="result-row"><span class="label">Remaining Income</span><span class="value green" id="cc_left">—</span></div>
+      <div class="verdict-box" id="cc_verdict"></div>
+    </div>
+    <div id="cc_empty" style="text-align:center;padding:40px;color:var(--text3);font-size:0.82rem;">Enter item price to see analysis</div>
+  </div>
+</div>
+
+<!-- ── 3. FD ── -->
+<div class="tool-pane" id="tool-fd">
+  <div class="tool-card">
+    <div class="tool-header">📈 Fixed Deposit Calculator</div>
+    <div class="tool-sub">See how much your FD will grow and compare compounding options</div>
+
+    <div class="form-group"><label class="form-label">Principal Amount</label><input type="number" id="fd_amount" class="form-control" placeholder="e.g. 100,000" oninput="calcFD()"></div>
+    <div class="form-group"><label class="form-label">Annual Interest Rate (%)</label><input type="number" step="0.1" id="fd_rate" class="form-control" placeholder="e.g. 10.5" oninput="calcFD()"></div>
+    <div class="form-group">
+      <label class="form-label">Tenure</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input type="number" id="fd_years" class="form-control" placeholder="Years" oninput="calcFD()">
+        <input type="number" id="fd_months_extra" class="form-control" placeholder="+ Months" oninput="calcFD()">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Compounding Frequency</label>
+      <select id="fd_compound" class="form-control" onchange="calcFD()">
+        <option value="4" selected>Quarterly (most banks)</option>
+        <option value="12">Monthly</option>
+        <option value="2">Half-yearly</option>
+        <option value="1">Yearly</option>
+      </select>
+    </div>
+
+    <div class="tool-note">
+      <strong>📌 How to use</strong>
+      Enter the amount you want to deposit and the bank's annual rate.
+      Most Sri Lankan banks compound quarterly — leave that as default.<br><br>
+      <div class="tip-row">Check current CBSL-guided rates before placing an FD — rates change frequently.</div>
+      <div class="tip-row">Higher compounding frequency = slightly higher returns on same rate.</div>
+      <div class="tip-row">FDs are great for your emergency fund — low risk, guaranteed returns.</div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-header">Maturity Details</div>
+    <div id="fd_result" class="result-box" style="display:none;">
+      <div class="result-row"><span class="label">Maturity Amount</span><span class="value highlight green" id="fd_maturity">—</span></div>
+      <div class="result-row"><span class="label">Interest Earned</span><span class="value green" id="fd_interest">—</span></div>
+      <div class="result-row"><span class="label">Effective Annual Rate</span><span class="value" id="fd_ear">—</span></div>
+      <div class="result-row"><span class="label">Total Return</span><span class="value green" id="fd_return">—</span></div>
+      <div class="result-row"><span class="label">Monthly Equivalent</span><span class="value" id="fd_monthly_eq">—</span></div>
+
+      <div style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text2);margin-bottom:4px;">
+          <span>Principal</span><span>Interest</span>
+        </div>
+        <div class="progress-track"><div id="fd_bar" class="progress-fill" style="background:var(--green);"></div></div>
+      </div>
+    </div>
+    <div id="fd_empty" style="text-align:center;padding:40px;color:var(--text3);font-size:0.82rem;">Enter FD details to see returns</div>
+  </div>
+</div>
+
+<!-- ── 4. EMERGENCY FUND ── -->
+<div class="tool-pane" id="tool-emergency">
+  <div class="tool-card">
+    <div class="tool-header">🛡️ Emergency Fund Calculator</div>
+    <div class="tool-sub">Find out if your savings can cover a financial emergency</div>
+
+    <div class="form-group"><label class="form-label">Monthly Expenses (total)</label><input type="number" id="em_exp" class="form-control" placeholder="e.g. 80,000" oninput="calcEmerg()"></div>
+    <div class="form-group"><label class="form-label">Current Liquid Savings</label><input type="number" id="em_save" class="form-control" value="{{ total_savings|int }}" oninput="calcEmerg()"></div>
+    <div class="form-group"><label class="form-label">Monthly Contribution to Fund</label><input type="number" id="em_monthly" class="form-control" placeholder="e.g. 20,000" oninput="calcEmerg()"></div>
+    <div class="form-group">
+      <label class="form-label">Safety Target</label>
+      <select id="em_risk" class="form-control" onchange="calcEmerg()">
+        <option value="3">3 Months — Minimum (salaried, stable job)</option>
+        <option value="6" selected>6 Months — Standard (recommended)</option>
+        <option value="9">9 Months — Self-employed / freelancer</option>
+        <option value="12">12 Months — Business owner / high risk</option>
+      </select>
+    </div>
+
+    <div class="tool-note">
+      <strong>📌 How to use</strong>
+      Enter your total monthly expenses — include rent, food, utilities, EMIs, everything.
+      Your wallet balance is pre-filled as current savings.<br><br>
+      <div class="tip-row">Keep emergency funds in a liquid FD or savings account — not invested.</div>
+      <div class="tip-row">Never use credit cards as your emergency fund — that's debt, not safety.</div>
+      <div class="tip-row">Build this before aggressively paying off low-interest debt.</div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-header">Fund Status</div>
+    <div id="em_result" class="result-box" style="display:none;">
+      <div class="result-row"><span class="label">Target Amount</span><span class="value highlight" id="em_target">—</span></div>
+      <div class="result-row"><span class="label">Currently Saved</span><span class="value green" id="em_saved_val">—</span></div>
+      <div class="result-row"><span class="label">Shortfall</span><span class="value red" id="em_gap">—</span></div>
+      <div class="result-row"><span class="label">Coverage</span><span class="value" id="em_coverage">—</span></div>
+      <div class="result-row"><span class="label">Months to Goal</span><span class="value" id="em_months_to">—</span></div>
+      <div class="progress-track"><div id="em_bar" class="progress-fill" style="background:var(--green);"></div></div>
+      <div id="em_msg" style="font-size:0.75rem;text-align:center;margin-top:8px;color:var(--text2);"></div>
+    </div>
+    <div id="em_empty" style="text-align:center;padding:40px;color:var(--text3);font-size:0.82rem;">Enter monthly expenses to calculate target</div>
+  </div>
+</div>
+
+<!-- ── 5. RETIREMENT ── -->
+<div class="tool-pane" id="tool-retirement">
+  <div class="tool-card">
+    <div class="tool-header">🏖️ Retirement Planner</div>
+    <div class="tool-sub">Estimate how much you need to save to retire comfortably</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">Current Age</label><input type="number" id="rt_age" class="form-control" value="30" oninput="calcRetire()"></div>
+      <div class="form-group"><label class="form-label">Retirement Age</label><input type="number" id="rt_retire" class="form-control" value="60" oninput="calcRetire()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">Life Expectancy</label><input type="number" id="rt_life" class="form-control" value="80" oninput="calcRetire()"></div>
+      <div class="form-group"><label class="form-label">Expected Return (%/yr)</label><input type="number" step="0.5" id="rt_return" class="form-control" value="8" oninput="calcRetire()"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Monthly Expenses Today</label><input type="number" id="rt_exp" class="form-control" placeholder="e.g. 80,000" oninput="calcRetire()"></div>
+    <div class="form-group"><label class="form-label">Current Savings</label><input type="number" id="rt_saved" class="form-control" value="{{ total_savings|int }}" oninput="calcRetire()"></div>
+
+    <div class="tool-note">
+      <strong>📌 How to use</strong>
+      The calculator accounts for inflation (6%) to project your future expenses.
+      It then calculates the corpus needed and how much you should invest monthly.<br><br>
+      <div class="tip-row">Expected return of 8% is reasonable for a balanced portfolio (equity + FD mix).</div>
+      <div class="tip-row">Start investing early — retiring at 60 vs 55 makes a massive difference.</div>
+      <div class="tip-row">Revisit this calculation every 2-3 years as your income grows.</div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-header">Retirement Analysis</div>
+    <div id="rt_result" class="result-box" style="display:none;">
+      <div class="result-row"><span class="label">Years to Retire</span><span class="value" id="rt_years">—</span></div>
+      <div class="result-row"><span class="label">Future Monthly Expenses</span><span class="value" id="rt_future_exp">—</span></div>
+      <div class="result-row"><span class="label">Total Corpus Needed</span><span class="value highlight" id="rt_corpus">—</span></div>
+      <div class="result-row"><span class="label">Current Savings Future Value</span><span class="value green" id="rt_fv">—</span></div>
+      <div class="result-row"><span class="label">Additional Needed</span><span class="value red" id="rt_gap">—</span></div>
+      <div class="result-row"><span class="label">Invest Monthly From Now</span><span class="value highlight" id="rt_monthly">—</span></div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:10px;font-style:italic;">*Assumes 6% annual inflation on expenses</div>
+    </div>
+    <div id="rt_empty" style="text-align:center;padding:40px;color:var(--text3);font-size:0.82rem;">Enter your details to calculate retirement corpus</div>
+  </div>
+</div>
+
+<!-- ── 6. AFFORDABILITY ── -->
+<div class="tool-pane" id="tool-afford">
+  <div class="tool-card">
+    <div class="tool-header">🎯 Can I Afford It?</div>
+    <div class="tool-sub">A complete reality check before making any large purchase</div>
+
+    <div class="form-group"><label class="form-label">Purchase Price</label><input type="number" id="af_cost" class="form-control" placeholder="e.g. 350,000" oninput="calcAfford()"></div>
+    <div class="form-group"><label class="form-label">Cash Available / Savings</label><input type="number" id="af_savings" class="form-control" value="{{ total_savings|int }}" oninput="calcAfford()"></div>
+    <div class="form-group"><label class="form-label">Monthly Income</label><input type="number" id="af_income" class="form-control" value="{{ monthly_income_avg|int }}" oninput="calcAfford()"></div>
+    <div class="form-group"><label class="form-label">Existing Monthly Commitments</label><input type="number" id="af_commit" class="form-control" value="{{ total_monthly_commitments|int }}" oninput="calcAfford()"></div>
+    <div class="form-group">
+      <label class="form-label">How to Pay</label>
+      <select id="af_option" class="form-control" onchange="calcAfford()">
+        <option value="cash">Full Cash</option>
+        <option value="partial" selected>Partial Cash + CC Installment</option>
+        <option value="loan">Full Loan / CC Installment</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Installment / Loan Period (months)</label>
+      <select id="af_months" class="form-control" onchange="calcAfford()">
+        <option value="12">12 months</option>
+        <option value="24">24 months</option>
+        <option value="36" selected>36 months</option>
+        <option value="48">48 months</option>
+        <option value="60">60 months</option>
+      </select>
+    </div>
+
+    <div class="tool-note">
+      <strong>📌 How to use</strong>
+      Enter the item price and select how you plan to pay. Your income and commitments are pre-filled from your app data.<br><br>
+      <div class="tip-row">Golden rule: monthly debt payments should not exceed 40% of income.</div>
+      <div class="tip-row">Always keep 3 months of expenses in cash after a big purchase.</div>
+      <div class="tip-row">If verdict is "Wait" — use this to plan a savings timeline instead.</div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-header">Purchase Analysis</div>
+    <div id="af_result" class="result-box" style="display:none;">
+      <div class="result-row"><span class="label">Cash After Purchase</span><span class="value" id="af_cash_left">—</span></div>
+      <div class="result-row"><span class="label">Monthly Installment</span><span class="value" id="af_installment">—</span></div>
+      <div class="result-row"><span class="label">Existing Commitments</span><span class="value red" id="af_existing">—</span></div>
+      <div class="result-row"><span class="label">Total Monthly Outflow</span><span class="value" id="af_total_monthly">—</span></div>
+      <div class="result-row"><span class="label">Debt-to-Income Ratio</span><span class="value" id="af_dti">—</span></div>
+      <div class="result-row"><span class="label">Emergency Fund Safe?</span><span class="value" id="af_ef">—</span></div>
+      <div class="verdict-box" id="af_verdict"></div>
+      <div id="af_advice" style="font-size:0.77rem;color:var(--text2);margin-top:10px;line-height:1.6;"></div>
+    </div>
+    <div id="af_empty" style="text-align:center;padding:40px;color:var(--text3);font-size:0.82rem;">Enter purchase price to see full analysis</div>
+  </div>
+</div>
+
+<script>
+const CUR = '{{ currency_symbol }}';
+const fmt = n => CUR + ' ' + Math.round(n).toLocaleString();
+const pct = (a, b) => b > 0 ? ((a/b)*100).toFixed(1) + '%' : '—';
+const getVal = id => parseFloat(document.getElementById(id).value) || 0;
+
+function showTool(id) {
+  document.querySelectorAll('.tool-pane').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-tool-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tool-' + id).classList.add('active');
+  const tabs = ['loan','installment','fd','emergency','retirement','afford'];
+  const idx = tabs.indexOf(id);
+  if (idx >= 0) document.querySelectorAll('.tab-tool-btn')[idx].classList.add('active');
+}
+
+// ── LOAN ──
+function calcLoan() {
+  const P = getVal('lc_amount'), N = getVal('lc_term');
+  const annualRate = getVal('lc_rate');
+  const type = document.getElementById('lc_type').value;
+  if (!P || !N || !annualRate) { document.getElementById('lc_result').style.display='none'; document.getElementById('lc_empty').style.display='block'; return; }
+
+  let emi, totalPay;
+  if (type === 'flat') {
+    const interest = P * (annualRate/100) * (N/12);
+    totalPay = P + interest;
+    emi = totalPay / N;
+  } else {
+    const R = annualRate / 1200;
+    emi = R === 0 ? P/N : (P * R * Math.pow(1+R,N)) / (Math.pow(1+R,N)-1);
+    totalPay = emi * N;
+  }
+  const interest = totalPay - P;
+  const income = {{ monthly_income_avg|int }} || 1;
+  const impactPct = (emi / (income || 1) * 100).toFixed(1);
+  const impactColor = impactPct > 40 ? 'var(--red)' : impactPct > 25 ? 'var(--orange)' : 'var(--green)';
+
+  document.getElementById('lc_result').style.display = 'block';
+  document.getElementById('lc_empty').style.display = 'none';
+  document.getElementById('lc_emi').textContent = fmt(emi);
+  document.getElementById('lc_total').textContent = fmt(totalPay);
+  document.getElementById('lc_interest').textContent = fmt(interest);
+  document.getElementById('lc_ratio').textContent = ((interest/P)*100).toFixed(1) + '% of principal';
+  const impEl = document.getElementById('lc_impact');
+  impEl.textContent = impactPct + '% of your income';
+  impEl.style.color = impactColor;
+  const pPct = (P/totalPay*100);
+  document.getElementById('lc_bar').style.width = pPct + '%';
+  document.getElementById('lc_p_pct').textContent = pPct.toFixed(0) + '% principal';
+  document.getElementById('lc_i_pct').textContent = (100-pPct).toFixed(0) + '% interest';
+}
+
+// ── CC INSTALLMENT ──
+function calcCC() {
+  const price = getVal('cc_price');
+  if (!price) { document.getElementById('cc_result').style.display='none'; document.getElementById('cc_empty').style.display='block'; return; }
+  const down = getVal('cc_down');
+  const months = getVal('cc_months');
+  const income = getVal('cc_income') || 1;
+  const commit = getVal('cc_commit');
+  const finance = Math.max(0, price - down);
+  const monthly = finance / months;
+  const totalOut = commit + monthly;
+  const ratio = totalOut / income * 100;
+  const left = income - totalOut;
+
+  document.getElementById('cc_result').style.display = 'block';
+  document.getElementById('cc_empty').style.display = 'none';
+  document.getElementById('cc_finance').textContent = fmt(finance);
+  document.getElementById('cc_monthly').textContent = fmt(monthly);
+  document.getElementById('cc_existing').textContent = fmt(commit);
+  document.getElementById('cc_outflow').textContent = fmt(totalOut);
+  const pctEl = document.getElementById('cc_pct');
+  pctEl.textContent = ratio.toFixed(1) + '% of income';
+  pctEl.style.color = ratio > 50 ? 'var(--red)' : ratio > 35 ? 'var(--orange)' : 'var(--green)';
+  const leftEl = document.getElementById('cc_left');
+  leftEl.textContent = fmt(left);
+  leftEl.style.color = left < 0 ? 'var(--red)' : 'var(--green)';
+  const v = document.getElementById('cc_verdict');
+  if (ratio < 30) { v.textContent = '✅ Comfortable — Go ahead'; v.className = 'verdict-box verdict-green'; }
+  else if (ratio < 40) { v.textContent = '⚠️ Manageable — Tight budget'; v.className = 'verdict-box verdict-orange'; }
+  else { v.textContent = '❌ Not recommended — Over 40% of income'; v.className = 'verdict-box verdict-red'; }
+}
+
+// ── FD ──
+function calcFD() {
+  const P = getVal('fd_amount'), r = getVal('fd_rate')/100;
+  const y = getVal('fd_years'), m = getVal('fd_months_extra');
+  const n = parseInt(document.getElementById('fd_compound').value);
+  const t = y + m/12;
+  if (!P || !r || !t) { document.getElementById('fd_result').style.display='none'; document.getElementById('fd_empty').style.display='block'; return; }
+  const maturity = P * Math.pow(1 + r/n, n*t);
+  const interest = maturity - P;
+  const ear = (Math.pow(1 + r/n, n) - 1) * 100;
+  const totalMonths = y*12 + m;
+  document.getElementById('fd_result').style.display = 'block';
+  document.getElementById('fd_empty').style.display = 'none';
+  document.getElementById('fd_maturity').textContent = fmt(maturity);
+  document.getElementById('fd_interest').textContent = fmt(interest);
+  document.getElementById('fd_ear').textContent = ear.toFixed(2) + '% effective';
+  document.getElementById('fd_return').textContent = ((interest/P)*100).toFixed(1) + '% total return';
+  document.getElementById('fd_monthly_eq').textContent = fmt(interest / (totalMonths||1)) + '/mo equivalent';
+  document.getElementById('fd_bar').style.width = Math.min(100, (interest/P*100)) + '%';
+}
+
+// ── EMERGENCY ──
+function calcEmerg() {
+  const exp = getVal('em_exp');
+  if (!exp) { document.getElementById('em_result').style.display='none'; document.getElementById('em_empty').style.display='block'; return; }
+  const saved = getVal('em_save');
+  const monthly = getVal('em_monthly');
+  const months = parseInt(document.getElementById('em_risk').value);
+  const target = exp * months;
+  const gap = Math.max(0, target - saved);
+  const coverage = Math.min(100, saved/target*100);
+  const monthsTo = monthly > 0 ? Math.ceil(gap/monthly) : null;
+  document.getElementById('em_result').style.display = 'block';
+  document.getElementById('em_empty').style.display = 'none';
+  document.getElementById('em_target').textContent = fmt(target);
+  document.getElementById('em_saved_val').textContent = fmt(saved);
+  const gEl = document.getElementById('em_gap');
+  gEl.textContent = gap > 0 ? fmt(gap) : '✅ Fully funded!';
+  gEl.style.color = gap > 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('em_coverage').textContent = coverage.toFixed(0) + '% covered (' + (saved/exp).toFixed(1) + ' months)';
+  document.getElementById('em_months_to').textContent = monthsTo ? monthsTo + ' months' : gap === 0 ? 'Done!' : 'Enter contribution above';
+  document.getElementById('em_bar').style.width = coverage + '%';
+  document.getElementById('em_msg').textContent = gap === 0 ? '🎉 Emergency fund complete!' : monthsTo ? `Save ${fmt(monthly)}/mo — reach goal in ${monthsTo} months` : 'Enter monthly contribution to see timeline';
+}
+
+// ── RETIREMENT ──
+function calcRetire() {
+  const age = getVal('rt_age'), retire = getVal('rt_retire'), life = getVal('rt_life');
+  const exp = getVal('rt_exp'), ret = getVal('rt_return')/100;
+  const saved = getVal('rt_saved');
+  if (!age || !exp || retire <= age) { document.getElementById('rt_result').style.display='none'; document.getElementById('rt_empty').style.display='block'; return; }
+  const yrs = retire - age;
+  const inflation = 0.06;
+  const futureExp = exp * Math.pow(1+inflation, yrs);
+  const retYrs = life - retire;
+  const corpus = futureExp * 12 * (1 - Math.pow(1+ret,-retYrs)) / ret;
+  const fv = saved * Math.pow(1+ret, yrs);
+  const gap = Math.max(0, corpus - fv);
+  const monthlyRate = ret/12;
+  const n = yrs * 12;
+  const pmt = gap > 0 && n > 0 ? gap * monthlyRate / (Math.pow(1+monthlyRate,n)-1) : 0;
+  document.getElementById('rt_result').style.display = 'block';
+  document.getElementById('rt_empty').style.display = 'none';
+  document.getElementById('rt_years').textContent = yrs + ' years';
+  document.getElementById('rt_future_exp').textContent = fmt(futureExp) + '/mo';
+  document.getElementById('rt_corpus').textContent = fmt(corpus);
+  document.getElementById('rt_fv').textContent = fmt(fv);
+  const gEl = document.getElementById('rt_gap');
+  gEl.textContent = gap > 0 ? fmt(gap) : '✅ Already on track!';
+  gEl.style.color = gap > 0 ? 'var(--red)' : 'var(--green)';
+  const mEl = document.getElementById('rt_monthly');
+  mEl.textContent = pmt > 0 ? fmt(pmt) + '/mo' : '✅ No additional investment needed';
+  mEl.style.color = pmt > 0 ? 'var(--accent)' : 'var(--green)';
+}
+
+// ── AFFORD ──
+function calcAfford() {
+  const cost = getVal('af_cost');
+  if (!cost) { document.getElementById('af_result').style.display='none'; document.getElementById('af_empty').style.display='block'; return; }
+  const cash = getVal('af_savings'), income = getVal('af_income')||1;
+  const commit = getVal('af_commit'), months = getVal('af_months');
+  const option = document.getElementById('af_option').value;
+  let cashLeft = 0, installment = 0;
+  if (option === 'cash') { cashLeft = cash - cost; installment = 0; }
+  else if (option === 'partial') { cashLeft = 0; installment = Math.max(0, cost-cash) / months; }
+  else { cashLeft = cash; installment = cost / months; }
+  const totalMonthly = commit + installment;
+  const dti = totalMonthly / income * 100;
+  const efOk = cashLeft >= income * 3;
+  document.getElementById('af_result').style.display = 'block';
+  document.getElementById('af_empty').style.display = 'none';
+  const clEl = document.getElementById('af_cash_left');
+  clEl.textContent = fmt(cashLeft);
+  clEl.style.color = cashLeft < 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('af_installment').textContent = installment > 0 ? fmt(installment)+'/mo' : 'None';
+  document.getElementById('af_existing').textContent = fmt(commit);
+  document.getElementById('af_total_monthly').textContent = fmt(totalMonthly);
+  const dtiEl = document.getElementById('af_dti');
+  dtiEl.textContent = dti.toFixed(1) + '%';
+  dtiEl.style.color = dti > 50 ? 'var(--red)' : dti > 35 ? 'var(--orange)' : 'var(--green)';
+  const efEl = document.getElementById('af_ef');
+  efEl.textContent = efOk ? '✅ Yes — safe' : cashLeft < 0 ? '❌ No cash left' : '⚠️ Low — top up after purchase';
+  efEl.style.color = efOk ? 'var(--green)' : cashLeft < 0 ? 'var(--red)' : 'var(--orange)';
+  const v = document.getElementById('af_verdict');
+  const advice = document.getElementById('af_advice');
+  if (cashLeft < 0) {
+    v.textContent = '❌ Cannot afford — not enough cash'; v.className = 'verdict-box verdict-red';
+    advice.textContent = `💡 You need ${fmt(cost - cash)} more. Consider a longer installment period or save for ${Math.ceil((cost-cash)/(income-commit))} more months.`;
+  } else if (dti > 50) {
+    v.textContent = '❌ Too risky — over 50% of income'; v.className = 'verdict-box verdict-red';
+    advice.textContent = `💡 Your monthly obligations would be ${dti.toFixed(0)}% of income. Try a longer period or pay more upfront.`;
+  } else if (dti > 35) {
+    v.textContent = '⚠️ Possible but tight'; v.className = 'verdict-box verdict-orange';
+    advice.textContent = `💡 Manageable but leaves little breathing room. Make sure you have savings for unexpected expenses.`;
+  } else if (!efOk) {
+    v.textContent = '⚠️ Affordable — top up emergency fund after'; v.className = 'verdict-box verdict-orange';
+    advice.textContent = `💡 Financially sound purchase. After buying, prioritize rebuilding 3 months of emergency fund.`;
+  } else {
+    v.textContent = '✅ Go ahead — financially sound'; v.className = 'verdict-box verdict-green';
+    advice.textContent = `💡 Great position! Debt-to-income is ${dti.toFixed(0)}% and emergency fund stays intact.`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  calcEmerg(); calcRetire(); calcAfford();
+});
+</script>
+{% endblock %}
