@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Wallets{% endblock %}
+{% block page_title %}Wallets{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:700;">Your Wallets</h2>
+    <p class="text-muted text-sm">Total: <strong class="font-mono" style="color:var(--blue);">{{ currency_symbol }} {{ "{:,.0f}".format(wallets|sum(attribute='balance')) }}</strong></p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('transferModal').classList.add('open')"><i class="fas fa-right-left"></i> Transfer</button>
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('addWalletModal').classList.add('open')"><i class="fas fa-plus"></i> Add Wallet</button>
+  </div>
+</div>
+
+<!-- Wallet Cards Grid -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:28px;">
+  {% for w in wallets %}
+  <div class="card" style="border-color:{{ w.color }}40;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:{{ w.color }}15;"></div>
+    <div class="flex items-center justify-between mb-3">
+      <span style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:{{ w.color }};font-weight:600;">{{ w.wallet_type }}</span>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditWallet({{ w.id }},'{{ w.name }}','{{ w.wallet_type }}',{{ w.balance }},'{{ w.currency }}','{{ w.color }}')"><i class="fas fa-pen"></i></button>
+        <form method="POST" action="{{ url_for('delete_wallet', wallet_id=w.id) }}" onsubmit="return confirm('Delete wallet?')">
+          <button class="btn btn-danger btn-icon btn-sm"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+    <div style="font-size:1.8rem;font-weight:700;font-family:var(--mono);color:{{ w.color }};margin-bottom:6px;">
+      {{ "{:,.0f}".format(w.balance) }}
+    </div>
+    <div style="font-size:0.75rem;color:var(--text2);">{{ w.currency }}</div>
+    <div style="font-size:1rem;font-weight:600;margin-top:8px;">{{ w.name }}</div>
+    {% if w.notes %}<div class="text-xs text-muted mt-1">{{ w.notes }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Transfer History -->
+<div class="card">
+  <div class="card-title">Transfer History</div>
+  {% if transfers %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>From</th><th>To</th><th>Amount</th><th>Note</th></tr></thead>
+      <tbody>
+        {% for t in transfers %}
+        <tr>
+          <td class="font-mono text-xs" style="color:var(--text2);">{{ t.date.strftime('%d %b %Y') if t.date else '—' }}</td>
+          <td>{{ t.from_wallet.name if t.from_wallet else '—' }}</td>
+          <td>{{ t.to_wallet.name if t.to_wallet else '—' }}</td>
+          <td class="font-mono font-bold" style="color:var(--blue);">{{ "{:,.0f}".format(t.amount) }}</td>
+          <td class="text-muted text-sm">{{ t.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">🔄</div>
+    <div style="font-size:0.95rem;font-weight:700;margin-bottom:6px;">No transfers yet</div>
+    <p style="font-size:0.82rem;color:var(--text2);margin-bottom:16px;">Transfer money between your wallets to track movement.</p>
+    {% if wallets|length >= 2 %}
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('transferModal').classList.add('open')">Make a Transfer</button>
+    {% else %}
+    <p style="font-size:0.78rem;color:var(--text3);">Add at least 2 wallets to transfer between them.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ADD WALLET MODAL -->
+<div class="modal-overlay" id="addWalletModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Add Wallet</div>
+    <form method="POST" action="{{ url_for('add_wallet') }}">
+      <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required placeholder="e.g. Cash, Savings..."></div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select name="wallet_type" class="form-control">
+            <option>Cash</option><option>Bank</option><option>Digital</option><option>Investment</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Currency</label>
+          <select name="currency" class="form-control"><option value="LKR">LKR</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Initial Balance</label><input type="number" step="0.01" name="balance" class="form-control" required value="0"></div>
+        <div class="form-group"><label class="form-label">Color</label><input type="color" name="color" class="form-control" value="#6366f1" style="height:42px;padding:4px;cursor:pointer;"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addWalletModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Wallet</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT WALLET MODAL -->
+<div class="modal-overlay" id="editWalletModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Edit Wallet</div>
+    <form method="POST" id="editWalletForm">
+      <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" id="editName" class="form-control" required></div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select name="wallet_type" id="editType" class="form-control">
+            <option>Cash</option><option>Bank</option><option>Digital</option><option>Investment</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Currency</label>
+          <select name="currency" id="editCurrency" class="form-control"><option value="LKR">LKR</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Balance</label><input type="number" step="0.01" name="balance" id="editBalance" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Color</label><input type="color" name="color" id="editColor" class="form-control" style="height:42px;padding:4px;cursor:pointer;"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea name="notes" id="editNotes" class="form-control" rows="2"></textarea></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('editWalletModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TRANSFER MODAL -->
+<div class="modal-overlay" id="transferModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="fas fa-right-left text-accent"></i> Transfer Between Wallets</div>
+    <form method="POST" action="{{ url_for('transfer_wallet') }}">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">From</label>
+          <select name="from_wallet" class="form-control" required>
+            {% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} ({{ "{:,.0f}".format(w.balance) }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">To</label>
+          <select name="to_wallet" class="form-control" required>
+            {% for w in wallets %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" name="note" class="form-control" placeholder="Reason for transfer..."></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('transferModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Transfer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openEditWallet(id, name, type, balance, currency, color) {
+  document.getElementById('editWalletForm').action = `/edit_wallet/${id}`;
+  document.getElementById('editName').value = name;
+  document.getElementById('editType').value = type;
+  document.getElementById('editBalance').value = balance;
+  document.getElementById('editCurrency').value = currency;
+  document.getElementById('editColor').value = color;
+  document.getElementById('editWalletModal').classList.add('open');
+}
+</script>
+{% endblock %}
