@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Credit Cards{% endblock %}
+{% block page_title %}Credit Cards{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:700;">Credit Cards</h2>
+    <p class="text-muted text-sm">Total Limit: <strong class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(total_credit_limit) }}</strong></p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addCardModal').classList.add('open')"><i class="fas fa-plus"></i> Add Card</button>
+</div>
+
+<div class="stat-grid mb-6">
+  <div class="stat-card"><div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-credit-card"></i></div><div class="stat-label">Total Limit</div><div class="stat-value text-accent">{{ "{:,.0f}".format(total_credit_limit) }}</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:var(--red-soft);color:var(--red)"><i class="fas fa-circle-minus"></i></div><div class="stat-label">Used Credit</div><div class="stat-value text-red">{{ "{:,.0f}".format(total_used_credit) }}</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:var(--green-soft);color:var(--green)"><i class="fas fa-circle-check"></i></div><div class="stat-label">Available</div><div class="stat-value text-green">{{ "{:,.0f}".format(total_available_balance) }}</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:var(--orange-soft);color:var(--orange)"><i class="fas fa-calendar"></i></div><div class="stat-label">Total Min. Due</div><div class="stat-value" style="color:var(--orange)">{{ "{:,.0f}".format(total_monthly_due) }}</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
+  {% for c in credit_cards %}
+  {% set used = c.credit_limit - c.available_balance %}
+  {% set util_pct = (used / c.credit_limit * 100)|int if c.credit_limit > 0 else 0 %}
+  {% set grad = card_colors[loop.index0 % card_colors|length] %}
+  <div style="background:linear-gradient(135deg, {{ grad[0] }}, {{ grad[1] }});border-radius:var(--radius-lg);padding:24px;position:relative;overflow:hidden;box-shadow:var(--shadow);">
+    <!-- Card background decoration -->
+    <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>
+    <div style="position:absolute;bottom:-20px;left:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.04);"></div>
+
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <div style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.7);">{{ c.bank_name }}</div>
+        <div style="font-size:0.875rem;color:rgba(255,255,255,0.5);font-family:var(--mono);">•••• •••• •••• {{ c.card_number[-4:] if c.card_number and c.card_number|length >= 4 else '????'  }}</div>
+      </div>
+      <div style="color:rgba(255,255,255,0.8);font-size:1.4rem;"><i class="fas fa-credit-card"></i></div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-bottom:4px;">AVAILABLE</div>
+      <div style="font-size:2rem;font-weight:700;color:white;font-family:var(--mono);">{{ "{:,.0f}".format(c.available_balance) }}</div>
+    </div>
+
+    <!-- Utilization bar -->
+    <div style="background:rgba(255,255,255,0.15);border-radius:999px;height:5px;margin-bottom:10px;">
+      <div style="height:5px;border-radius:999px;background:{% if util_pct > 80 %}#ff4d6d{% elif util_pct > 60 %}#ff9500{% else %}#00d68f{% endif %};width:{{ util_pct }}%;transition:width 0.6s;"></div>
+    </div>
+    <div class="flex justify-between" style="font-size:0.72rem;color:rgba(255,255,255,0.65);">
+      <span>Used: {{ "{:,.0f}".format(used) }}</span>
+      <span>{{ util_pct }}% utilization</span>
+      <span>Limit: {{ "{:,.0f}".format(c.credit_limit) }}</span>
+    </div>
+
+    <div style="border-top:1px solid rgba(255,255,255,0.12);margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:0.68rem;color:rgba(255,255,255,0.5);">Min. Due · {{ c.due_date.strftime('%d %b') if c.due_date else '—' }}</div>
+        <div style="font-size:1rem;font-weight:700;color:white;font-family:var(--mono);">{{ "{:,.0f}".format(c.minimum_payment) }}</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.25);font-weight:500;" onclick="openPayCard({{ c.id }},'{{ c.bank_name }}',{{ c.minimum_payment }},{{ c.credit_limit }},{{ c.available_balance }})">
+          <i class="fas fa-money-bill-wave"></i> Pay
+        </button>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.15);" onclick="openEditCard({{ c.id }},'{{ c.bank_name }}','{{ c.card_number }}',{{ c.credit_limit }},{{ c.available_balance }},{{ c.minimum_payment }},'{{ c.due_date }}',{{ c.interest_rate }})">
+          <i class="fas fa-pen"></i>
+        </button>
+        <form method="POST" action="{{ url_for('delete_credit_card', card_id=c.id) }}" onsubmit="return confirm('Delete card?')">
+          <button class="btn btn-sm" style="background:rgba(255,77,109,0.25);color:#ff4d6d;border:1px solid rgba(255,77,109,0.25);"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="text-align:center;padding:60px;grid-column:1/-1;">
+    <div style="font-size:3rem;margin-bottom:16px;">💳</div>
+    <h3 style="font-weight:700;margin-bottom:8px;">No cards yet</h3>
+    <p class="text-muted mb-4">Add your credit cards to track usage.</p>
+    <button class="btn btn-primary" onclick="document.getElementById('addCardModal').classList.add('open')">Add First Card</button>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ADD CARD MODAL -->
+<div class="modal-overlay" id="addCardModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Add Credit Card</div>
+    <form method="POST" action="{{ url_for('add_credit_card') }}">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Bank Name</label><input type="text" name="bank_name" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Card Number (last 4)</label><input type="text" name="card_number" class="form-control" maxlength="4" placeholder="1234"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Credit Limit</label><input type="number" step="0.01" name="credit_limit" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Available Balance</label><input type="number" step="0.01" name="available_balance" class="form-control" required></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Minimum Payment</label><input type="number" step="0.01" name="minimum_payment" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Interest Rate (%)</label><input type="number" step="0.01" name="interest_rate" class="form-control" value="0"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Payment Due Date</label><input type="date" name="due_date" class="form-control" required></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addCardModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Card</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT CARD MODAL -->
+<div class="modal-overlay" id="editCardModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Edit Credit Card</div>
+    <form method="POST" id="editCardForm">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Bank Name</label><input type="text" name="bank_name" id="ec_bank" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Card Number</label><input type="text" name="card_number" id="ec_num" class="form-control"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Credit Limit</label><input type="number" step="0.01" name="credit_limit" id="ec_limit" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Available Balance</label><input type="number" step="0.01" name="available_balance" id="ec_avail" class="form-control" required></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Min. Payment</label><input type="number" step="0.01" name="minimum_payment" id="ec_min" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Interest Rate (%)</label><input type="number" step="0.01" name="interest_rate" id="ec_rate" class="form-control"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Due Date</label><input type="date" name="due_date" id="ec_due" class="form-control" required></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('editCardModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- PAY CARD MODAL -->
+<div class="modal-overlay" id="payCardModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="payCardTitle">Pay Credit Card</div>
+    <div id="payCardInfo" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.82rem;color:var(--text2);"></div>
+    <form method="POST" id="payCardForm">
+      <div class="form-group">
+        <label class="form-label">Payment Type</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setPayType('min')" id="btn-min">Min. Payment</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setPayType('full')" id="btn-full">Full Balance</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setPayType('custom')" id="btn-custom">Custom</button>
+        </div>
+        <input type="number" step="0.01" name="amount" id="payCardAmount" class="form-control" required placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pay From Wallet</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None (record only)</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('payCardModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Record Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PAY CARD MODAL -->
+<div class="modal-overlay" id="payCardModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="payCardTitle">Pay Credit Card</div>
+    <p class="text-muted text-sm mb-4" id="payCardDesc"></p>
+    <form method="POST" id="payCardForm">
+      <div class="form-group">
+        <label class="form-label">Payment Amount</label>
+        <input type="number" step="0.01" name="amount" id="payCardAmount" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pay From Wallet</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None (record only)</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('payCardModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Record Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let _cardMin = 0, _cardUsed = 0;
+
+function openPayCard(id, bank, min, limit, avail) {
+  _cardMin = min;
+  _cardUsed = limit - avail;
+  document.getElementById('payCardTitle').textContent = `Pay: ${bank}`;
+  document.getElementById('payCardInfo').innerHTML =
+    `Used: <strong>${_cardUsed.toLocaleString()}</strong> &nbsp;·&nbsp; Min. payment: <strong>${min.toLocaleString()}</strong> &nbsp;·&nbsp; Limit: <strong>${limit.toLocaleString()}</strong>`;
+  document.getElementById('payCardForm').action = `/pay-credit-card/${id}`;
+  setPayType('min');
+  document.getElementById('payCardModal').classList.add('open');
+}
+
+function setPayType(type) {
+  ['min','full','custom'].forEach(t => {
+    document.getElementById('btn-'+t).classList.toggle('btn-primary', t===type);
+    document.getElementById('btn-'+t).classList.toggle('btn-ghost', t!==type);
+  });
+  if (type==='min') document.getElementById('payCardAmount').value = _cardMin;
+  else if (type==='full') document.getElementById('payCardAmount').value = _cardUsed;
+  else { document.getElementById('payCardAmount').value = ''; document.getElementById('payCardAmount').focus(); }
+}
+
+function openEditCard(id, bank, num, limit, avail, min, due, rate) {
+  document.getElementById('editCardForm').action = `/edit-credit-card/${id}`;
+  document.getElementById('ec_bank').value = bank;
+  document.getElementById('ec_num').value = num;
+  document.getElementById('ec_limit').value = limit;
+  document.getElementById('ec_avail').value = avail;
+  document.getElementById('ec_min').value = min;
+  document.getElementById('ec_due').value = due;
+  document.getElementById('ec_rate').value = rate;
+  document.getElementById('editCardModal').classList.add('open');
+}
+</script>
+{% endblock %}

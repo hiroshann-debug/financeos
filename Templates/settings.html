@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="mb-6"><h2 style="font-size:1.4rem;font-weight:700;">App Settings</h2></div>
+
+<div style="max-width:560px;">
+  <form method="POST" action="{{ url_for('settings') }}">
+    <div class="card mb-4">
+      <div class="card-title">General</div>
+      <div class="form-group">
+        <label class="form-label">Currency Symbol</label>
+        <select name="currency_symbol" class="form-control" style="width:200px;">
+          <option value="LKR" {% if currency_symbol=='LKR' %}selected{% endif %}>LKR — Sri Lankan Rupee</option>
+          <option value="USD" {% if currency_symbol=='USD' %}selected{% endif %}>USD — US Dollar</option>
+          <option value="EUR" {% if currency_symbol=='EUR' %}selected{% endif %}>EUR — Euro</option>
+          <option value="GBP" {% if currency_symbol=='GBP' %}selected{% endif %}>GBP — British Pound</option>
+          <option value="AUD" {% if currency_symbol=='AUD' %}selected{% endif %}>AUD — Australian Dollar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Salary Cycle Start Day</label>
+        <input type="number" name="salary_cycle_day" class="form-control" style="width:120px;" min="1" max="28" value="{{ salary_cycle_day }}">
+        <div class="text-xs text-muted mt-1">Day of month your salary cycle begins (1-28)</div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.875rem;font-weight:500;">
+          <input type="checkbox" name="dark_mode" {% if dark_mode %}checked{% endif %} style="width:16px;height:16px;accent-color:var(--accent);">
+          Dark Mode
+        </label>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Settings</button>
+  </form>
+
+  <div class="card mt-4">
+    <div class="card-title">Data Export</div>
+    <p class="text-muted text-sm mb-4">Download all your transaction data as CSV.</p>
+    <a href="{{ url_for('export_transactions') }}" class="btn btn-ghost"><i class="fas fa-download"></i> Export All Transactions</a>
+  </div>
+</div>
+{% endblock %}
