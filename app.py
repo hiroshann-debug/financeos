@@ -19,21 +19,29 @@ load_dotenv()
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
 
-app = Flask(__name__)
+import os
+from flask import Flask
 
-# Use PostgreSQL from env, fallback to SQLite for local dev without .env
+# 1. Clear any ambiguous path evaluations by forcing an exact physical root path
+app = Flask(
+    __name__,
+    template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates')),
+    static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
+)
+
+# 2. Database Configurations
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///budget.db')
-# Fix for older Heroku/Railway URLs that use postgres:// instead of postgresql://
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,       # reconnect if connection dropped
-    'pool_recycle': 300,         # recycle connections every 5 min
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
 }
 app.secret_key = os.getenv('APP_SECRET_KEY', 'fallback_dev_secret_change_this')
+
 
 db.init_app(app)
 migrate = Migrate(app, db)
