@@ -18,6 +18,9 @@ from functools import wraps
 load_dotenv()
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(__name__)
+
 # Use PostgreSQL from env, fallback to SQLite for local dev without .env
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///budget.db')
 # Fix for older Heroku/Railway URLs that use postgres:// instead of postgresql://
