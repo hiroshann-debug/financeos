@@ -14,6 +14,7 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
@@ -22,6 +23,9 @@ app = Flask(
     template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates')),
     static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
 )
+
+# Apply ProxyFix to the WSGI app after creating the Flask app
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # 2. Database Configurations
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///budget.db')
