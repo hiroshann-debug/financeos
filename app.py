@@ -17,12 +17,6 @@ from functools import wraps
 
 load_dotenv()
 
-base_dir = os.path.abspath(os.path.dirname(__file__))
-
-import os
-from flask import Flask
-
-# 1. Clear any ambiguous path evaluations by forcing an exact physical root path
 app = Flask(
     __name__,
     template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates')),
