@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ 'dark' if dark_mode else 'light' }}" style="color-scheme: {{ 'dark' if dark_mode else 'light' }};">
+<html lang="en" data-theme="{{ 'dark' if dark_mode else 'light' }}" style="color-scheme: {{'dark' if dark_mode else 'light'}};">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -430,7 +430,10 @@
     <a href="{{ url_for('financial_tools') }}" class="nav-link {% if request.endpoint == 'financial_tools' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-calculator"></i></span> Financial Tools
     </a>
-
+    <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint in ['reports','download_report'] %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
+    </a>
+    
     <div class="nav-section-label">Liabilities</div>
     <a href="{{ url_for('credit_cards') }}" class="nav-link {% if request.endpoint == 'credit_cards' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-credit-card"></i></span> Credit Cards

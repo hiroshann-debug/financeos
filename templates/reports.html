@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block content %}
+<div class="mb-6">
+  <h2 style="font-size:1.4rem;font-weight:500;">Monthly Reports</h2>
+  <p class="text-muted text-sm">Download a full PDF summary of any month — income, expenses, wallets, loans, goals and health score.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px;">
+
+  <!-- Download Card -->
+  <div class="card">
+    <div class="card-title">Download Report</div>
+    <div class="form-group">
+      <label class="form-label">Select Month</label>
+      <select id="monthSelect" class="form-control">
+        {% for m in months %}
+        <option value="{{ m.strftime('%Y-%m') }}" {% if loop.first %}selected{% endif %}>
+          {{ m.strftime('%B %Y') }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Report Format</label>
+      <select class="form-control">
+        <option>PDF — Full Report</option>
+      </select>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">CSV export is available on the Transactions page</div>
+    </div>
+    <button onclick="downloadReport()" class="btn btn-primary w-full" style="margin-top:8px;">
+      <i class="fas fa-file-pdf"></i> Download PDF Report
+    </button>
+  </div>
+
+  <!-- What's included -->
+  <div class="card">
+    <div class="card-title">What's Included</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for item in [
+        ('fas fa-chart-pie', 'Financial Summary', 'Income, expenses, net balance, savings rate'),
+        ('fas fa-heart-pulse', 'Health Score', 'Score breakdown and recommendations'),
+        ('fas fa-receipt', 'Spending by Category', 'Bar chart + category breakdown table'),
+        ('fas fa-list', 'Top Transactions', 'Biggest expenses of the month'),
+        ('fas fa-wallet', 'Wallet Balances', 'Snapshot of all wallets'),
+        ('fas fa-building-columns', 'Liabilities', 'Loans and credit card balances'),
+        ('fas fa-bullseye', 'Goals Progress', 'Progress bars for active goals'),
+        ('fas fa-lightbulb', 'Recommendations', 'Personalised financial advice'),
+      ] %}
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--border);">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-glow);display:grid;place-items:center;font-size:0.78rem;color:var(--accent);flex-shrink:0;">
+          <i class="{{ item[0] }}"></i>
+        </div>
+        <div>
+          <div style="font-size:0.82rem;font-weight:500;">{{ item[1] }}</div>
+          <div style="font-size:0.72rem;color:var(--text2);">{{ item[2] }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent downloads hint -->
+<div class="card mt-4" style="max-width:800px;">
+  <div class="card-title">Quick Download — Last 3 Months</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    {% for m in months[:3] %}
+    <a href="{{ url_for('download_report', month=m.strftime('%Y-%m')) }}"
+       class="btn btn-ghost btn-sm">
+      <i class="fas fa-file-pdf" style="color:var(--red);"></i>
+      {{ m.strftime('%B %Y') }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function downloadReport() {
+  const month = document.getElementById('monthSelect').value;
+  const btn = event.currentTarget;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  btn.disabled = true;
+  window.location.href = `/reports/download?month=${month}`;
+  setTimeout(() => {
+    btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF Report';
+    btn.disabled = false;
+  }, 3000);
+}
+</script>
+{% endblock %}

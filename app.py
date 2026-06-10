@@ -1,4 +1,7 @@
-from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
+try:
+    from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
+except ImportError as e:
+    raise ImportError('Flask is required to run this application. Install it with pip install flask') from e
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings
 import requests as req_lib
@@ -14,7 +17,12 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
-from werkzeug.middleware.proxy_fix import ProxyFix
+from pdf_report import generate_monthly_report
+try:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+except ImportError:
+    from werkzeug.contrib.fixers import ProxyFix
+
 
 load_dotenv()
 
@@ -517,9 +525,33 @@ def dashboard():
         active_goals=active_goals,
         recent_notifications=recent_notifications,
     )
-
-
 # ─────────────────────────────────────────
+#  Financial Tools
+# ─────────────────────────────────────────
+@app.route("/tools")
+@login_required
+def financial_tools():
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    cards = CreditCard.query.filter_by(user_id=uid()).all()
+    loans = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
+    total_monthly_commitments = (
+        sum(l.monthly_payment for l in loans) +
+        sum(c.minimum_payment for c in cards)
+    )
+    recent_income = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.trans_type == 'income',
+        Transaction.date >= (date.today() - relativedelta(months=3))
+    ).all()
+    monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
+    return render_template("financial_tools.html",
+        wallets=wallets, cards=cards, loans=loans,
+        total_monthly_commitments=total_monthly_commitments,
+        monthly_income_avg=monthly_income_avg,
+        total_savings=sum(w.balance for w in wallets),
+    )
+ 
+ # ─────────────────────────────────────────
 #  Transactions
 # ─────────────────────────────────────────
 @app.route("/transactions", methods=["GET", "POST"])
@@ -1802,59 +1834,71 @@ def export_transactions():
 # ─────────────────────────────────────────
 #  Financial Tools
 # ─────────────────────────────────────────
-@app.route("/tools")
+@app.route("/reports")
 @login_required
-def financial_tools():
-    wallets = Wallet.query.filter_by(user_id=uid()).all()
-    cards = CreditCard.query.filter_by(user_id=uid()).all()
-    loans = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
-    total_monthly_commitments = (
-        sum(l.monthly_payment for l in loans) +
-        sum(c.minimum_payment for c in cards)
-    )
-    recent_income = Transaction.query.filter(
-        Transaction.user_id == uid(),
-        Transaction.trans_type == 'income',
-        Transaction.date >= (date.today() - relativedelta(months=3))
-    ).all()
-    monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
-    return render_template("financial_tools.html",
-        wallets=wallets, cards=cards, loans=loans,
-        total_monthly_commitments=total_monthly_commitments,
-        monthly_income_avg=monthly_income_avg,
-        total_savings=sum(w.balance for w in wallets),
-    )
-
-
-
-@app.route("/api/health-score")
-def api_health_score():
-    return jsonify(get_financial_health_score())
-
-
-@app.route("/api/net-worth-history")
-def api_net_worth_history():
-    history = NetWorthHistory.query.filter_by(user_id=uid()).order_by(NetWorthHistory.date).all()
-    return jsonify([{
-        "date": h.date.strftime("%Y-%m-%d"),
-        "assets": h.total_assets,
-        "liabilities": h.total_liabilities,
-        "net_worth": h.net_worth
-    } for h in history])
-
-
-@app.route("/api/spending-by-category")
-def api_spending_by_category():
+def reports():
     today = date.today()
-    start = today.replace(day=1)
-    txns = Transaction.query.filter(
-        Transaction.trans_type == "expense",
-        Transaction.date >= start
-    ).all()
-    by_cat = defaultdict(float)
-    for t in txns:
-        by_cat[t.category or "Other"] += t.amount
-    return jsonify(dict(by_cat))
+    # Build list of last 12 months for selection
+    months = []
+    for i in range(12):
+        m = (today - relativedelta(months=i)).replace(day=1)
+        months.append(m)
+    return render_template("reports.html", months=months, today=today)
+
+
+@app.route("/reports/download")
+@login_required
+def download_report():
+    month_str = request.args.get("month", date.today().strftime("%Y-%m"))
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date()
+    except:
+        month_date = date.today().replace(day=1)
+
+    month_start = month_date.replace(day=1)
+    month_end = month_start + relativedelta(months=1) - timedelta(days=1)
+
+    # Gather all data for this user
+    transactions = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.date >= month_start,
+        Transaction.date <= month_end
+    ).order_by(Transaction.date.desc()).all()
+
+    wallets  = Wallet.query.filter_by(user_id=uid()).all()
+    loans    = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
+    cards    = CreditCard.query.filter_by(user_id=uid()).all()
+    goals    = Goal.query.filter_by(user_id=uid()).all()
+    fixed    = FixedExpense.query.filter_by(user_id=uid()).all()
+    health   = get_financial_health_score(user_id=uid())
+    settings = {}
+
+    user     = session.get('user', {})
+    currency = get_setting("currency_symbol", "LKR", user_id=uid())
+
+    pdf_bytes = generate_monthly_report(
+        user_id      = uid(),
+        user_name    = user.get('name', 'User'),
+        user_email   = user.get('email', ''),
+        currency_symbol = currency,
+        month_date   = month_date,
+        transactions = transactions,
+        wallets      = wallets,
+        loans        = loans,
+        cards        = cards,
+        goals        = goals,
+        fixed_expenses = fixed,
+        health       = health,
+        settings     = settings,
+    )
+
+    filename = f"FinanceOS_{month_date.strftime('%B_%Y')}_Report.pdf"
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 
 
 import models
