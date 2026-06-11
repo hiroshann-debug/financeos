@@ -15,26 +15,42 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
+from werkzeug.middleware.proxy_fix import ProxyFix as ProxyFixMiddleware
+
+
 
 load_dotenv()
 
 app = Flask(__name__)
-# Use PostgreSQL from env, fallback to SQLite for local dev without .env
+
+# Fix proxy (must be first after app init)
+app.wsgi_app = ProxyFixMiddleware(app.wsgi_app, x_proto=1, x_host=1)
+
+# REQUIRED: no fallback in production
+app.secret_key = os.environ['APP_SECRET_KEY']
+
+# Session hardening for Auth0
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_HTTPONLY=True
+)
+
+# DB config
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///budget.db')
-# Fix for older Heroku/Railway URLs that use postgres:// instead of postgresql://
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,       # reconnect if connection dropped
-    'pool_recycle': 300,         # recycle connections every 5 min
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
 }
-app.secret_key = os.getenv('APP_SECRET_KEY', 'fallback_dev_secret_change_this')
 
 db.init_app(app)
 migrate = Migrate(app, db)
+
 
 # ─────────────────────────────────────────
 #  Auth0 Setup
