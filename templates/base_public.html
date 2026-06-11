@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}FinanceOS{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,7 +30,7 @@
       --font:       'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     html { font-size: 14px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; font-weight: 400; }
+    body { font-family: 'Plus Jakarta Sans',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; font-weight: 400; }
 
     /* NAV */
     .pub-nav {
@@ -100,19 +100,25 @@
 </head>
 <body>
 
-<nav class="pub-nav">
-  <a href="{{ url_for('landing') }}" class="pub-nav-logo">
-    <div class="pub-nav-logo-icon">💰</div>
-    <span class="pub-nav-logo-text">FinanceOS</span>
+<!-- ── NAV ── -->
+<nav style="position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(14px);border-bottom:1px solid #E2E8F0;padding:0 60px;height:68px;display:flex;align-items:center;justify-content:space-between;">
+  <a href="{{ url_for('landing') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+    <div style="width:38px;height:38px;background:#00C853;border-radius:10px;display:grid;place-items:center;font-size:1.15rem;">💰</div>
+    <span style="font-size:1.1rem;font-weight:800;color:#0F172A;letter-spacing:-0.02em;font-family:'Plus Jakarta Sans',sans-serif;">FinanceOS</span>
   </a>
-  <div class="pub-nav-links">
-    <a href="{{ url_for('login') }}" class="pub-nav-link">Sign In</a>
-    <a href="{{ url_for('auth_signup') }}" class="pub-nav-cta">Get Started Free</a>
+  <div style="display:flex;align-items:center;gap:32px;">
+    <a href="#how-it-works" style="font-size:0.975rem;font-weight:600;color:#64748B;text-decoration:none;">How it works</a>
+    <a href="#features" style="font-size:0.975rem;font-weight:600;color:#64748B;text-decoration:none;">Features</a>
+    <a href="#ecosystem" style="font-size:0.975rem;font-weight:600;color:#64748B;text-decoration:none;">Ecosystem</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="{{ url_for('auth_login') }}" style="padding:8px 20px;border-radius:8px;font-size:0.875rem;font-weight:700;color:#0F172A;background:transparent;border:1.5px solid #E2E8F0;text-decoration:none;">Sign In</a>
+    <a href="{{ url_for('auth_signup') }}" style="padding:9px 22px;border-radius:8px;font-size:0.875rem;font-weight:700;color:#fff;background:#0F172A;text-decoration:none;">Get Started Free</a>
   </div>
 </nav>
 
-<div class="pub-content">
-  {% with messages = get_flashed_messages(with_categories=true) %}
+<div class="pub-content" style="padding-top:0;margin-top:0;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div style="max-width:500px;margin:20px auto;padding:0 20px;">
       {% for category, message in messages %}
@@ -127,9 +133,6 @@
   {% block content %}{% endblock %}
 </div>
 
-<footer class="pub-footer">
-  © 2025 FinanceOS · Built in Sri lanka
-</footer>
 
 {% block scripts %}{% endblock %}
 </body>

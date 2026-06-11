@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ 'dark' if dark_mode else 'light' }}" style="color-scheme: {{'dark' if dark_mode else 'light'}};">
+<html lang="en" data-theme="{{ 'dark' if dark_mode else 'light' }}" style="color-scheme: {{ 'dark' if dark_mode else 'light' }};">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -349,13 +349,96 @@
     /* ── MOBILE ── */
     .menu-toggle { display: none; }
     @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); }
-      .sidebar.open { transform: none; }
+      /* Sidebar */
+      .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+      .sidebar.open { transform: none; box-shadow: 4px 0 24px rgba(0,0,0,0.15); }
+      .sidebar-overlay { display: block !important; }
       .main-wrap { margin-left: 0; }
       .menu-toggle { display: grid; }
-      .content { padding: 16px; }
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .stat-grid { grid-template-columns: 1fr 1fr; }
+
+      /* Content */
+      .content { padding: 12px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+      .stat-grid { grid-template-columns: 1fr 1fr !important; }
+
+      /* Topbar */
+      .topbar { padding: 0 12px; }
+      .topbar-title { font-size: 0.82rem; }
+      .currency-pill { display: none; }
+
+      /* Tables — horizontal scroll */
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { min-width: 480px; }
+
+      /* Cards */
+      .card { padding: 14px; }
+      .stat-card { padding: 12px; }
+      .stat-value { font-size: 1.1rem; }
+
+      /* Modals */
+      .modal { margin: 12px; max-width: calc(100vw - 24px); }
+
+      /* Chart height */
+      .chart-wrap { height: 180px; }
+
+      /* Dashboard grids */
+      .dashboard-row2 { grid-template-columns: 1fr !important; }
+      .dashboard-row2 .card[style*="grid-column:span 2"] { grid-column: span 1 !important; }
+      .dashboard-row3 { grid-template-columns: 1fr 1fr !important; }
+      .dashboard-row4 { grid-template-columns: 1fr !important; }
+
+      /* Salary bar tiles */
+      [style*="repeat(auto-fit,minmax(150px"] { grid-template-columns: 1fr 1fr !important; }
+
+      /* Hide non-essential on very small screens */
+      @media (max-width: 400px) {
+        .stat-grid { grid-template-columns: 1fr !important; }
+        .dashboard-row3 { grid-template-columns: 1fr !important; }
+      }
+    }
+
+    /* Sidebar overlay for mobile */
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 99;
+      background: rgba(0,0,0,0.4);
+    }
+
+    /* ── TOUCH / MOBILE ENHANCEMENTS ── */
+    @media (max-width: 768px) {
+      /* Larger tap targets */
+      .btn { min-height: 40px; padding: 8px 14px; }
+      .btn-sm { min-height: 34px; }
+      .nav-link { min-height: 40px; padding: 8px; }
+
+      /* Form controls larger on mobile */
+      .form-control { font-size: 16px !important; /* prevents iOS zoom */ min-height: 44px; }
+      select.form-control { min-height: 44px; }
+
+      /* Modal full-width on small screens */
+      .modal-overlay { align-items: flex-end; padding: 0; }
+      .modal {
+        margin: 0; border-radius: 16px 16px 0 0;
+        max-height: 90vh; max-width: 100%;
+        animation: slideUpMobile 0.2s ease;
+      }
+      @keyframes slideUpMobile {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+
+      /* Topbar adjustments */
+      .topbar { height: 48px; }
+      .topbar-btn { width: 36px; height: 36px; }
+
+      /* Scroll lists taller on mobile */
+      .scroll-list { max-height: none; }
+
+      /* Stat grid 2 columns minimum */
+      .stat-grid { gap: 8px; }
+      .stat-card { padding: 12px 10px; }
+      .stat-label { font-size: 0.62rem; }
+      .stat-value { font-size: 1rem; }
     }
 
     /* ── SCROLLBAR ── */
@@ -433,7 +516,7 @@
     <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint in ['reports','download_report'] %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
     </a>
-    
+
     <div class="nav-section-label">Liabilities</div>
     <a href="{{ url_for('credit_cards') }}" class="nav-link {% if request.endpoint == 'credit_cards' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-credit-card"></i></span> Credit Cards
@@ -522,6 +605,8 @@
 <script>
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').style.display =
+    document.getElementById('sidebar').classList.contains('open') ? 'block' : 'none';
 }
 // Close sidebar on outside click (mobile)
 document.addEventListener('click', function(e) {
