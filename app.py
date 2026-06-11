@@ -1,7 +1,4 @@
-try:
-    from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
-except ImportError as e:
-    raise ImportError('Flask is required to run this application. Install it with pip install flask') from e
+from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings
 import requests as req_lib
@@ -11,46 +8,30 @@ from dateutil.relativedelta import relativedelta
 import json, csv, io, os
 from collections import defaultdict
 from flask_migrate import Migrate
+from pdf_report import generate_monthly_report
 from finance_service import (add_transaction, update_networth_snapshot, check_and_create_notifications,
                               apply_due_recurring_payments, get_spending_insights, get_financial_health_score,
                               get_setting, set_setting)
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
-from pdf_report import generate_monthly_report
-try:
-    from werkzeug.middleware.proxy_fix import ProxyFix
-except ImportError:
-    from werkzeug.contrib.fixers import ProxyFix
-
 
 load_dotenv()
 
-app = Flask(
-    __name__,
-    template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates')),
-    static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
-)
-
-# Apply ProxyFix to the WSGI app after creating the Flask app
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-
-# 2. Database Configurations
+app = Flask(__name__)
+# Use PostgreSQL from env, fallback to SQLite for local dev without .env
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///budget.db')
+# Fix for older Heroku/Railway URLs that use postgres:// instead of postgresql://
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
+    'pool_pre_ping': True,       # reconnect if connection dropped
+    'pool_recycle': 300,         # recycle connections every 5 min
 }
 app.secret_key = os.getenv('APP_SECRET_KEY', 'fallback_dev_secret_change_this')
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -293,8 +274,10 @@ def dashboard():
     previous_transactions = Transaction.query.filter(Transaction.user_id == uid(), Transaction.date < period_start).all()
     carryover_balance = sum(t.amount if t.trans_type == "income" else -t.amount for t in previous_transactions)
     current_balance = carryover_balance + total_income - total_expense
-    # Total Wallet Balance = actual wallet balances (source of truth)
+    # Total Wallet Balance = actual wallet balances (source of truth, independent of transaction calc)
     total_wallet_balance = sum(w.balance for w in wallets)
+    # Net Balance = wallet balance is the real number; transaction-based is for period tracking
+    # We show both: wallet balance = actual cash, net balance = period performance
 
     chart_data = {
         "income": dict(income_by_category),
@@ -521,37 +504,14 @@ def dashboard():
         total_wallet_balance=total_wallet_balance,
         salary_period=salary_period_str,
         today=today,
+        minimum_required=next_month_total,
         health=health,
         active_goals=active_goals,
         recent_notifications=recent_notifications,
     )
+
+
 # ─────────────────────────────────────────
-#  Financial Tools
-# ─────────────────────────────────────────
-@app.route("/tools")
-@login_required
-def financial_tools():
-    wallets = Wallet.query.filter_by(user_id=uid()).all()
-    cards = CreditCard.query.filter_by(user_id=uid()).all()
-    loans = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
-    total_monthly_commitments = (
-        sum(l.monthly_payment for l in loans) +
-        sum(c.minimum_payment for c in cards)
-    )
-    recent_income = Transaction.query.filter(
-        Transaction.user_id == uid(),
-        Transaction.trans_type == 'income',
-        Transaction.date >= (date.today() - relativedelta(months=3))
-    ).all()
-    monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
-    return render_template("financial_tools.html",
-        wallets=wallets, cards=cards, loans=loans,
-        total_monthly_commitments=total_monthly_commitments,
-        monthly_income_avg=monthly_income_avg,
-        total_savings=sum(w.balance for w in wallets),
-    )
- 
- # ─────────────────────────────────────────
 #  Transactions
 # ─────────────────────────────────────────
 @app.route("/transactions", methods=["GET", "POST"])
@@ -1832,7 +1792,7 @@ def export_transactions():
 
 
 # ─────────────────────────────────────────
-#  Financial Tools
+#  Reports
 # ─────────────────────────────────────────
 @app.route("/reports")
 @login_required
@@ -1899,6 +1859,63 @@ def download_report():
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+
+# ─────────────────────────────────────────
+#  Financial Tools
+# ─────────────────────────────────────────
+@app.route("/tools")
+@login_required
+def financial_tools():
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    cards = CreditCard.query.filter_by(user_id=uid()).all()
+    loans = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
+    total_monthly_commitments = (
+        sum(l.monthly_payment for l in loans) +
+        sum(c.minimum_payment for c in cards)
+    )
+    recent_income = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.trans_type == 'income',
+        Transaction.date >= (date.today() - relativedelta(months=3))
+    ).all()
+    monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
+    return render_template("financial_tools.html",
+        wallets=wallets, cards=cards, loans=loans,
+        total_monthly_commitments=total_monthly_commitments,
+        monthly_income_avg=monthly_income_avg,
+        total_savings=sum(w.balance for w in wallets),
+    )
+
+
+
+@app.route("/api/health-score")
+def api_health_score():
+    return jsonify(get_financial_health_score())
+
+
+@app.route("/api/net-worth-history")
+def api_net_worth_history():
+    history = NetWorthHistory.query.filter_by(user_id=uid()).order_by(NetWorthHistory.date).all()
+    return jsonify([{
+        "date": h.date.strftime("%Y-%m-%d"),
+        "assets": h.total_assets,
+        "liabilities": h.total_liabilities,
+        "net_worth": h.net_worth
+    } for h in history])
+
+
+@app.route("/api/spending-by-category")
+def api_spending_by_category():
+    today = date.today()
+    start = today.replace(day=1)
+    txns = Transaction.query.filter(
+        Transaction.trans_type == "expense",
+        Transaction.date >= start
+    ).all()
+    by_cat = defaultdict(float)
+    for t in txns:
+        by_cat[t.category or "Other"] += t.amount
+    return jsonify(dict(by_cat))
 
 
 import models

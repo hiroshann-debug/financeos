@@ -31,6 +31,40 @@
 </div>
 {% endif %}
 
+<!-- SALARY CYCLE BAR -->
+{% set days_total = (period_end - period_start).days + 1 %}
+{% set days_passed = [(today - period_start).days + 1, days_total] | min %}
+{% set days_left = [(period_end - today).days, 0] | max %}
+{% set pct_passed = (days_passed / days_total * 100) | int %}
+{% set safe_balance = total_wallet_balance - minimum_required %}
+<div style="background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:14px 20px;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:0.8rem;font-weight:500;color:var(--text2);">
+      Salary Cycle · <span style="color:var(--text);">{{ salary_period }}</span>
+    </div>
+    <div style="display:flex;gap:16px;font-size:0.78rem;">
+      <span><span style="color:var(--text2);">Days left:</span> <strong style="color:var(--text);">{{ days_left }}</strong></span>
+      <span><span style="color:var(--text2);">Min. required next period:</span>
+        <strong style="color:var(--orange);">{{ currency_symbol }} {{ "{:,.0f}".format(minimum_required) }}</strong>
+      </span>
+      <span><span style="color:var(--text2);">Safe balance:</span>
+        <strong style="color:{% if safe_balance >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ currency_symbol }} {{ "{:,.0f}".format(safe_balance) }}
+        </strong>
+      </span>
+    </div>
+  </div>
+  <!-- Progress bar -->
+  <div style="background:var(--surface2);border-radius:999px;height:6px;overflow:hidden;">
+    <div style="height:6px;border-radius:999px;background:{% if pct_passed > 80 %}var(--red){% elif pct_passed > 60 %}var(--orange){% else %}var(--accent){% endif %};width:{{ pct_passed }}%;transition:width 0.5s;"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.68rem;color:var(--text3);">
+    <span>{{ period_start.strftime('%d %b') }}</span>
+    <span>{{ pct_passed }}% of cycle elapsed</span>
+    <span>{{ period_end.strftime('%d %b') }}</span>
+  </div>
+</div>
+
 <!-- STAT CARDS -->
 <div class="stat-grid">
   <div class="stat-card">
@@ -45,11 +79,11 @@
     <div class="stat-value text-red">{{ "{:,.0f}".format(total_expense) }}</div>
     <div class="stat-change">{{ currency_symbol }}</div>
   </div>
-  <div class="stat-card {% if balance >= 0 %}glow-green{% else %}glow-red{% endif %}">
+  <div class="stat-card">
     <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-scale-balanced"></i></div>
-    <div class="stat-label">Net Balance</div>
+    <div class="stat-label">Net Balance (Period)</div>
     <div class="stat-value {% if balance >= 0 %}text-green{% else %}text-red{% endif %}">{{ "{:,.0f}".format(balance) }}</div>
-    <div class="stat-change">{{ currency_symbol }} including carryover</div>
+    <div class="stat-change">income − expenses this period</div>
   </div>
   <div class="stat-card">
     <div class="stat-icon" style="background:var(--orange-soft);color:var(--orange)"><i class="fas fa-credit-card"></i></div>
@@ -60,8 +94,8 @@
   <div class="stat-card">
     <div class="stat-icon" style="background:rgba(14,165,233,0.1);color:var(--blue)"><i class="fas fa-wallet"></i></div>
     <div class="stat-label">Total Wallet Balance</div>
-    <div class="stat-value" style="color:var(--blue)">{{ "{:,.0f}".format(wallets|sum(attribute='balance')) }}</div>
-    <div class="stat-change">across {{ wallets|length }} wallet{{ 's' if wallets|length != 1 }}</div>
+    <div class="stat-value" style="color:var(--blue)">{{ "{:,.0f}".format(total_wallet_balance) }}</div>
+    <div class="stat-change">actual cash across {{ wallets|length }} wallet{{ 's' if wallets|length != 1 }}</div>
   </div>
 
   <!-- Health Score Card -->
@@ -88,63 +122,79 @@
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
 
-  <!-- Upcoming Payments -->
-  <div class="card">
-    <div class="card-title">Upcoming Payments</div>
+  <!-- Upcoming Payments Slider -->
+  <div class="card" style="display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">Upcoming Payments</div>
+      {% if upcoming_payments %}
+      <span style="font-size:0.7rem;color:var(--text3);" id="up-counter"></span>
+      {% endif %}
+    </div>
     {% if upcoming_payments %}
+    <div style="flex:1;position:relative;min-height:120px;">
       {% for p in upcoming_payments %}
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
-        {# Icon by type #}
-        <div style="width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font-size:0.7rem;flex-shrink:0;
-          {% if p.kind=='card' %}background:rgba(255,149,0,0.12);color:var(--orange);
-          {% elif p.kind=='recurring' %}background:var(--accent-glow);color:var(--accent2);
-          {% else %}background:var(--red-soft);color:var(--red);{% endif %}">
-          {% if p.kind=='card' %}<i class="fas fa-credit-card"></i>
-          {% elif p.kind=='recurring' %}<i class="fas fa-rotate"></i>
-          {% else %}<i class="fas fa-file-invoice"></i>{% endif %}
-        </div>
-        {# Name + due date #}
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.type }}</div>
-          <div style="font-size:0.7rem;color:var(--text2);">
-            {{ p.due_date }}
-            {% if p.days_left < 0 %}<span style="color:var(--red);font-weight:600;"> · Overdue</span>
-            {% elif p.days_left == 0 %}<span style="color:var(--red);font-weight:600;"> · Today</span>
-            {% elif p.days_left <= 5 %}<span style="color:var(--orange);font-weight:600;"> · {{ p.days_left }}d</span>
-            {% endif %}
+      <div class="up-slide" style="{% if not loop.first %}display:none;{% endif %}">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0 10px;">
+          <div style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:0.85rem;flex-shrink:0;
+            {% if p.kind=='card' %}background:rgba(255,149,0,0.12);color:var(--orange);
+            {% elif p.kind=='recurring' %}background:var(--accent-glow);color:var(--accent2);
+            {% else %}background:var(--red-soft);color:var(--red);{% endif %}">
+            {% if p.kind=='card' %}<i class="fas fa-credit-card"></i>
+            {% elif p.kind=='recurring' %}<i class="fas fa-rotate"></i>
+            {% else %}<i class="fas fa-file-invoice"></i>{% endif %}
           </div>
-        </div>
-        {# Amount + Pay button #}
-        <div style="text-align:right;flex-shrink:0;">
-          <div style="font-family:var(--mono);font-size:0.85rem;font-weight:700;
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.9rem;font-weight:500;">{{ p.type }}</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">
+              Due {{ p.due_date }}
+              {% if p.days_left < 0 %}<span style="color:var(--red);font-weight:600;"> · Overdue</span>
+              {% elif p.days_left == 0 %}<span style="color:var(--red);font-weight:600;"> · Today</span>
+              {% elif p.days_left <= 5 %}<span style="color:var(--orange);font-weight:600;"> · {{ p.days_left }}d left</span>
+              {% endif %}
+            </div>
+          </div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:600;flex-shrink:0;
             {% if p.kind=='card' %}color:var(--orange);
             {% elif p.kind=='recurring' %}color:var(--accent2);
             {% else %}color:var(--red);{% endif %}">
-            {{ "{:,.0f}".format(p.amount) }}
+            {{ currency_symbol }} {{ "{:,.0f}".format(p.amount) }}
           </div>
+        </div>
+        <div>
           {% if p.kind == 'card' %}
-            <button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:0.68rem;margin-top:2px;"
-              onclick="openPayCard({{ p.id }},'{{ p.type }}',{{ p.amount }})">Pay</button>
+            <button class="btn btn-ghost btn-sm w-full" onclick="openPayCard({{ p.id }},'{{ p.type }}',{{ p.amount }})">
+              <i class="fas fa-credit-card"></i> Pay {{ currency_symbol }} {{ "{:,.0f}".format(p.amount) }}
+            </button>
           {% elif p.kind == 'recurring' %}
             <form method="POST" action="{{ url_for('apply_recurring', rec_id=p.id) }}">
-              <button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:0.68rem;margin-top:2px;">Pay</button>
+              <button class="btn btn-ghost btn-sm w-full"><i class="fas fa-rotate"></i> Apply Payment</button>
             </form>
           {% else %}
             <form method="POST" action="{{ url_for('mark_fixed_paid', expense_id=p.id) }}">
-              <button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:0.68rem;margin-top:2px;">Pay</button>
+              <button class="btn btn-ghost btn-sm w-full"><i class="fas fa-check"></i> Mark as Paid</button>
             </form>
           {% endif %}
         </div>
       </div>
       {% endfor %}
+    </div>
+    <!-- Slider dots + arrows -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);">
+      <button onclick="slideUp(-1)" id="up-prev" style="background:none;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);width:28px;height:28px;border-radius:6px;display:grid;place-items:center;">
+        <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i>
+      </button>
+      <div id="up-dots" style="display:flex;gap:5px;"></div>
+      <button onclick="slideUp(1)" id="up-next" style="background:none;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);width:28px;height:28px;border-radius:6px;display:grid;place-items:center;">
+        <i class="fas fa-chevron-right" style="font-size:0.7rem;"></i>
+      </button>
+    </div>
     {% else %}
-    <div style="text-align:center;padding:24px 0;">
+    <div style="text-align:center;padding:28px 0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
       <div style="font-size:2rem;margin-bottom:8px;">🎉</div>
-      <div style="font-size:0.8rem;color:var(--green);font-weight:600;">All payments done!</div>
-      <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Nothing due this period</div>
+      <div style="font-size:0.82rem;color:var(--green);font-weight:500;">All payments done!</div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:3px;">Nothing due this period</div>
     </div>
     {% endif %}
-    <a href="{{ url_for('fixed_expenses') }}" class="btn btn-ghost btn-sm w-full mt-3">View All</a>
   </div>
 </div>
 
@@ -271,24 +321,44 @@
     </div>
   </div>
 
-  <!-- Next Period Forecast -->
-  <div class="card">
-    <div class="card-title">Next Period Forecast</div>
-    <div style="font-family:var(--mono);font-size:2rem;font-weight:700;color:var(--orange);margin-bottom:4px;">
-      {{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}
+  <!-- Next Period Forecast Slider -->
+  <div class="card" style="display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="card-title" style="margin-bottom:0;">Next Period Forecast</div>
+      <span style="font-family:var(--mono);font-size:0.95rem;font-weight:600;color:var(--orange);">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
     </div>
-    <div class="text-muted text-sm mb-4">estimated fixed expenses</div>
-    {% for e in next_month_expenses[:6] %}
-    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
-      <div>
-        <span>{{ e.name }}</span>
-        <div style="font-size:0.7rem;color:var(--text2);">{{ e.date.strftime('%d %b') if e.date else '' }}</div>
+    {% if next_month_expenses %}
+    <div style="flex:1;">
+      {% for e in next_month_expenses %}
+      <div class="fc-slide" style="{% if not loop.first %}display:none;{% endif %}padding:10px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:0.9rem;font-weight:500;">{{ e.name }}</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">
+              {{ e.date.strftime('%d %b %Y') if e.date else '—' }}
+              {% if e.get('category') %}
+              <span style="margin-left:6px;padding:1px 6px;border-radius:3px;background:var(--orange-soft);color:var(--orange);font-size:0.65rem;">{{ e.category }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div style="font-family:var(--mono);font-size:1.05rem;font-weight:600;color:var(--orange);">
+            {{ currency_symbol }} {{ "{:,.0f}".format(e.amount) }}
+          </div>
+        </div>
       </div>
-      <span class="font-mono" style="color:var(--orange);">{{ "{:,.0f}".format(e.amount) }}</span>
+      {% endfor %}
     </div>
-    {% endfor %}
-    {% if next_month_expenses|length > 6 %}
-    <div class="text-muted text-xs mt-2">+{{ next_month_expenses|length - 6 }} more</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:10px;border-top:0.5px solid var(--border);">
+      <button onclick="slideFc(-1)" style="background:none;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);width:28px;height:28px;border-radius:6px;display:grid;place-items:center;">
+        <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i>
+      </button>
+      <div id="fc-dots" style="display:flex;gap:5px;"></div>
+      <button onclick="slideFc(1)" style="background:none;border:0.5px solid var(--border2);cursor:pointer;color:var(--text2);width:28px;height:28px;border-radius:6px;display:grid;place-items:center;">
+        <i class="fas fa-chevron-right" style="font-size:0.7rem;"></i>
+      </button>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:28px 0;color:var(--text3);font-size:0.82rem;">No forecast data</div>
     {% endif %}
   </div>
 </div>
@@ -429,5 +499,67 @@ function openPayCard(id, name, amount) {
   document.getElementById('payCardAmount').value = amount;
   document.getElementById('payCardModal').classList.add('open');
 }
+
+// ── UPCOMING PAYMENTS SLIDER ──
+(function() {
+  const slides = document.querySelectorAll('.up-slide');
+  const dotsEl = document.getElementById('up-dots');
+  const counter = document.getElementById('up-counter');
+  let cur = 0;
+  if (!slides.length) return;
+
+  function buildDots() {
+    if (!dotsEl) return;
+    dotsEl.innerHTML = '';
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.style.cssText = `width:6px;height:6px;border-radius:50%;background:${i===cur?'var(--accent)':'var(--border2)'};transition:background 0.2s;cursor:pointer;`;
+      d.onclick = () => { cur = i; show(); };
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function show() {
+    slides.forEach((s,i) => s.style.display = i===cur ? 'block' : 'none');
+    if (counter) counter.textContent = `${cur+1} / ${slides.length}`;
+    buildDots();
+    document.getElementById('up-prev').style.opacity = cur===0 ? '0.3' : '1';
+    document.getElementById('up-next').style.opacity = cur===slides.length-1 ? '0.3' : '1';
+  }
+  show();
+  window.slideUp = function(dir) {
+    cur = Math.max(0, Math.min(slides.length-1, cur+dir));
+    show();
+  };
+})();
+
+// ── FORECAST SLIDER ──
+(function() {
+  const slides = document.querySelectorAll('.fc-slide');
+  const dotsEl = document.getElementById('fc-dots');
+  let cur = 0;
+  if (!slides.length) return;
+
+  function buildDots() {
+    if (!dotsEl) return;
+    dotsEl.innerHTML = '';
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.style.cssText = `width:6px;height:6px;border-radius:50%;background:${i===cur?'var(--orange)':'var(--border2)'};transition:background 0.2s;cursor:pointer;`;
+      d.onclick = () => { cur = i; show(); };
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function show() {
+    slides.forEach((s,i) => s.style.display = i===cur ? 'block' : 'none');
+    buildDots();
+  }
+  show();
+  window.slideFc = function(dir) {
+    cur = Math.max(0, Math.min(slides.length-1, cur+dir));
+    show();
+  };
+})();
 </script>
 {% endblock %}
