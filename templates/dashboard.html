@@ -128,63 +128,76 @@
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
 
-  <!-- Upcoming Payments -->
-  <div class="card">
-    <div class="card-title">Upcoming Payments</div>
+   <!-- Upcoming Payments — scrollable -->
+  <div class="card" style="display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">Upcoming Payments</div>
+      {% if upcoming_payments %}
+      <span style="font-size:0.68rem;font-weight:600;background:var(--red-soft);color:var(--red);padding:2px 7px;border-radius:999px;">{{ upcoming_payments|length }}</span>
+      {% endif %}
+    </div>
     {% if upcoming_payments %}
+    <div style="overflow-y:auto;max-height:calc(5 * 68px);scrollbar-width:thin;scrollbar-color:var(--border2) transparent;flex:1;">
       {% for p in upcoming_payments %}
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
-        {# Icon by type #}
-        <div style="width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font-size:0.7rem;flex-shrink:0;
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border);">
+        <div style="width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:0.78rem;flex-shrink:0;
           {% if p.kind=='card' %}background:rgba(255,149,0,0.12);color:var(--orange);
           {% elif p.kind=='recurring' %}background:var(--accent-glow);color:var(--accent2);
-          {% else %}background:var(--red-soft);color:var(--red);{% endif %}">
+          {% elif p.kind=='loan' %}background:var(--red-soft);color:var(--red);
+          {% else %}background:var(--surface2);color:var(--text2);{% endif %}">
           {% if p.kind=='card' %}<i class="fas fa-credit-card"></i>
           {% elif p.kind=='recurring' %}<i class="fas fa-rotate"></i>
+          {% elif p.kind=='loan' %}<i class="fas fa-building-columns"></i>
           {% else %}<i class="fas fa-file-invoice"></i>{% endif %}
         </div>
-        {# Name + due date #}
         <div style="flex:1;min-width:0;">
-          <div style="font-size:0.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.type }}</div>
-          <div style="font-size:0.7rem;color:var(--text2);">
+          <div style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.type }}</div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-top:1px;">
             {{ p.due_date }}
             {% if p.days_left < 0 %}<span style="color:var(--red);font-weight:600;"> · Overdue</span>
             {% elif p.days_left == 0 %}<span style="color:var(--red);font-weight:600;"> · Today</span>
-            {% elif p.days_left <= 5 %}<span style="color:var(--orange);font-weight:600;"> · {{ p.days_left }}d</span>
+            {% elif p.days_left <= 5 %}<span style="color:var(--orange);font-weight:600;"> · {{ p.days_left }}d left</span>
             {% endif %}
           </div>
         </div>
-        {# Amount + Pay button #}
         <div style="text-align:right;flex-shrink:0;">
-          <div style="font-family:var(--mono);font-size:0.85rem;font-weight:700;
+          <div style="font-family:var(--mono);font-size:0.82rem;font-weight:600;
             {% if p.kind=='card' %}color:var(--orange);
+            {% elif p.kind=='loan' %}color:var(--red);
             {% elif p.kind=='recurring' %}color:var(--accent2);
-            {% else %}color:var(--red);{% endif %}">
-            {{ "{:,.0f}".format(p.amount) }}
+            {% else %}color:var(--text);{% endif %}">
+            {{ currency_symbol }} {{ "{:,.0f}".format(p.amount) }}
           </div>
           {% if p.kind == 'card' %}
-            <button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:0.68rem;margin-top:2px;"
+            <button class="btn btn-sm btn-ghost" style="font-size:0.65rem;padding:2px 6px;margin-top:2px;"
               onclick="openPayCard({{ p.id }},'{{ p.type }}',{{ p.amount }})">Pay</button>
+          {% elif p.kind == 'loan' %}
+            <button class="btn btn-sm btn-ghost" style="font-size:0.65rem;padding:2px 6px;margin-top:2px;"
+              onclick="openPayLoan({{ p.id }},'{{ p.type }}',{{ p.amount }},null)">Pay</button>
           {% elif p.kind == 'recurring' %}
-            <form method="POST" action="{{ url_for('apply_recurring', rec_id=p.id) }}">
-              <button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:0.68rem;margin-top:2px;">Pay</button>
+            <form method="POST" action="{{ url_for('apply_recurring', rec_id=p.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-ghost" style="font-size:0.65rem;padding:2px 6px;margin-top:2px;">Pay</button>
             </form>
           {% else %}
-            <form method="POST" action="{{ url_for('mark_fixed_paid', expense_id=p.id) }}">
-              <button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:0.68rem;margin-top:2px;">Pay</button>
+            <form method="POST" action="{{ url_for('mark_fixed_paid', expense_id=p.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-ghost" style="font-size:0.65rem;padding:2px 6px;margin-top:2px;">Pay</button>
             </form>
           {% endif %}
         </div>
       </div>
       {% endfor %}
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:0.78rem;border-top:0.5px solid var(--border);margin-top:4px;">
+      <span style="color:var(--text2);">Total unpaid</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--red);">{{ currency_symbol }} {{ "{:,.0f}".format(unpaid_fixed_total) }}</span>
+    </div>
     {% else %}
-    <div style="text-align:center;padding:24px 0;">
+    <div style="text-align:center;padding:32px 0;flex:1;">
       <div style="font-size:2rem;margin-bottom:8px;">🎉</div>
-      <div style="font-size:0.8rem;color:var(--green);font-weight:600;">All payments done!</div>
-      <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Nothing due this period</div>
+      <div style="font-size:0.82rem;color:var(--green);font-weight:500;">All payments done!</div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:3px;">Nothing due this period</div>
     </div>
     {% endif %}
-    <a href="{{ url_for('fixed_expenses') }}" class="btn btn-ghost btn-sm w-full mt-3">View All</a>
   </div>
 </div>
 
@@ -311,24 +324,45 @@
     </div>
   </div>
 
-  <!-- Next Period Forecast -->
-  <div class="card">
-    <div class="card-title">Next Period Forecast</div>
-    <div style="font-family:var(--mono);font-size:2rem;font-weight:700;color:var(--orange);margin-bottom:4px;">
-      {{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}
+   <!-- Next Period Forecast — scrollable -->
+  <div class="card" style="display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">Next Period Forecast</div>
+      <span style="font-family:var(--mono);font-size:0.9rem;font-weight:600;color:var(--orange);">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
     </div>
-    <div class="text-muted text-sm mb-4">estimated fixed expenses</div>
-    {% for e in next_month_expenses[:6] %}
-    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
-      <div>
-        <span>{{ e.name }}</span>
-        <div style="font-size:0.7rem;color:var(--text2);">{{ e.date.strftime('%d %b') if e.date else '' }}</div>
+    {% if next_month_expenses %}
+    <div style="overflow-y:auto;max-height:calc(5 * 58px);scrollbar-width:thin;scrollbar-color:var(--border2) transparent;flex:1;">
+      {% for e in next_month_expenses %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ e.name }}</div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-top:1px;display:flex;align-items:center;gap:6px;">
+            <span>{{ e.date.strftime('%d %b') if e.date else '—' }}</span>
+            {% if e.get('category') %}
+            <span style="padding:1px 5px;border-radius:3px;font-size:0.62rem;
+              {% if e.category == 'Loan Payment' %}background:var(--red-soft);color:var(--red);
+              {% elif e.category == 'Credit Card' %}background:var(--orange-soft);color:var(--orange);
+              {% else %}background:var(--accent-glow);color:var(--accent2);{% endif %}">
+              {{ e.category }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        <div style="font-family:var(--mono);font-size:0.85rem;font-weight:600;color:var(--orange);flex-shrink:0;margin-left:10px;">
+          {{ currency_symbol }} {{ "{:,.0f}".format(e.amount) }}
+        </div>
       </div>
-      <span class="font-mono" style="color:var(--orange);">{{ "{:,.0f}".format(e.amount) }}</span>
+      {% endfor %}
     </div>
-    {% endfor %}
-    {% if next_month_expenses|length > 6 %}
-    <div class="text-muted text-xs mt-2">+{{ next_month_expenses|length - 6 }} more</div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:0.78rem;border-top:0.5px solid var(--border);margin-top:4px;">
+      <span style="color:var(--text2);">Total forecast</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--orange);">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px 0;color:var(--text3);font-size:0.82rem;flex:1;">
+      <div style="font-size:2rem;margin-bottom:8px;">📅</div>
+      No forecast data yet
+    </div>
     {% endif %}
   </div>
 </div>
