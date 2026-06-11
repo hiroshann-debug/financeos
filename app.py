@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
-    NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings
+    NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
+    Investment, InvestmentIncome, Debt, FavouriteStock
 import requests as req_lib
 from calendar import monthrange
 from datetime import datetime, date, timedelta, time
@@ -15,42 +16,26 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
-from werkzeug.middleware.proxy_fix import ProxyFix as ProxyFixMiddleware
-
-
 
 load_dotenv()
 
 app = Flask(__name__)
-
-# Fix proxy (must be first after app init)
-app.wsgi_app = ProxyFixMiddleware(app.wsgi_app, x_proto=1, x_host=1)
-
-# REQUIRED: no fallback in production
-app.secret_key = os.environ['APP_SECRET_KEY']
-
-# Session hardening for Auth0
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_HTTPONLY=True
-)
-
-# DB config
+# Use PostgreSQL from env, fallback to SQLite for local dev without .env
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///budget.db')
+# Fix for older Heroku/Railway URLs that use postgres:// instead of postgresql://
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
+    'pool_pre_ping': True,       # reconnect if connection dropped
+    'pool_recycle': 300,         # recycle connections every 5 min
 }
+app.secret_key = os.getenv('APP_SECRET_KEY', 'fallback_dev_secret_change_this')
 
 db.init_app(app)
 migrate = Migrate(app, db)
-
 
 # ─────────────────────────────────────────
 #  Auth0 Setup
@@ -1953,6 +1938,490 @@ def api_spending_by_category():
 
 
 import models
+
+
+# ─────────────────────────────────────────
+#  Investments
+# ─────────────────────────────────────────
+@app.route("/investments")
+@login_required
+def investments():
+    investments = Investment.query.filter_by(user_id=uid()).order_by(Investment.asset_type, Investment.name).all()
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    income_records = InvestmentIncome.query.filter_by(user_id=uid()).order_by(InvestmentIncome.date.desc()).limit(20).all()
+
+    # Group by type
+    by_type = {}
+    total_invested = 0
+    total_value = 0
+    for inv in investments:
+        if inv.status == 'active':
+            t = inv.asset_type
+            if t not in by_type:
+                by_type[t] = {'items': [], 'invested': 0, 'value': 0}
+            by_type[t]['items'].append(inv)
+            by_type[t]['invested'] += inv.total_invested
+            by_type[t]['value'] += inv.current_value
+            total_invested += inv.total_invested
+            total_value += inv.current_value
+
+    total_gain = total_value - total_invested
+    total_gain_pct = (total_gain / total_invested * 100) if total_invested > 0 else 0
+
+    return render_template('investments.html',
+        investments=investments,
+        by_type=by_type,
+        wallets=wallets,
+        income_records=income_records,
+        total_invested=total_invested,
+        total_value=total_value,
+        total_gain=total_gain,
+        total_gain_pct=total_gain_pct,
+        today=date.today(),
+    )
+
+
+@app.route("/investments/add", methods=["POST"])
+@login_required
+def add_investment():
+    name, err = validate_text(request.form.get('name'), "Investment name")
+    if err: flash(err, "danger"); return redirect(url_for('investments'))
+
+    units = float(request.form.get('units') or 0)
+    purchase_price = float(request.form.get('purchase_price') or 0)
+    current_price = float(request.form.get('current_price') or purchase_price)
+
+    inv = Investment(
+        user_id=uid(),
+        name=name,
+        symbol=request.form.get('symbol', '').upper().strip(),
+        asset_type=request.form.get('asset_type', 'Other'),
+        institution=request.form.get('institution', ''),
+        units=units,
+        purchase_price=purchase_price,
+        current_price=current_price,
+        purchase_date=datetime.strptime(request.form['purchase_date'], '%Y-%m-%d').date() if request.form.get('purchase_date') else None,
+        maturity_date=datetime.strptime(request.form['maturity_date'], '%Y-%m-%d').date() if request.form.get('maturity_date') else None,
+        interest_rate=float(request.form.get('interest_rate') or 0),
+        currency=request.form.get('currency', 'LKR'),
+        notes=request.form.get('notes', ''),
+        wallet_id=int(request.form['wallet_id']) if request.form.get('wallet_id') else None,
+    )
+
+    # Deduct from wallet if linked (money went into investment)
+    if inv.wallet_id and inv.total_invested > 0:
+        wallet = Wallet.query.filter_by(id=inv.wallet_id, user_id=uid()).first()
+        if wallet:
+            wallet.balance -= inv.total_invested
+
+    db.session.add(inv)
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash(f"✅ {name} added to investments.", "success")
+    return redirect(url_for('investments'))
+
+
+@app.route("/investments/update-price/<int:inv_id>", methods=["POST"])
+@login_required
+def update_investment_price(inv_id):
+    inv = Investment.query.filter_by(id=inv_id, user_id=uid()).first_or_404()
+    new_price = float(request.form.get('current_price') or inv.current_price)
+    inv.current_price = new_price
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash(f"Price updated for {inv.name}.", "success")
+    return redirect(url_for('investments'))
+
+
+@app.route("/investments/income/<int:inv_id>", methods=["POST"])
+@login_required
+def record_investment_income(inv_id):
+    inv = Investment.query.filter_by(id=inv_id, user_id=uid()).first_or_404()
+    amount, err = validate_amount(request.form.get('amount'), "Amount")
+    if err: flash(err, "danger"); return redirect(url_for('investments'))
+
+    action = request.form.get('action', 'record_only')
+    wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
+
+    income = InvestmentIncome(
+        user_id=uid(),
+        investment_id=inv_id,
+        income_type=request.form.get('income_type', 'Dividend'),
+        amount=amount,
+        date=date.today(),
+        action=action,
+        wallet_id=wallet_id,
+        notes=request.form.get('notes', ''),
+    )
+    db.session.add(income)
+
+    if action == 'add_to_wallet' and wallet_id:
+        wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
+        if wallet:
+            wallet.balance += amount
+        add_transaction(
+            amount=amount, description=f"{inv.name} — {income.income_type}",
+            trans_type='income', wallet_id=wallet_id,
+            date_obj=date.today(), category='Investment Income', user_id=uid()
+        )
+    elif action == 'reinvest':
+        # Add to units at current price
+        if inv.current_price > 0:
+            inv.units += amount / inv.current_price
+
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash(f"✅ {income.income_type} of {amount:,.0f} recorded.", "success")
+    return redirect(url_for('investments'))
+
+
+@app.route("/investments/sell/<int:inv_id>", methods=["POST"])
+@login_required
+def sell_investment(inv_id):
+    inv = Investment.query.filter_by(id=inv_id, user_id=uid()).first_or_404()
+    units_sold = float(request.form.get('units_sold') or inv.units)
+    sale_price = float(request.form.get('sale_price') or inv.current_price)
+    wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
+
+    proceeds = units_sold * sale_price
+    gain = (sale_price - inv.purchase_price) * units_sold
+
+    if wallet_id:
+        wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
+        if wallet:
+            wallet.balance += proceeds
+        add_transaction(
+            amount=proceeds, description=f"Sold: {inv.name}",
+            trans_type='income', wallet_id=wallet_id,
+            date_obj=date.today(), category='Investment Sale', user_id=uid()
+        )
+
+    if units_sold >= inv.units:
+        inv.status = 'sold'
+        inv.units = 0
+    else:
+        inv.units -= units_sold
+
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash(f"✅ Sold {units_sold} units of {inv.name} for {proceeds:,.0f}. {'Gain' if gain >= 0 else 'Loss'}: {abs(gain):,.0f}", "success")
+    return redirect(url_for('investments'))
+
+
+@app.route("/investments/delete/<int:inv_id>", methods=["POST"])
+@login_required
+def delete_investment(inv_id):
+    inv = Investment.query.filter_by(id=inv_id, user_id=uid()).first_or_404()
+    db.session.delete(inv)
+    db.session.commit()
+    flash("Investment deleted.", "success")
+    return redirect(url_for('investments'))
+
+
+# ─────────────────────────────────────────
+#  Debt Tracker
+# ─────────────────────────────────────────
+@app.route("/debts")
+@login_required
+def debts():
+    all_debts = Debt.query.filter_by(user_id=uid()).order_by(Debt.status, Debt.due_date).all()
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    pending = [d for d in all_debts if d.status == 'pending']
+    settled = [d for d in all_debts if d.status == 'settled']
+    i_owe = sum(d.amount for d in pending if d.direction == 'owe')
+    owed_to_me = sum(d.amount for d in pending if d.direction == 'lent')
+    return render_template('debts.html',
+        debts=all_debts, wallets=wallets,
+        pending=pending, settled=settled,
+        i_owe=i_owe, owed_to_me=owed_to_me,
+        today=date.today(),
+    )
+
+
+@app.route("/debts/add", methods=["POST"])
+@login_required
+def add_debt():
+    contact, err = validate_text(request.form.get('contact_name'), "Contact name")
+    if err: flash(err, "danger"); return redirect(url_for('debts'))
+    amount, err = validate_amount(request.form.get('amount'), "Amount")
+    if err: flash(err, "danger"); return redirect(url_for('debts'))
+
+    direction = request.form.get('direction', 'owe')
+    wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
+
+    debt = Debt(
+        user_id=uid(),
+        contact_name=contact,
+        amount=amount,
+        direction=direction,
+        description=request.form.get('description', ''),
+        due_date=datetime.strptime(request.form['due_date'], '%Y-%m-%d').date() if request.form.get('due_date') else None,
+        wallet_id=wallet_id,
+        notes=request.form.get('notes', ''),
+    )
+
+    # Record transaction
+    if wallet_id:
+        wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
+        if wallet:
+            if direction == 'lent':  # I lent money → deduct from wallet
+                wallet.balance -= amount
+            else:  # I borrowed → add to wallet
+                wallet.balance += amount
+
+    db.session.add(debt)
+    db.session.commit()
+    label = "lent to" if direction == "lent" else "borrowed from"
+    flash(f"✅ {get_setting('currency_symbol','LKR',user_id=uid())} {amount:,.0f} {label} {contact} recorded.", "success")
+    return redirect(url_for('debts'))
+
+
+@app.route("/debts/settle/<int:debt_id>", methods=["POST"])
+@login_required
+def settle_debt(debt_id):
+    debt = Debt.query.filter_by(id=debt_id, user_id=uid()).first_or_404()
+    wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
+
+    if wallet_id:
+        wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
+        if wallet:
+            if debt.direction == 'owe':  # I repay → deduct
+                wallet.balance -= debt.amount
+            else:  # They repay me → add
+                wallet.balance += debt.amount
+
+    debt.status = 'settled'
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash(f"✅ Debt with {debt.contact_name} settled.", "success")
+    return redirect(url_for('debts'))
+
+
+@app.route("/debts/delete/<int:debt_id>", methods=["POST"])
+@login_required
+def delete_debt(debt_id):
+    debt = Debt.query.filter_by(id=debt_id, user_id=uid()).first_or_404()
+    db.session.delete(debt)
+    db.session.commit()
+    flash("Debt record deleted.", "success")
+    return redirect(url_for('debts'))
+
+
+# ─────────────────────────────────────────
+#  Exchange Rates
+# ─────────────────────────────────────────
+@app.route("/exchange-rates")
+@login_required
+def exchange_rates():
+    import requests as http
+    rates = {}
+    error = None
+    last_updated = None
+
+    try:
+        resp = http.get(
+            "https://open.er-api.com/v6/latest/USD",
+            timeout=8,
+            headers={"User-Agent": "FinanceOS/1.0"}
+        )
+        data = resp.json()
+        if data.get("result") == "success":
+            r = data["rates"]
+            lkr = r.get("LKR", 1)
+            last_updated = data.get("time_last_update_utc", "")
+            # Build LKR per 1 unit of each currency
+            currencies = [
+                ("USD", "🇺🇸", "US Dollar"),
+                ("EUR", "🇪🇺", "Euro"),
+                ("GBP", "🇬🇧", "British Pound"),
+                ("AUD", "🇦🇺", "Australian Dollar"),
+                ("SGD", "🇸🇬", "Singapore Dollar"),
+                ("INR", "🇮🇳", "Indian Rupee"),
+                ("JPY", "🇯🇵", "Japanese Yen"),
+                ("CAD", "🇨🇦", "Canadian Dollar"),
+                ("CNY", "🇨🇳", "Chinese Yuan"),
+                ("AED", "🇦🇪", "UAE Dirham"),
+                ("SAR", "🇸🇦", "Saudi Riyal"),
+                ("MYR", "🇲🇾", "Malaysian Ringgit"),
+                ("THB", "🇹🇭", "Thai Baht"),
+                ("CHF", "🇨🇭", "Swiss Franc"),
+                ("NZD", "🇳🇿", "New Zealand Dollar"),
+            ]
+            for code, flag, name in currencies:
+                if code in r:
+                    rates[code] = {
+                        "flag": flag,
+                        "name": name,
+                        "lkr_per_unit": round(lkr / r[code], 2),
+                        "usd_per_unit": round(1 / r[code], 4) if r[code] else 0,
+                    }
+        else:
+            error = "Could not fetch rates. Try again later."
+    except Exception as e:
+        error = f"Service unavailable: {str(e)[:60]}"
+
+    currency_symbol = get_setting("currency_symbol", "LKR", user_id=uid())
+    return render_template("exchange_rates.html",
+        rates=rates,
+        error=error,
+        last_updated=last_updated,
+        currency_symbol=currency_symbol,
+    )
+
+
+# ─────────────────────────────────────────
+#  CSE Stock Prices
+# ─────────────────────────────────────────
+@app.route("/cse")
+@login_required
+def cse_stocks():
+    import requests as http
+    error = None
+    top_gainers = []
+    top_losers = []
+    most_active = []
+    aspi = None
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.cse.lk/",
+        "Origin": "https://www.cse.lk",
+    }
+
+    try:
+        # Top gainers
+        r = http.post("https://www.cse.lk/api/topGainers", headers=headers, timeout=8)
+        gainers_data = r.json()
+        top_gainers = gainers_data.get("reqTopGainers", [])[:10]
+    except Exception as e:
+        error = str(e)[:80]
+
+    try:
+        # Top losers
+        r = http.post("https://www.cse.lk/api/topLooses", headers=headers, timeout=8)
+        losers_data = r.json()
+        top_losers = losers_data.get("reqTopLooses", [])[:10]
+    except Exception:
+        pass
+
+    try:
+        # Most active
+        r = http.post("https://www.cse.lk/api/mostActiveTrades", headers=headers, timeout=8)
+        active_data = r.json()
+        most_active = active_data.get("reqMostActiveTrades", [])[:10]
+    except Exception:
+        pass
+
+    favourites = FavouriteStock.query.filter_by(user_id=uid()).order_by(FavouriteStock.added_at).all()
+    return render_template("cse_stocks.html",
+        top_gainers=top_gainers,
+        top_losers=top_losers,
+        most_active=most_active,
+        favourites=favourites,
+        error=error,
+    )
+
+
+@app.route("/cse/search", methods=["POST"])
+@login_required
+def cse_search():
+    import requests as http
+    symbol = request.form.get("symbol", "").strip().upper()
+    if not symbol:
+        return jsonify({"error": "Symbol required"})
+
+    # Add suffix if not present
+    if "." not in symbol:
+        symbol = symbol + ".N0000"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://www.cse.lk/",
+        "Origin": "https://www.cse.lk",
+    }
+    try:
+        r = http.post("https://www.cse.lk/api/companyInfoSummery",
+            data={"symbol": symbol}, headers=headers, timeout=8)
+        data = r.json()
+        info = data.get("reqSymbolInfo", {})
+        return jsonify({"success": True, "data": info})
+    except Exception as e:
+        return jsonify({"error": str(e)[:80]})
+
+
+# ─────────────────────────────────────────
+#  CSE Favourites
+# ─────────────────────────────────────────
+@app.route("/cse/favourites/add", methods=["POST"])
+@login_required
+def add_favourite_stock():
+    symbol = request.form.get("symbol", "").strip().upper()
+    name = request.form.get("name", "").strip()
+    if not symbol:
+        return jsonify({"error": "Symbol required"})
+    # Add .N0000 if no suffix
+    if "." not in symbol:
+        symbol = symbol + ".N0000"
+    # Check duplicate
+    existing = FavouriteStock.query.filter_by(user_id=uid(), symbol=symbol).first()
+    if existing:
+        return jsonify({"error": "Already in favourites"})
+    fav = FavouriteStock(user_id=uid(), symbol=symbol, display_name=name)
+    db.session.add(fav)
+    db.session.commit()
+    return jsonify({"success": True, "id": fav.id, "symbol": symbol, "name": name})
+
+
+@app.route("/cse/favourites/remove", methods=["POST"])
+@login_required
+def remove_favourite_stock():
+    symbol = request.form.get("symbol", "").strip().upper()
+    if "." not in symbol:
+        symbol = symbol + ".N0000"
+    fav = FavouriteStock.query.filter_by(user_id=uid(), symbol=symbol).first()
+    if fav:
+        db.session.delete(fav)
+        db.session.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/cse/favourites/prices", methods=["POST"])
+@login_required
+def favourite_stock_prices():
+    """Fetch live prices for all favourite stocks — called by JS polling."""
+    import requests as http
+    favs = FavouriteStock.query.filter_by(user_id=uid()).all()
+    results = []
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://www.cse.lk/",
+        "Origin": "https://www.cse.lk",
+    }
+    for fav in favs:
+        try:
+            r = http.post("https://www.cse.lk/api/companyInfoSummery",
+                data={"symbol": fav.symbol}, headers=headers, timeout=6)
+            d = r.json().get("reqSymbolInfo", {})
+            results.append({
+                "id": fav.id,
+                "symbol": fav.symbol,
+                "name": d.get("name") or fav.display_name or fav.symbol,
+                "price": d.get("lastTradedPrice") or d.get("closingPrice") or 0,
+                "change": d.get("change") or 0,
+                "changePct": d.get("changePercentage") or 0,
+                "marketCap": d.get("marketCap") or 0,
+            })
+        except Exception:
+            results.append({
+                "id": fav.id,
+                "symbol": fav.symbol,
+                "name": fav.display_name or fav.symbol,
+                "price": None,
+                "change": None,
+                "changePct": None,
+                "marketCap": None,
+            })
+    return jsonify({"stocks": results})
 
 if __name__ == '__main__':
     with app.app_context():

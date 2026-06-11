@@ -161,3 +161,89 @@ class AppSettings(db.Model):
     key = db.Column(db.String(100), unique=True, nullable=False)
     value = db.Column(db.Text, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Investment(db.Model):
+    """Tracks investments: stocks, unit trusts, FDs, crypto, gold."""
+    __tablename__ = 'investment'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=True, index=True)
+    name = db.Column(db.String(200), nullable=False)          # e.g. "John Keells Holdings"
+    symbol = db.Column(db.String(20), nullable=True)           # e.g. "JKH.N0000"
+    asset_type = db.Column(db.String(50), nullable=False)      # Stock, Unit Trust, FD, Crypto, Gold, Other
+    institution = db.Column(db.String(100), nullable=True)     # bank/broker name
+    units = db.Column(db.Float, default=0)                     # shares/units held
+    purchase_price = db.Column(db.Float, default=0)            # cost per unit
+    current_price = db.Column(db.Float, default=0)             # current market price per unit
+    purchase_date = db.Column(db.Date, nullable=True)
+    maturity_date = db.Column(db.Date, nullable=True)          # for FDs
+    interest_rate = db.Column(db.Float, default=0)             # for FDs
+    currency = db.Column(db.String(10), default='LKR')
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='active')        # active, sold, matured
+    wallet_id = db.Column(db.Integer, db.ForeignKey('wallet.id'), nullable=True)
+    wallet = db.relationship('Wallet', backref='investments', foreign_keys=[wallet_id])
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def total_invested(self):
+        return self.units * self.purchase_price
+
+    @property
+    def current_value(self):
+        return self.units * self.current_price
+
+    @property
+    def gain_loss(self):
+        return self.current_value - self.total_invested
+
+    @property
+    def gain_loss_pct(self):
+        if self.total_invested > 0:
+            return (self.gain_loss / self.total_invested) * 100
+        return 0
+
+
+class InvestmentIncome(db.Model):
+    """Dividends, interest, maturity payouts from investments."""
+    __tablename__ = 'investment_income'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=True, index=True)
+    investment_id = db.Column(db.Integer, db.ForeignKey('investment.id'), nullable=True)
+    investment = db.relationship('Investment', backref='income_records')
+    income_type = db.Column(db.String(50), nullable=False)     # Dividend, Interest, Maturity, Capital Gain
+    amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    action = db.Column(db.String(20), default='record_only')   # add_to_wallet, reinvest, record_only
+    wallet_id = db.Column(db.Integer, db.ForeignKey('wallet.id'), nullable=True)
+    wallet = db.relationship('Wallet', backref='investment_income', foreign_keys=[wallet_id])
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Debt(db.Model):
+    """Friend/personal debt tracking."""
+    __tablename__ = 'debt'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=True, index=True)
+    contact_name = db.Column(db.String(100), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    direction = db.Column(db.String(10), nullable=False)       # 'owe' = I owe them, 'lent' = they owe me
+    description = db.Column(db.String(200), nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(20), default='pending')       # pending, settled, partial
+    wallet_id = db.Column(db.Integer, db.ForeignKey('wallet.id'), nullable=True)
+    wallet = db.relationship('Wallet', backref='debts', foreign_keys=[wallet_id])
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class FavouriteStock(db.Model):
+    """User's favourite CSE stocks."""
+    __tablename__ = 'favourite_stock'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False, index=True)
+    symbol = db.Column(db.String(30), nullable=False)   # e.g. JKH.N0000
+    display_name = db.Column(db.String(100), nullable=True)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)

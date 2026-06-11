@@ -513,8 +513,21 @@
     <a href="{{ url_for('financial_tools') }}" class="nav-link {% if request.endpoint == 'financial_tools' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-calculator"></i></span> Financial Tools
     </a>
+    <a href="{{ url_for('exchange_rates') }}" class="nav-link {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-money-bill-transfer"></i></span> Exchange Rates
+    </a>
+    <a href="{{ url_for('cse_stocks') }}" class="nav-link {% if request.endpoint == 'cse_stocks' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-chart-column"></i></span> CSE Stocks
+    </a>
     <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint in ['reports','download_report'] %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
+    </a>
+
+    <a href="{{ url_for('investments') }}" class="nav-link {% if request.endpoint == 'investments' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-chart-line"></i></span> Investments
+    </a>
+    <a href="{{ url_for('debts') }}" class="nav-link {% if request.endpoint in ['debts'] %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-people-arrows"></i></span> Friend Debts
     </a>
 
     <div class="nav-section-label">Liabilities</div>

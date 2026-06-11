@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Investments{% endblock %}
+{% block page_title %}Investments{% endblock %}
+{% block content %}
+
+<!-- Summary stat cards -->
+<div class="stat-grid mb-6">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-coins"></i></div>
+    <div class="stat-label">Total Invested</div>
+    <div class="stat-value" style="color:var(--accent2)">{{ "{:,.0f}".format(total_invested) }}</div>
+    <div class="stat-change">{{ currency_symbol }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--green-soft);color:var(--green)"><i class="fas fa-chart-line"></i></div>
+    <div class="stat-label">Current Value</div>
+    <div class="stat-value text-green">{{ "{:,.0f}".format(total_value) }}</div>
+    <div class="stat-change">{{ currency_symbol }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:{% if total_gain >= 0 %}var(--green-soft){% else %}var(--red-soft){% endif %};color:{% if total_gain >= 0 %}var(--green){% else %}var(--red){% endif %}"><i class="fas fa-{% if total_gain >= 0 %}arrow-trend-up{% else %}arrow-trend-down{% endif %}"></i></div>
+    <div class="stat-label">Total Gain / Loss</div>
+    <div class="stat-value {% if total_gain >= 0 %}text-green{% else %}text-red{% endif %}">{{ "{:,.0f}".format(total_gain) }}</div>
+    <div class="stat-change {% if total_gain >= 0 %}up{% else %}down{% endif %}">{{ "{:+.1f}".format(total_gain_pct) }}%</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--orange-soft);color:var(--orange)"><i class="fas fa-layer-group"></i></div>
+    <div class="stat-label">Asset Types</div>
+    <div class="stat-value" style="color:var(--orange)">{{ by_type|length }}</div>
+    <div class="stat-change">{{ investments|selectattr('status','equalto','active')|list|length }} active positions</div>
+  </div>
+</div>
+
+<!-- Action buttons -->
+<div class="flex gap-2 mb-6">
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addInvModal').classList.add('open')">
+    <i class="fas fa-plus"></i> Add Investment
+  </button>
+</div>
+
+<!-- By asset type -->
+{% if by_type %}
+{% for type_name, type_data in by_type.items() %}
+<div class="card mb-4">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div class="card-title" style="margin-bottom:0;">
+      {% if type_name == 'Stock' %}📈{% elif type_name == 'Unit Trust' %}🏦{% elif type_name == 'FD' %}💰{% elif type_name == 'Crypto' %}₿{% elif type_name == 'Gold' %}🪙{% else %}📊{% endif %}
+      {{ type_name }}s
+    </div>
+    <div style="font-size:0.78rem;color:var(--text2);">
+      Invested: <strong class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(type_data.invested) }}</strong>
+      &nbsp;·&nbsp;
+      Value: <strong class="font-mono" style="color:{% if type_data.value >= type_data.invested %}var(--green){% else %}var(--red){% endif %}">{{ currency_symbol }} {{ "{:,.0f}".format(type_data.value) }}</strong>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Units</th>
+          <th>Buy Price</th>
+          <th>Current Price</th>
+          <th>Total Invested</th>
+          <th>Current Value</th>
+          <th>Gain / Loss</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for inv in type_data['items'] %} 
+      {% set gl_color = 'var(--green)' if inv.gain_loss >= 0 else 'var(--red)' %}
+        <tr>
+          <td>
+            <div style="font-weight:500;">{{ inv.name }}</div>
+            {% if inv.symbol %}<div style="font-size:0.7rem;color:var(--text3);">{{ inv.symbol }}</div>{% endif %}
+            {% if inv.institution %}<div style="font-size:0.7rem;color:var(--text2);">{{ inv.institution }}</div>{% endif %}
+          </td>
+          <td class="font-mono">{{ "{:,.4f}".format(inv.units) if inv.units % 1 != 0 else "{:,.0f}".format(inv.units) }}</td>
+          <td class="font-mono">{{ "{:,.2f}".format(inv.purchase_price) }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('update_investment_price', inv_id=inv.id) }}" style="display:flex;gap:4px;align-items:center;">
+              <input type="number" step="0.01" name="current_price" value="{{ inv.current_price }}"
+                class="form-control font-mono" style="width:100px;padding:4px 8px;font-size:0.78rem;">
+              <button class="btn btn-sm btn-ghost" title="Update"><i class="fas fa-check"></i></button>
+            </form>
+          </td>
+          <td class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(inv.total_invested) }}</td>
+          <td class="font-mono" style="color:var(--green);">{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_value) }}</td>
+          <td>
+            <div class="font-mono" style="color:{{ gl_color }};font-weight:600;">
+              {{ '+' if inv.gain_loss >= 0 else '' }}{{ "{:,.0f}".format(inv.gain_loss) }}
+            </div>
+            <div style="font-size:0.7rem;color:{{ gl_color }};">{{ "{:+.1f}".format(inv.gain_loss_pct) }}%</div>
+          </td>
+          <td>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-sm btn-ghost" onclick="openIncomeModal({{ inv.id }}, '{{ inv.name }}')" title="Record income">
+                <i class="fas fa-hand-holding-dollar"></i>
+              </button>
+              <button class="btn btn-sm btn-ghost" onclick="openSellModal({{ inv.id }}, '{{ inv.name }}', {{ inv.units }}, {{ inv.current_price }})" title="Sell">
+                <i class="fas fa-arrow-right-from-bracket"></i>
+              </button>
+              <form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete {{ inv.name }}?')">
+                <button class="btn btn-sm btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card" style="text-align:center;padding:60px;">
+  <div style="font-size:3rem;margin-bottom:16px;">📈</div>
+  <h3 style="font-weight:500;margin-bottom:8px;">No investments yet</h3>
+  <p style="color:var(--text2);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;">
+    Track your stocks, unit trusts, fixed deposits, crypto and gold all in one place.
+  </p>
+  <button class="btn btn-primary" onclick="document.getElementById('addInvModal').classList.add('open')">
+    <i class="fas fa-plus"></i> Add First Investment
+  </button>
+</div>
+{% endif %}
+
+<!-- Recent income -->
+{% if income_records %}
+<div class="card mt-4">
+  <div class="card-title">Recent Investment Income</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Investment</th><th>Type</th><th>Amount</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for rec in income_records %}
+        <tr>
+          <td class="font-mono text-xs" style="color:var(--text2);">{{ rec.date.strftime('%d %b %Y') }}</td>
+          <td>{{ rec.investment.name if rec.investment else '—' }}</td>
+          <td><span class="badge-pill badge-green">{{ rec.income_type }}</span></td>
+          <td class="font-mono text-green font-bold">{{ currency_symbol }} {{ "{:,.0f}".format(rec.amount) }}</td>
+          <td style="font-size:0.78rem;color:var(--text2);">
+            {% if rec.action == 'add_to_wallet' %}→ Wallet
+            {% elif rec.action == 'reinvest' %}↺ Reinvested
+            {% else %}📝 Recorded{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ADD INVESTMENT MODAL -->
+<div class="modal-overlay" id="addInvModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">Add Investment</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Investment Name</label>
+          <input type="text" name="name" class="form-control" required placeholder="e.g. John Keells Holdings">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Symbol / Code</label>
+          <input type="text" name="symbol" class="form-control" placeholder="e.g. JKH.N0000">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Asset Type</label>
+          <select name="asset_type" class="form-control" id="assetTypeSelect" onchange="toggleFDFields()">
+            <option value="Stock">📈 Stock (CSE)</option>
+            <option value="Unit Trust">🏦 Unit Trust</option>
+            <option value="FD">💰 Fixed Deposit</option>
+            <option value="Crypto">₿ Crypto</option>
+            <option value="Gold">🪙 Gold</option>
+            <option value="Other">📊 Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Institution / Broker</label>
+          <input type="text" name="institution" class="form-control" placeholder="e.g. CSE, BOC, Sanlam">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Units / Shares</label>
+          <input type="number" step="0.0001" name="units" class="form-control" required placeholder="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Purchase Price per Unit</label>
+          <input type="number" step="0.01" name="purchase_price" class="form-control" required placeholder="250.00">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Current Price per Unit</label>
+          <input type="number" step="0.01" name="current_price" class="form-control" placeholder="Same as purchase">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Purchase Date</label>
+          <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
+        </div>
+      </div>
+      <!-- FD-specific fields -->
+      <div id="fd_fields" style="display:none;">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Interest Rate (%/yr)</label>
+            <input type="number" step="0.01" name="interest_rate" class="form-control" placeholder="10.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Maturity Date</label>
+            <input type="date" name="maturity_date" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Funded From Wallet <span style="color:var(--text3);font-weight:400;">(optional — deducts from wallet)</span></label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addInvModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Investment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- RECORD INCOME MODAL -->
+<div class="modal-overlay" id="incomeModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="incomeModalTitle">Record Investment Income</div>
+    <form method="POST" id="incomeForm">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Income Type</label>
+          <select name="income_type" class="form-control">
+            <option value="Dividend">Dividend</option>
+            <option value="Interest">Interest</option>
+            <option value="Maturity">Maturity Payout</option>
+            <option value="Capital Gain">Capital Gain</option>
+            <option value="Bonus">Bonus Share</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount</label>
+          <input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">What to do with this income?</label>
+        <select name="action" class="form-control" id="incomeAction" onchange="toggleIncomeWallet()">
+          <option value="add_to_wallet">💼 Add to Wallet</option>
+          <option value="reinvest">↺ Reinvest (buy more units)</option>
+          <option value="record_only">📝 Record Only</option>
+        </select>
+      </div>
+      <div class="form-group" id="incomeWalletGroup">
+        <label class="form-label">Select Wallet</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" name="notes" class="form-control" placeholder="e.g. Q3 dividend">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('incomeModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Record Income</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SELL MODAL -->
+<div class="modal-overlay" id="sellModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="sellModalTitle">Sell Investment</div>
+    <form method="POST" id="sellForm">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Units to Sell</label>
+          <input type="number" step="0.0001" name="units_sold" id="sellUnits" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sale Price per Unit</label>
+          <input type="number" step="0.01" name="sale_price" id="sellPrice" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Add Proceeds to Wallet</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None (record only)</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('sellModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm Sale</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleFDFields() {
+  document.getElementById('fd_fields').style.display =
+    document.getElementById('assetTypeSelect').value === 'FD' ? 'grid' : 'none';
+}
+function openIncomeModal(id, name) {
+  document.getElementById('incomeModalTitle').textContent = `Income: ${name}`;
+  document.getElementById('incomeForm').action = `/investments/income/${id}`;
+  document.getElementById('incomeModal').classList.add('open');
+}
+function openSellModal(id, name, units, price) {
+  document.getElementById('sellModalTitle').textContent = `Sell: ${name}`;
+  document.getElementById('sellForm').action = `/investments/sell/${id}`;
+  document.getElementById('sellUnits').value = units;
+  document.getElementById('sellPrice').value = price;
+  document.getElementById('sellModal').classList.add('open');
+}
+function toggleIncomeWallet() {
+  const action = document.getElementById('incomeAction').value;
+  document.getElementById('incomeWalletGroup').style.display =
+    action === 'add_to_wallet' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

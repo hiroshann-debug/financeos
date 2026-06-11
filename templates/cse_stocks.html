@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+{% block title %}CSE Stock Prices{% endblock %}
+{% block page_title %}CSE Stock Prices{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:500;">Colombo Stock Exchange</h2>
+    <p class="text-muted text-sm">Live data via cse.lk · Unofficial API</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span id="liveIndicator" style="display:none;font-size:0.72rem;color:var(--green);font-weight:600;">
+      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;"></span>
+      LIVE
+    </span>
+    <a href="{{ url_for('cse_stocks') }}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-rotate"></i> Refresh
+    </a>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-warning mb-4">
+  <i class="fas fa-triangle-exclamation"></i>
+  Could not connect to CSE API. The market may be closed or temporarily unavailable.
+</div>
+{% endif %}
+
+<!-- Tabs -->
+<div style="display:flex;gap:0;border-bottom:2px solid var(--border2);margin-bottom:20px;">
+  <button class="cse-tab active" id="tab-market" onclick="switchTab('market')">
+    <i class="fas fa-chart-column"></i> Market
+  </button>
+  <button class="cse-tab" id="tab-search" onclick="switchTab('search')">
+    <i class="fas fa-search"></i> Search
+  </button>
+  <button class="cse-tab" id="tab-favourites" onclick="switchTab('favourites')">
+    <i class="fas fa-star"></i> Favourites
+    <span id="favCount" style="background:var(--accent2);color:white;border-radius:999px;padding:1px 6px;font-size:0.65rem;margin-left:4px;">{{ favourites|length }}</span>
+  </button>
+</div>
+
+<!-- ── TAB: MARKET ── -->
+<div id="pane-market">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" class="cse-grid">
+
+    <!-- Top Gainers -->
+    <div class="card">
+      <div class="card-title" style="color:var(--green);"><i class="fas fa-arrow-trend-up"></i> Top Gainers</div>
+      {% if top_gainers %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symbol</th><th>Price</th><th>%</th><th></th></tr></thead>
+          <tbody>
+            {% for s in top_gainers %}
+            {% set short = s.symbol.replace('.N0000','').replace('.X0000','') %}
+            <tr>
+              <td style="cursor:pointer;" onclick="switchTab('search');quickSearch('{{ short }}')">
+                <div style="font-weight:600;font-size:0.82rem;">{{ short }}</div>
+                <div style="font-size:0.65rem;color:var(--text2);">{{ (s.name or '')[:20] }}</div>
+              </td>
+              <td class="font-mono" style="font-size:0.82rem;">{{ "{:,.2f}".format(s.lastTradedPrice or s.closingPrice or 0) }}</td>
+              <td><span class="badge-pill badge-green">+{{ "{:.2f}".format(s.changePercentage or 0) }}%</span></td>
+              <td>
+                <button class="btn btn-sm btn-ghost" title="Add to favourites"
+                  onclick="addFav('{{ s.symbol }}','{{ (s.name or short)|replace("'","") }}')">
+                  <i class="fas fa-star" style="color:var(--text3);"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted text-sm">No data — market may be closed</p>
+      {% endif %}
+    </div>
+
+    <!-- Top Losers -->
+    <div class="card">
+      <div class="card-title" style="color:var(--red);"><i class="fas fa-arrow-trend-down"></i> Top Losers</div>
+      {% if top_losers %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symbol</th><th>Price</th><th>%</th><th></th></tr></thead>
+          <tbody>
+            {% for s in top_losers %}
+            {% set short = s.symbol.replace('.N0000','').replace('.X0000','') %}
+            <tr>
+              <td style="cursor:pointer;" onclick="switchTab('search');quickSearch('{{ short }}')">
+                <div style="font-weight:600;font-size:0.82rem;">{{ short }}</div>
+                <div style="font-size:0.65rem;color:var(--text2);">{{ (s.name or '')[:20] }}</div>
+              </td>
+              <td class="font-mono" style="font-size:0.82rem;">{{ "{:,.2f}".format(s.lastTradedPrice or s.closingPrice or 0) }}</td>
+              <td><span class="badge-pill badge-red">{{ "{:.2f}".format(s.changePercentage or 0) }}%</span></td>
+              <td>
+                <button class="btn btn-sm btn-ghost" title="Add to favourites"
+                  onclick="addFav('{{ s.symbol }}','{{ (s.name or short)|replace("'","") }}')">
+                  <i class="fas fa-star" style="color:var(--text3);"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted text-sm">No data — market may be closed</p>
+      {% endif %}
+    </div>
+
+    <!-- Most Active -->
+    <div class="card">
+      <div class="card-title" style="color:var(--accent2);"><i class="fas fa-fire"></i> Most Active</div>
+      {% if most_active %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symbol</th><th>Price</th><th>Vol</th><th></th></tr></thead>
+          <tbody>
+            {% for s in most_active %}
+            {% set short = s.symbol.replace('.N0000','').replace('.X0000','') %}
+            <tr>
+              <td style="cursor:pointer;" onclick="switchTab('search');quickSearch('{{ short }}')">
+                <div style="font-weight:600;font-size:0.82rem;">{{ short }}</div>
+                <div style="font-size:0.65rem;color:var(--text2);">{{ (s.name or '')[:20] }}</div>
+              </td>
+              <td class="font-mono" style="font-size:0.82rem;">{{ "{:,.2f}".format(s.lastTradedPrice or s.closingPrice or 0) }}</td>
+              <td style="font-size:0.72rem;color:var(--text2);">{{ "{:,.0f}".format(s.volume or 0) }}</td>
+              <td>
+                <button class="btn btn-sm btn-ghost" title="Add to favourites"
+                  onclick="addFav('{{ s.symbol }}','{{ (s.name or short)|replace("'","") }}')">
+                  <i class="fas fa-star" style="color:var(--text3);"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted text-sm">No data — market may be closed</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB: SEARCH ── -->
+<div id="pane-search" style="display:none;">
+  <div class="card mb-6" style="max-width:560px;">
+    <div class="card-title">Search Stock by Symbol</div>
+    <div style="display:flex;gap:10px;align-items:flex-end;">
+      <div class="form-group" style="flex:1;margin-bottom:0;">
+        <label class="form-label">Symbol or Code</label>
+        <input type="text" id="symbolInput" class="form-control" placeholder="e.g. JKH, LOLC, COMB, DIPD"
+          onkeydown="if(event.key==='Enter') searchSymbol()">
+      </div>
+      <button class="btn btn-primary" onclick="searchSymbol()"><i class="fas fa-search"></i> Search</button>
+    </div>
+
+    <div id="searchSpinner" style="display:none;margin-top:12px;color:var(--text2);font-size:0.82rem;">
+      <i class="fas fa-spinner fa-spin"></i> Fetching live data...
+    </div>
+    <div id="searchError" style="display:none;margin-top:10px;color:var(--red);font-size:0.82rem;"></div>
+
+    <!-- Result -->
+    <div id="searchResult" style="display:none;margin-top:14px;padding:16px;background:var(--surface2);border-radius:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+        <div>
+          <div id="res_name" style="font-weight:700;font-size:1rem;"></div>
+          <div id="res_symbol" style="font-size:0.72rem;color:var(--text2);font-family:var(--mono);"></div>
+        </div>
+        <div style="text-align:right;">
+          <div id="res_price" style="font-family:var(--mono);font-size:1.5rem;font-weight:700;"></div>
+          <div id="res_change" style="font-size:0.82rem;font-weight:600;"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;">
+          <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:2px;">Market Cap</div>
+          <div id="res_mktcap" style="font-size:0.82rem;font-weight:600;font-family:var(--mono);"></div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;">
+          <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:2px;">52W High</div>
+          <div id="res_high" style="font-size:0.82rem;font-weight:600;font-family:var(--mono);"></div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;">
+          <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:2px;">52W Low</div>
+          <div id="res_low" style="font-size:0.82rem;font-weight:600;font-family:var(--mono);"></div>
+        </div>
+      </div>
+      <button id="addFavBtn" class="btn btn-sm btn-ghost" onclick="addFavFromSearch()">
+        <i class="fas fa-star"></i> Add to Favourites
+      </button>
+    </div>
+  </div>
+
+  <div style="padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:0.75rem;color:var(--text3);">
+    <strong>Common symbols:</strong> JKH · LOLC · COMB · DIPD · SAMP · HNB · CTC · DIST · GRAN · PARQ · WIND · LIOC
+  </div>
+</div>
+
+<!-- ── TAB: FAVOURITES ── -->
+<div id="pane-favourites" style="display:none;">
+  {% if favourites %}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <p class="text-muted text-sm">Prices refresh every 60 seconds during market hours.</p>
+    <button class="btn btn-sm btn-ghost" onclick="fetchFavPrices()">
+      <i class="fas fa-rotate"></i> Refresh Now
+    </button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="favGrid">
+    {% for fav in favourites %}
+    <div class="card fav-card" id="fav-{{ fav.id }}" style="position:relative;">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;font-family:var(--mono);">
+            {{ fav.symbol.replace('.N0000','').replace('.X0000','') }}
+          </div>
+          <div class="fav-name" style="font-size:0.72rem;color:var(--text2);">{{ fav.display_name or fav.symbol }}</div>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="removeFav('{{ fav.symbol }}',{{ fav.id }})" title="Remove">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="fav-price" style="font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--text);">—</div>
+      <div class="fav-change" style="font-size:0.78rem;font-weight:600;margin-top:2px;">Loading...</div>
+      <div class="fav-mktcap" style="font-size:0.68rem;color:var(--text3);margin-top:6px;"></div>
+      <!-- Flash overlay on price update -->
+      <div class="fav-flash" style="position:absolute;inset:0;border-radius:inherit;opacity:0;pointer-events:none;transition:opacity 0.4s;"></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="card" style="text-align:center;padding:60px;">
+    <div style="font-size:3rem;margin-bottom:16px;">⭐</div>
+    <h3 style="font-weight:500;margin-bottom:8px;">No favourites yet</h3>
+    <p style="color:var(--text2);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto;">
+      Go to the Market or Search tab and click the ⭐ star icon to add stocks here. Prices update live every 60 seconds.
+    </p>
+    <button class="btn btn-primary" onclick="switchTab('market')">
+      <i class="fas fa-chart-column"></i> Browse Market
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Source note -->
+<div style="margin-top:20px;padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:0.75rem;color:var(--text3);">
+  <i class="fas fa-info-circle"></i>
+  Data from <strong>cse.lk</strong> (unofficial API). For official data visit
+  <a href="https://www.cse.lk" target="_blank" style="color:var(--accent);">cse.lk</a>.
+  Market hours: Mon–Fri 09:30–14:30 Colombo time.
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Tab switching ──
+function switchTab(tab) {
+  ['market','search','favourites'].forEach(t => {
+    document.getElementById('pane-'+t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'favourites') {
+    document.getElementById('liveIndicator').style.display = 'flex';
+    fetchFavPrices();
+  } else {
+    document.getElementById('liveIndicator').style.display = 'none';
+  }
+}
+
+// ── Search ──
+let lastSearchResult = null;
+
+function searchSymbol() {
+  const sym = document.getElementById('symbolInput').value.trim();
+  if (!sym) return;
+  doSearch(sym);
+}
+
+function quickSearch(sym) {
+  document.getElementById('symbolInput').value = sym;
+  doSearch(sym);
+}
+
+function doSearch(sym) {
+  document.getElementById('searchResult').style.display = 'none';
+  document.getElementById('searchError').style.display = 'none';
+  document.getElementById('searchSpinner').style.display = 'block';
+  lastSearchResult = null;
+
+  const fd = new FormData();
+  fd.append('symbol', sym);
+
+  fetch('/cse/search', { method:'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('searchSpinner').style.display = 'none';
+      if (data.error) {
+        document.getElementById('searchError').textContent = '⚠️ ' + data.error;
+        document.getElementById('searchError').style.display = 'block';
+        return;
+      }
+      if (data.success && data.data) {
+        const d = data.data;
+        lastSearchResult = d;
+        const price = d.lastTradedPrice || d.closingPrice || 0;
+        const change = d.change || 0;
+        const pct = d.changePercentage || 0;
+        const up = change >= 0;
+
+        document.getElementById('res_name').textContent = d.name || '—';
+        document.getElementById('res_symbol').textContent = d.symbol || '—';
+
+        const priceEl = document.getElementById('res_price');
+        priceEl.textContent = 'LKR ' + price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        priceEl.style.color = up ? 'var(--green)' : 'var(--red)';
+
+        const chEl = document.getElementById('res_change');
+        chEl.textContent = `${up ? '▲' : '▼'} ${Math.abs(change).toFixed(2)} (${pct.toFixed(2)}%)`;
+        chEl.style.color = up ? 'var(--green)' : 'var(--red)';
+
+        const mc = d.marketCap || 0;
+        document.getElementById('res_mktcap').textContent =
+          mc >= 1e9 ? (mc/1e9).toFixed(2)+'B' : mc >= 1e6 ? (mc/1e6).toFixed(2)+'M' : mc.toLocaleString();
+        document.getElementById('res_high').textContent = d['52weekHigh'] ? d['52weekHigh'].toFixed(2) : '—';
+        document.getElementById('res_low').textContent  = d['52weekLow']  ? d['52weekLow'].toFixed(2)  : '—';
+        document.getElementById('searchResult').style.display = 'block';
+      } else {
+        document.getElementById('searchError').textContent = '⚠️ Symbol not found. Try e.g. JKH, LOLC, COMB';
+        document.getElementById('searchError').style.display = 'block';
+      }
+    })
+    .catch(() => {
+      document.getElementById('searchSpinner').style.display = 'none';
+      document.getElementById('searchError').textContent = '⚠️ Request failed. Try again.';
+      document.getElementById('searchError').style.display = 'block';
+    });
+}
+
+function addFavFromSearch() {
+  if (!lastSearchResult) return;
+  addFav(lastSearchResult.symbol, lastSearchResult.name || '');
+}
+
+// ── Favourites ──
+function addFav(symbol, name) {
+  const fd = new FormData();
+  fd.append('symbol', symbol);
+  fd.append('name', name);
+  fetch('/cse/favourites/add', { method:'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+      } else {
+        // Add card dynamically or reload
+        window.location.href = '/cse#favourites';
+        location.reload();
+      }
+    });
+}
+
+function removeFav(symbol, id) {
+  const fd = new FormData();
+  fd.append('symbol', symbol);
+  fetch('/cse/favourites/remove', { method:'POST', body: fd })
+    .then(r => r.json())
+    .then(() => {
+      const card = document.getElementById('fav-'+id);
+      if (card) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 300);
+      }
+      // Update count
+      const cnt = document.getElementById('favCount');
+      cnt.textContent = Math.max(0, parseInt(cnt.textContent) - 1);
+    });
+}
+
+function fetchFavPrices() {
+  fetch('/cse/favourites/prices', { method:'POST' })
+    .then(r => r.json())
+    .then(data => {
+      data.stocks.forEach(s => {
+        const card = document.getElementById('fav-'+s.id);
+        if (!card) return;
+
+        const nameEl = card.querySelector('.fav-name');
+        const priceEl = card.querySelector('.fav-price');
+        const changeEl = card.querySelector('.fav-change');
+        const mcEl = card.querySelector('.fav-mktcap');
+        const flash = card.querySelector('.fav-flash');
+
+        if (s.name) nameEl.textContent = s.name;
+
+        if (s.price !== null) {
+          const oldPrice = parseFloat(priceEl.dataset.price || 0);
+          const newPrice = s.price;
+          const up = s.change >= 0;
+
+          priceEl.textContent = 'LKR ' + newPrice.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+          priceEl.style.color = up ? 'var(--green)' : 'var(--red)';
+          priceEl.dataset.price = newPrice;
+
+          changeEl.textContent = `${up ? '▲' : '▼'} ${Math.abs(s.change||0).toFixed(2)} (${(s.changePct||0).toFixed(2)}%)`;
+          changeEl.style.color = up ? 'var(--green)' : 'var(--red)';
+
+          // Flash green/red on price change
+          if (oldPrice && oldPrice !== newPrice) {
+            flash.style.background = newPrice > oldPrice ? 'rgba(0,200,83,0.12)' : 'rgba(220,38,38,0.1)';
+            flash.style.opacity = '1';
+            setTimeout(() => flash.style.opacity = '0', 600);
+          }
+
+          const mc = s.marketCap || 0;
+          mcEl.textContent = mc >= 1e9 ? 'MCap: ' + (mc/1e9).toFixed(2)+'B'
+            : mc >= 1e6 ? 'MCap: ' + (mc/1e6).toFixed(2)+'M' : '';
+        } else {
+          priceEl.textContent = '—';
+          changeEl.textContent = 'No data';
+          changeEl.style.color = 'var(--text3)';
+        }
+      });
+    })
+    .catch(() => console.log('Price fetch failed'));
+}
+
+// ── Live polling (60s) ──
+let pollInterval = null;
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(fetchFavPrices, 60000);
+}
+function stopPolling() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
+
+// On load — check hash
+window.addEventListener('load', () => {
+  if (window.location.hash === '#favourites') {
+    switchTab('favourites');
+    startPolling();
+  }
+});
+
+// Tab click handlers also manage polling
+document.getElementById('tab-favourites').addEventListener('click', startPolling);
+document.getElementById('tab-market').addEventListener('click', stopPolling);
+document.getElementById('tab-search').addEventListener('click', stopPolling);
+</script>
+
+<style>
+.cse-tab {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cse-tab:hover { color: var(--text); }
+.cse-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+.fav-card { transition: transform 0.2s; overflow: hidden; }
+.fav-card:hover { transform: translateY(-2px); }
+@media (max-width: 768px) {
+  .cse-grid { grid-template-columns: 1fr !important; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+</style>
+{% endblock %}

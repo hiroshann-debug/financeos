@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Friend Debts{% endblock %}
+{% block page_title %}Friend Debt Tracker{% endblock %}
+{% block content %}
+
+<!-- Summary -->
+<div class="stat-grid mb-6">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--red-soft);color:var(--red)"><i class="fas fa-arrow-up-right-from-square"></i></div>
+    <div class="stat-label">I Owe</div>
+    <div class="stat-value text-red">{{ "{:,.0f}".format(i_owe) }}</div>
+    <div class="stat-change">{{ currency_symbol }} to pay back</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--green-soft);color:var(--green)"><i class="fas fa-arrow-down-left"></i></div>
+    <div class="stat-label">Owed to Me</div>
+    <div class="stat-value text-green">{{ "{:,.0f}".format(owed_to_me) }}</div>
+    <div class="stat-change">{{ currency_symbol }} to collect</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:{% if owed_to_me - i_owe >= 0 %}var(--green-soft){% else %}var(--red-soft){% endif %};color:{% if owed_to_me - i_owe >= 0 %}var(--green){% else %}var(--red){% endif %}"><i class="fas fa-scale-balanced"></i></div>
+    <div class="stat-label">Net Position</div>
+    <div class="stat-value {% if owed_to_me - i_owe >= 0 %}text-green{% else %}text-red{% endif %}">{{ "{:,.0f}".format(owed_to_me - i_owe) }}</div>
+    <div class="stat-change">{{ 'in your favour' if owed_to_me - i_owe >= 0 else 'you owe more' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-people-arrows"></i></div>
+    <div class="stat-label">Pending Debts</div>
+    <div class="stat-value" style="color:var(--accent2)">{{ pending|length }}</div>
+    <div class="stat-change">{{ settled|length }} settled</div>
+  </div>
+</div>
+
+<div class="flex gap-2 mb-6">
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addDebtModal').classList.add('open')">
+    <i class="fas fa-plus"></i> Add Debt Record
+  </button>
+</div>
+
+<!-- Pending debts -->
+{% if pending %}
+<div class="card mb-4">
+  <div class="card-title">Pending</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Contact</th><th>Direction</th><th>Amount</th><th>Description</th><th>Due Date</th><th>Days</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for d in pending %}
+        {% set overdue = d.due_date and d.due_date < today %}
+        {% set days_left = (d.due_date - today).days if d.due_date else None %}
+        <tr>
+          <td>
+            <div style="font-weight:500;">{{ d.contact_name }}</div>
+          </td>
+          <td>
+            {% if d.direction == 'owe' %}
+            <span class="badge-pill badge-red">I owe them</span>
+            {% else %}
+            <span class="badge-pill badge-green">They owe me</span>
+            {% endif %}
+          </td>
+          <td class="font-mono font-bold {% if d.direction == 'owe' %}text-red{% else %}text-green{% endif %}">
+            {{ currency_symbol }} {{ "{:,.0f}".format(d.amount) }}
+          </td>
+          <td style="color:var(--text2);font-size:0.82rem;">{{ d.description or '—' }}</td>
+          <td class="font-mono text-xs" style="color:{% if overdue %}var(--red){% else %}var(--text2){% endif %};">
+            {{ d.due_date.strftime('%d %b %Y') if d.due_date else '—' }}
+            {% if overdue %}<span style="color:var(--red);font-weight:600;"> Overdue</span>{% endif %}
+          </td>
+          <td style="font-size:0.78rem;color:var(--text2);">
+            {% if days_left is not none %}
+              {% if days_left < 0 %}<span style="color:var(--red);">{{ days_left|abs }}d overdue</span>
+              {% elif days_left == 0 %}<span style="color:var(--red);">Today</span>
+              {% elif days_left <= 7 %}<span style="color:var(--orange);">{{ days_left }}d</span>
+              {% else %}{{ days_left }}d{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="openSettleModal({{ d.id }}, '{{ d.contact_name }}', {{ d.amount }}, '{{ d.direction }}')">
+              Settle
+            </button>
+            <form method="POST" action="{{ url_for('delete_debt', debt_id=d.id) }}" style="display:inline;" onsubmit="return confirm('Delete this debt record?')">
+              <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Settled debts -->
+{% if settled %}
+<div class="card">
+  <div class="card-title">Settled History</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Contact</th><th>Direction</th><th>Amount</th><th>Description</th></tr></thead>
+      <tbody>
+        {% for d in settled %}
+        <tr style="opacity:0.6;">
+          <td>{{ d.contact_name }}</td>
+          <td><span class="badge-pill badge-accent">{{ 'I owed' if d.direction == 'owe' else 'Owed me' }}</span></td>
+          <td class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(d.amount) }}</td>
+          <td style="color:var(--text2);">{{ d.description or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not pending and not settled %}
+<div class="card" style="text-align:center;padding:60px;">
+  <div style="font-size:3rem;margin-bottom:16px;">🤝</div>
+  <h3 style="font-weight:500;margin-bottom:8px;">No debt records yet</h3>
+  <p style="color:var(--text2);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;">
+    Track money you've lent to friends or borrowed from them. Never forget who owes what.
+  </p>
+  <button class="btn btn-primary" onclick="document.getElementById('addDebtModal').classList.add('open')">
+    <i class="fas fa-plus"></i> Add First Record
+  </button>
+</div>
+{% endif %}
+
+<!-- ADD DEBT MODAL -->
+<div class="modal-overlay" id="addDebtModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Add Debt Record</div>
+    <form method="POST" action="{{ url_for('add_debt') }}">
+      <div class="form-group">
+        <label class="form-label">Direction</label>
+        <select name="direction" class="form-control" id="directionSelect" onchange="updateDirectionLabel()">
+          <option value="lent">💚 I lent money to someone</option>
+          <option value="owe">❤️ I borrowed money from someone</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="contactLabel">Contact Name (who I lent to)</label>
+        <input type="text" name="contact_name" class="form-control" required placeholder="e.g. Ashan, Nimasha">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Amount</label>
+          <input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date (optional)</label>
+          <input type="date" name="due_date" class="form-control">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" name="description" class="form-control" placeholder="e.g. Lunch, rent, emergency">
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="walletLabel">Wallet (deducted when lending)</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None (record only)</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addDebtModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SETTLE MODAL -->
+<div class="modal-overlay" id="settleModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="settleTitle">Settle Debt</div>
+    <p class="text-muted text-sm mb-4" id="settleDesc"></p>
+    <form method="POST" id="settleForm">
+      <div class="form-group">
+        <label class="form-label">Update Wallet</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None (record only)</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('settleModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Mark Settled</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function updateDirectionLabel() {
+  const dir = document.getElementById('directionSelect').value;
+  document.getElementById('contactLabel').textContent =
+    dir === 'lent' ? 'Contact Name (who I lent to)' : 'Contact Name (who I borrowed from)';
+  document.getElementById('walletLabel').textContent =
+    dir === 'lent' ? 'Wallet (amount deducted)' : 'Wallet (amount added)';
+}
+function openSettleModal(id, name, amount, direction) {
+  document.getElementById('settleTitle').textContent = `Settle with ${name}`;
+  document.getElementById('settleDesc').textContent =
+    direction === 'owe'
+      ? `You repaid ${amount.toLocaleString()} — select wallet to deduct from`
+      : `${name} paid you back ${amount.toLocaleString()} — select wallet to add to`;
+  document.getElementById('settleForm').action = `/debts/settle/${id}`;
+  document.getElementById('settleModal').classList.add('open');
+}
+</script>
+{% endblock %}
