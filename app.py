@@ -378,10 +378,21 @@ def dashboard():
                 "id": rec.id,
             })
 
-    # Show only UNPAID, sorted by due date (overdue first, then upcoming)
-    upcoming_fixed_sorted = sorted(
-        [p for p in upcoming_payments if not p["paid"]], key=lambda x: x["due_date"]
-    )[:5]
+    # Show only UNPAID, sorted by due date
+    unpaid = [p for p in upcoming_payments if not p["paid"]]
+    upcoming_fixed_sorted = sorted(unpaid, key=lambda x: x["due_date"])
+
+    # Salary bar calculations
+    unpaid_fixed_total = sum(p["amount"] for p in unpaid)
+    days_left_in_period = max(0, (period_end - today).days)
+    days_total_period = max(1, (period_end - period_start).days + 1)
+    days_elapsed = max(1, (today - period_start).days + 1)
+    # Daily average spend so far
+    daily_avg_so_far = total_expense / days_elapsed if days_elapsed > 0 else 0
+    # How much left after unpaid fixed
+    available_after_fixed = total_wallet_balance - unpaid_fixed_total
+    # Daily budget remaining
+    daily_budget_remaining = available_after_fixed / days_left_in_period if days_left_in_period > 0 else 0
 
     cards = CreditCard.query.filter_by(user_id=uid()).all()
     total_credit_limit = sum(c.credit_limit for c in cards)
@@ -505,6 +516,13 @@ def dashboard():
         salary_period=salary_period_str,
         today=today,
         minimum_required=next_month_total,
+        unpaid_fixed_total=unpaid_fixed_total,
+        days_left_in_period=days_left_in_period,
+        days_total_period=days_total_period,
+        days_elapsed=days_elapsed,
+        daily_avg_so_far=daily_avg_so_far,
+        available_after_fixed=available_after_fixed,
+        daily_budget_remaining=daily_budget_remaining,
         health=health,
         active_goals=active_goals,
         recent_notifications=recent_notifications,
