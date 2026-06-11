@@ -441,6 +441,66 @@
       .stat-value { font-size: 1rem; }
     }
 
+    /* ── TOPBAR QUICK LINKS ── */
+    .topbar-quicklinks {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-right: 8px;
+    }
+    .topbar-qlink {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-decoration: none;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .topbar-qlink:hover { background: var(--surface2); color: var(--text); }
+    .topbar-qlink.active { background: var(--accent-glow); color: var(--accent2); }
+    .topbar-qlink i { font-size: 0.72rem; }
+    @media (max-width: 900px) { .topbar-quicklinks { display: none; } }
+
+    /* ── SUB NAV BAR ── */
+    .sub-nav {
+      background: var(--card);
+      border-bottom: 1px solid var(--border2);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      white-space: nowrap;
+      position: sticky;
+      top: 56px;
+      z-index: 90;
+    }
+    .sub-nav::-webkit-scrollbar { display: none; }
+    .sub-nav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text2);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .sub-nav-link:hover { color: var(--text); }
+    .sub-nav-link.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+    .sub-nav-link i { font-size: 0.78rem; opacity: 0.7; }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -510,15 +570,7 @@
       <span class="nav-icon"><i class="fas fa-calendar-check"></i></span> Payments
     </a>
 
-    <a href="{{ url_for('financial_tools') }}" class="nav-link {% if request.endpoint == 'financial_tools' %}active{% endif %}">
-      <span class="nav-icon"><i class="fas fa-calculator"></i></span> Financial Tools
-    </a>
-    <a href="{{ url_for('exchange_rates') }}" class="nav-link {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
-      <span class="nav-icon"><i class="fas fa-money-bill-transfer"></i></span> Exchange Rates
-    </a>
-    <a href="{{ url_for('cse_stocks') }}" class="nav-link {% if request.endpoint == 'cse_stocks' %}active{% endif %}">
-      <span class="nav-icon"><i class="fas fa-chart-column"></i></span> CSE Stocks
-    </a>
+
     <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint in ['reports','download_report'] %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
     </a>
@@ -587,6 +639,21 @@
     </button>
     <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
     <span class="topbar-spacer"></span>
+    <!-- Quick access links in topbar -->
+    <div class="topbar-quicklinks">
+      <a href="{{ url_for('financial_tools') }}" class="topbar-qlink {% if request.endpoint == 'financial_tools' %}active{% endif %}">
+        <i class="fas fa-calculator"></i> Tools
+      </a>
+      <a href="{{ url_for('cse_stocks') }}" class="topbar-qlink {% if request.endpoint == 'cse_stocks' %}active{% endif %}">
+        <i class="fas fa-chart-column"></i> CSE
+      </a>
+      <a href="{{ url_for('exchange_rates') }}" class="topbar-qlink {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
+        <i class="fas fa-money-bill-transfer"></i> Rates
+      </a>
+      <a href="{{ url_for('reports') }}" class="topbar-qlink {% if request.endpoint == 'reports' %}active{% endif %}">
+        <i class="fas fa-file-pdf"></i> Reports
+      </a>
+    </div>
     <span class="currency-pill">{{ currency_symbol }}</span>
     <a href="{{ url_for('notifications') }}" class="topbar-btn">
       <i class="fas fa-bell"></i>
