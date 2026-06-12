@@ -5,6 +5,7 @@ from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, Wall
 import requests as req_lib
 from calendar import monthrange
 from datetime import datetime, date, timedelta, time
+from zoneinfo import ZoneInfo
 from dateutil.relativedelta import relativedelta
 import json, csv, io, os
 from collections import defaultdict
@@ -18,9 +19,7 @@ from dotenv import load_dotenv
 from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-
 load_dotenv()
-
 
 app = Flask(
     __name__,
@@ -512,18 +511,54 @@ def dashboard():
     default_name = user.get("name", "").split()[0] if user.get("name") else "there"
     preferred_name = get_setting("preferred_name", default_name, user_id=uid())
 
+    # ── FIXES ──
+    # 1. Net Balance = period only (not carryover)
+    net_balance_period = total_income - total_expense
+
+    # 2. Daily budget — clamp to 0 if negative
+    daily_budget_safe = max(0, daily_budget_remaining)
+
+    # 3. Savings rate
+    savings_rate = round((net_balance_period / total_income * 100), 1) if total_income > 0 else 0
+
+    # 4. Net worth snapshot
+    total_investments = sum(inv.current_value for inv in Investment.query.filter_by(user_id=uid(), status='active').all())
+    total_loan_outstanding = sum(l.outstanding_balance for l in Loan.query.filter_by(user_id=uid(), loan_status='Active').all())
+    net_worth = total_wallet_balance + total_investments - total_loan_outstanding - total_used
+
+    # 5. Friend debts
+    from models import Debt
+    pending_debts = Debt.query.filter_by(user_id=uid(), status='pending').all()
+    owed_to_me = sum(d.amount for d in pending_debts if d.direction == 'lent')
+    i_owe = sum(d.amount for d in pending_debts if d.direction == 'owe')
+
+    # 6. Active goals sorted by deadline then % complete
+    active_goals_sorted = Goal.query.filter_by(status='active', user_id=uid()).order_by(Goal.target_date).limit(4).all()
+
+    # 7. Recent transactions use period dates not calendar month
+    period_transactions = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.date >= period_start,
+        Transaction.date <= period_end
+    ).order_by(Transaction.date.desc()).all()
+
     return render_template(
         "dashboard.html",
         preferred_name=preferred_name,
         wallets=wallets,
         total_income=total_income,
         total_expense=total_expense,
-        balance=current_balance,
+        balance=net_balance_period,
+        net_worth=net_worth,
+        savings_rate=savings_rate,
+        total_investments=total_investments,
+        owed_to_me=owed_to_me,
+        i_owe=i_owe,
         upcoming_payments=upcoming_fixed_sorted,
         chart_data=chart_data,
         fixed_chart_data=dict(fixed_chart_data),
         monthly_trends=json.dumps({"labels": monthly_labels, "expenses": monthly_values, "income": monthly_income_values}),
-        selected_month=period_start.strftime("%Y-%m"),
+        selected_month=today.strftime("%Y-%m"),
         next_month_expenses=next_month_expenses,
         next_month_total=next_month_total,
         total_credit_limit=total_credit_limit,
@@ -536,7 +571,7 @@ def dashboard():
         month_end=period_end,
         period_start=period_start,
         period_end=period_end,
-        this_month_transactions=this_month_transactions,
+        this_month_transactions=period_transactions,
         future_txn_ids=future_txn_ids,
         total_wallet_balance=total_wallet_balance,
         salary_period=salary_period_str,
@@ -548,9 +583,9 @@ def dashboard():
         days_elapsed=days_elapsed,
         daily_avg_so_far=daily_avg_so_far,
         available_after_fixed=available_after_fixed,
-        daily_budget_remaining=daily_budget_remaining,
+        daily_budget_remaining=daily_budget_safe,
         health=health,
-        active_goals=active_goals,
+        active_goals=active_goals_sorted,
         recent_notifications=recent_notifications,
     )
 
@@ -1648,6 +1683,7 @@ def analytics():
     today = date.today()
     period = request.args.get("period", "month")
 
+    # FIX: Use salary period for "month" to be consistent with dashboard
     if period == "week":
         start = today - timedelta(days=7)
     elif period == "quarter":
@@ -1655,18 +1691,22 @@ def analytics():
     elif period == "year":
         start = today - relativedelta(years=1)
     else:
-        start = today.replace(day=1)
+        # Use salary period start instead of calendar month
+        period_start, period_end = get_salary_period(today)
+        start = period_start
 
     insights = get_spending_insights(start, today, user_id=uid())
     health = get_financial_health_score(user_id=uid())
 
-    # Month-over-month last 12 months
+    # FIX: Add user_id filter to monthly query
     monthly_data = []
     for i in range(11, -1, -1):
         m_start = (today - relativedelta(months=i)).replace(day=1)
         m_end = m_start + relativedelta(months=1) - timedelta(days=1)
         txns = Transaction.query.filter(
-            Transaction.date >= m_start, Transaction.date <= m_end
+            Transaction.user_id == uid(),
+            Transaction.date >= m_start,
+            Transaction.date <= m_end
         ).all()
         income = sum(t.amount for t in txns if t.trans_type == "income")
         expense = sum(t.amount for t in txns if t.trans_type == "expense")
@@ -1674,22 +1714,37 @@ def analytics():
             "month": m_start.strftime("%b %Y"),
             "income": income,
             "expense": expense,
-            "savings": income - expense
+            "savings": income - expense,
+            "savings_rate": round((income - expense) / income * 100, 1) if income > 0 else 0
         })
 
-    # Top categories last 3 months
-    three_ago = today - relativedelta(months=3)
+    # FIX: Top categories respect selected period
     cat_txns = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.trans_type == "expense",
-        Transaction.date >= three_ago
+        Transaction.date >= start,
+        Transaction.date <= today
     ).all()
     cat_totals = defaultdict(float)
     for t in cat_txns:
         cat_totals[t.category or "Other"] += t.amount
     top_categories = sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:8]
 
-    # Weekday vs Weekend spending
+    # Income by category for the period
+    inc_txns = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.trans_type == "income",
+        Transaction.date >= start,
+        Transaction.date <= today
+    ).all()
+    income_by_cat = defaultdict(float)
+    total_income_period = 0
+    for t in inc_txns:
+        income_by_cat[t.category or "Salary"] += t.amount
+        total_income_period += t.amount
+    top_income_sources = sorted(income_by_cat.items(), key=lambda x: x[1], reverse=True)[:6]
+
+    # FIX: Weekday vs Weekend — avg per actual day count, not per transaction
     all_txns_period = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.trans_type == "expense",
@@ -1700,23 +1755,49 @@ def analytics():
         if (t.date.date() if isinstance(t.date, datetime) else t.date).weekday() < 5)
     weekend_total = sum(t.amount for t in all_txns_period
         if (t.date.date() if isinstance(t.date, datetime) else t.date).weekday() >= 5)
-    weekday_count = max(1, sum(1 for t in all_txns_period
-        if (t.date.date() if isinstance(t.date, datetime) else t.date).weekday() < 5))
-    weekend_count = max(1, sum(1 for t in all_txns_period
-        if (t.date.date() if isinstance(t.date, datetime) else t.date).weekday() >= 5))
-    weekday_avg = weekday_total / weekday_count
-    weekend_avg = weekend_total / weekend_count
 
-    # This month fixed total needed
-    this_month_fixed_total = sum(
-        e["amount"] for e in []  # calculated in fixed_expenses route
-    )
+    # Count actual weekdays/weekends in period
+    num_days = (today - start).days + 1
+    weekday_days = sum(1 for i in range(num_days) if (start + timedelta(days=i)).weekday() < 5)
+    weekend_days = max(1, num_days - weekday_days)
+    weekday_avg = weekday_total / max(1, weekday_days)
+    weekend_avg = weekend_total / max(1, weekend_days)
+
+    # Savings rate for period
+    total_expense_period = sum(t.amount for t in all_txns_period)
+    savings_rate = round((total_income_period - total_expense_period) / total_income_period * 100, 1) if total_income_period > 0 else 0
+
+    # FIX: fixed_committed includes recurring + fixed expenses too
     loans_active = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
     cards_active = CreditCard.query.filter_by(user_id=uid()).all()
+    recurring_active = RecurringPayment.query.filter_by(user_id=uid(), is_active=True).all()
+    fixed_all = FixedExpense.query.filter_by(user_id=uid()).filter(
+        FixedExpense.repeat == True
+    ).all()
     fixed_committed = (
         sum(l.monthly_payment for l in loans_active) +
-        sum(c.minimum_payment for c in cards_active)
+        sum(c.minimum_payment for c in cards_active) +
+        sum(r.amount for r in recurring_active) +
+        sum(f.amount for f in fixed_all)
     )
+
+    # Largest single expenses in period
+    largest_expenses = sorted(
+        [t for t in all_txns_period],
+        key=lambda x: x.amount, reverse=True
+    )[:5]
+
+    # Budget vs actual comparison
+    budgets = BudgetPlanner.query.filter_by(user_id=uid()).all()
+    budget_vs_actual = []
+    for b in budgets:
+        actual = cat_totals.get(b.category, 0)
+        budget_vs_actual.append({
+            "category": b.category,
+            "budget": b.amount,
+            "actual": actual,
+            "pct": round(actual / b.amount * 100) if b.amount > 0 else 0
+        })
 
     return render_template(
         "analytics.html",
@@ -1724,6 +1805,9 @@ def analytics():
         health=health,
         monthly_data=monthly_data,
         top_categories=top_categories,
+        top_income_sources=top_income_sources,
+        total_income_period=total_income_period,
+        savings_rate=savings_rate,
         period=period,
         start_date=start,
         end_date=today,
@@ -1732,6 +1816,8 @@ def analytics():
         weekday_total=weekday_total,
         weekend_total=weekend_total,
         fixed_committed=fixed_committed,
+        largest_expenses=largest_expenses,
+        budget_vs_actual=budget_vs_actual,
     )
 
 
@@ -1806,11 +1892,11 @@ def settings():
 
     user = session.get("user", {})
     return render_template("settings.html",
-                       salary_cycle_day=get_setting("salary_cycle_day", "25", user_id=uid()),
-                       currency_symbol=get_setting("currency_symbol", "LKR", user_id=uid()),
-                       dark_mode=get_setting("dark_mode", "false", user_id=uid()) == "true",
-                       preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else "", user_id=uid()),
-                       user=user)
+                           salary_cycle_day=get_setting("salary_cycle_day", "25"),
+                           currency_symbol=get_setting("currency_symbol", "LKR"),
+                           dark_mode=get_setting("dark_mode", "false") == "true",
+                           preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else ""),
+                           user=user)
 
 
 # ─────────────────────────────────────────
