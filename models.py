@@ -158,7 +158,7 @@ class AppSettings(db.Model):
     """User preferences and app configuration."""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), nullable=True, index=True)
-    key = db.Column(db.String(100), unique=True, nullable=False)
+    key = db.Column(db.String(100), nullable=False, index=True)
     value = db.Column(db.Text, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
