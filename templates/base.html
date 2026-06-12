@@ -468,6 +468,10 @@
     .topbar-qlink.active { background: var(--accent-glow); color: var(--accent2); }
     .topbar-qlink i { font-size: 0.72rem; }
     @media (max-width: 900px) { .topbar-quicklinks { display: none; } }
+    /* Tools section: hidden on desktop (shown in topbar), visible on mobile */
+    .nav-tools-mobile { display: none; }
+    @media (max-width: 900px) { .nav-tools-mobile { display: flex !important; } }
+    @media (max-width: 900px) { div.nav-tools-mobile { display: block !important; } }
 
     /* ── SUB NAV BAR ── */
     .sub-nav {
@@ -591,6 +595,20 @@
     </a>
     <a href="{{ url_for('loan_list') }}" class="nav-link {% if request.endpoint == 'loan_list' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-hand-holding-dollar"></i></span> Loans
+    </a>
+
+    <div class="nav-section-label nav-tools-mobile">Tools</div>
+    <a href="{{ url_for('financial_tools') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'financial_tools' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-calculator"></i></span> Financial Tools
+    </a>
+    <a href="{{ url_for('cse_stocks') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'cse_stocks' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-chart-column"></i></span> CSE Stocks
+    </a>
+    <a href="{{ url_for('exchange_rates') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-money-bill-transfer"></i></span> Exchange Rates
+    </a>
+    <a href="{{ url_for('reports') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'reports' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
     </a>
 
     <div class="nav-section-label">System</div>

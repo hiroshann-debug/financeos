@@ -24,7 +24,10 @@
 {% if error %}
 <div class="alert alert-warning mb-4">
   <i class="fas fa-triangle-exclamation"></i>
-  Could not connect to CSE API. The market may be closed or temporarily unavailable.
+  CSE data unavailable right now. This usually means:
+  the market is closed (Mon–Fri 9:30am–2:30pm Colombo time), or the CSE API is temporarily down.
+  Try refreshing during market hours.
+  <a href="https://www.cse.lk" target="_blank" style="color:var(--accent);">Visit cse.lk directly →</a>
 </div>
 {% endif %}
 
@@ -75,7 +78,7 @@
         </table>
       </div>
       {% else %}
-      <p class="text-muted text-sm">No data — market may be closed</p>
+      <p class="text-muted text-sm" style="padding:20px 0;text-align:center;"><i class="fas fa-clock" style="color:var(--orange);"></i> No data — market hours: Mon–Fri 9:30am–2:30pm Colombo</p>
       {% endif %}
     </div>
 
@@ -108,7 +111,7 @@
         </table>
       </div>
       {% else %}
-      <p class="text-muted text-sm">No data — market may be closed</p>
+      <p class="text-muted text-sm" style="padding:20px 0;text-align:center;"><i class="fas fa-clock" style="color:var(--orange);"></i> No data — market hours: Mon–Fri 9:30am–2:30pm Colombo</p>
       {% endif %}
     </div>
 
@@ -141,7 +144,7 @@
         </table>
       </div>
       {% else %}
-      <p class="text-muted text-sm">No data — market may be closed</p>
+      <p class="text-muted text-sm" style="padding:20px 0;text-align:center;"><i class="fas fa-clock" style="color:var(--orange);"></i> No data — market hours: Mon–Fri 9:30am–2:30pm Colombo</p>
       {% endif %}
     </div>
   </div>
