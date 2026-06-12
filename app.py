@@ -4,7 +4,8 @@ from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, Wall
     Investment, InvestmentIncome, Debt, FavouriteStock
 import requests as req_lib
 from calendar import monthrange
-from datetime import datetime, date, timedelta, time
+from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo, time
 from dateutil.relativedelta import relativedelta
 import json, csv, io, os
 from collections import defaultdict
@@ -54,7 +55,6 @@ app.config.update(
 
 db.init_app(app)
 migrate = Migrate(app, db)
-
 
 # ─────────────────────────────────────────
 #  Auth0 Setup
@@ -1780,6 +1780,30 @@ def mark_all_read():
 # ─────────────────────────────────────────
 #  Settings (NEW)
 # ─────────────────────────────────────────
+@app.route("/run-settings-migration")
+def run_settings_migration():
+    """One-time fix — drop unique constraint and deduplicate settings. Remove after running."""
+    results = []
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(db.text('ALTER TABLE app_settings DROP CONSTRAINT IF EXISTS app_settings_key_key;'))
+            conn.commit()
+            results.append("✅ Unique constraint dropped")
+        except Exception as e:
+            results.append(f"Constraint note: {e}")
+        try:
+            conn.execute(db.text("""
+                DELETE FROM app_settings a
+                USING app_settings b
+                WHERE a.id < b.id
+                AND a.key = b.key
+                AND a.user_id = b.user_id;
+            """))
+            conn.commit()
+            results.append("✅ Duplicate settings cleaned")
+        except Exception as e:
+            results.append(f"Cleanup note: {e}")
+    return "<br>".join(results) + "<br><br>Done! Remove this route from app.py now."
 
 
 @app.route("/toggle-dark-mode", methods=["POST"])
