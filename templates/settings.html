@@ -3,42 +3,40 @@
 {% block page_title %}Settings{% endblock %}
 
 {% block content %}
+<div style="max-width:700px;">
+
 <form method="POST" action="{{ url_for('settings') }}">
 
   <!-- Profile -->
   <div class="card mb-4">
     <div class="card-title">👤 Profile</div>
-    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
       {% if user.picture %}
-      <img src="{{ user.picture }}" alt="Profile" style="width:64px;height:64px;border-radius:50%;border:2px solid var(--border2);">
+      <img src="{{ user.picture }}" alt="Profile" style="width:56px;height:56px;border-radius:50%;border:2px solid var(--border2);">
       {% else %}
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--accent-glow);color:var(--accent2);display:grid;place-items:center;font-size:1.6rem;font-weight:700;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-glow);color:var(--accent2);display:grid;place-items:center;font-size:1.4rem;font-weight:700;">
         {{ user.name[0].upper() if user.name else '?' }}
       </div>
       {% endif %}
       <div>
-        <div style="font-weight:600;font-size:1rem;">{{ user.name or 'User' }}</div>
+        <div style="font-weight:600;">{{ user.name or 'User' }}</div>
         <div style="font-size:0.82rem;color:var(--text2);">{{ user.email or '' }}</div>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:3px;">Signed in via Auth0</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;"><i class="fas fa-lock" style="font-size:0.65rem;"></i> Managed by Auth0</div>
       </div>
     </div>
-    <div class="grid-2">
-      <div class="form-group">
-        <label class="form-label">Preferred Name <span style="color:var(--text3);font-weight:400;">(shown in dashboard greeting)</span></label>
-        <input type="text" name="preferred_name" class="form-control"
-          value="{{ preferred_name }}"
-          placeholder="e.g. Hiroshan">
-      </div>
-
+    <div class="form-group">
+      <label class="form-label">Preferred Name <span style="color:var(--text3);font-weight:400;">— shown in dashboard greeting</span></label>
+      <input type="text" name="preferred_name" class="form-control" style="max-width:320px;"
+        value="{{ preferred_name }}" placeholder="e.g. Hiroshan">
     </div>
   </div>
 
-  <!-- Finance Preferences -->
+  <!-- Finance -->
   <div class="card mb-4">
     <div class="card-title">💰 Finance Preferences</div>
     <div class="grid-2">
       <div class="form-group">
-        <label class="form-label">Currency Symbol</label>
+        <label class="form-label">Currency</label>
         <select name="currency_symbol" class="form-control">
           {% for sym in ['LKR','USD','EUR','GBP','AUD','SGD','INR','CAD','AED','JPY'] %}
           <option value="{{ sym }}" {% if currency_symbol == sym %}selected{% endif %}>{{ sym }}</option>
@@ -49,10 +47,12 @@
         <label class="form-label">Income / Salary Day</label>
         <select name="salary_cycle_day" class="form-control">
           {% for d in range(1, 32) %}
-          <option value="{{ d }}" {% if salary_cycle_day|int == d %}selected{% endif %}>{{ d }}{% if d == 1 %}st{% elif d == 2 %}nd{% elif d == 3 %}rd{% else %}th{% endif %} of each month</option>
+          <option value="{{ d }}" {% if salary_cycle_day|int == d %}selected{% endif %}>
+            {{ d }}{% if d == 1 %}st{% elif d == 2 %}nd{% elif d == 3 %}rd{% else %}th{% endif %} of each month
+          </option>
           {% endfor %}
         </select>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Your salary arrives on this day — used to calculate the cycle bar on dashboard</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Used to calculate the salary cycle bar on dashboard</div>
       </div>
     </div>
   </div>
@@ -60,25 +60,21 @@
   <!-- Appearance -->
   <div class="card mb-4">
     <div class="card-title">🎨 Appearance</div>
-    <div class="form-group">
-      <label class="form-label">Theme</label>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <label class="theme-opt" id="light-opt" style="{% if not dark_mode %}border-color:var(--accent);background:var(--accent-glow);{% endif %}">
-          <input type="radio" name="dark_mode" value="off" {% if not dark_mode %}checked{% endif %}
-            style="accent-color:var(--accent);" onchange="setThemeOpt('light')">
-          ☀️ Light Mode
-        </label>
-        <label class="theme-opt" id="dark-opt" style="{% if dark_mode %}border-color:var(--accent);background:var(--accent-glow);{% endif %}">
-          <input type="radio" name="dark_mode" value="on" {% if dark_mode %}checked{% endif %}
-            style="accent-color:var(--accent);" onchange="setThemeOpt('dark')">
-          🌙 Dark Mode
-        </label>
-      </div>
+    <label class="form-label">Theme</label>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border:2px solid {% if not dark_mode %}var(--accent){% else %}var(--border2){% endif %};border-radius:8px;font-size:0.875rem;font-weight:600;transition:all 0.15s;background:{% if not dark_mode %}var(--accent-glow){% else %}transparent{% endif %};">
+        <input type="radio" name="dark_mode" value="off" {% if not dark_mode %}checked{% endif %} style="accent-color:var(--accent);">
+        ☀️ Light
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border:2px solid {% if dark_mode %}var(--accent){% else %}var(--border2){% endif %};border-radius:8px;font-size:0.875rem;font-weight:600;transition:all 0.15s;background:{% if dark_mode %}var(--accent-glow){% else %}transparent{% endif %};">
+        <input type="radio" name="dark_mode" value="on" {% if dark_mode %}checked{% endif %} style="accent-color:var(--accent);">
+        🌙 Dark
+      </label>
     </div>
   </div>
 
-  <!-- Save button -->
-  <div style="display:flex;gap:12px;align-items:center;">
+  <!-- Save -->
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:24px;">
     <button type="submit" class="btn btn-primary">
       <i class="fas fa-save"></i> Save Settings
     </button>
@@ -87,73 +83,38 @@
 
 </form>
 
-<!-- Data & Account section (outside form) -->
-<div class="card mt-6">
+<!-- Data -->
+<div class="card mb-4">
   <div class="card-title">📦 Data & Export</div>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <a href="{{ url_for('export_transactions') }}" class="btn btn-ghost btn-sm">
-      <i class="fas fa-download"></i> Export Transactions (CSV)
+      <i class="fas fa-download"></i> Export CSV
     </a>
     <a href="{{ url_for('reports') }}" class="btn btn-ghost btn-sm">
-      <i class="fas fa-file-pdf"></i> Download PDF Report
+      <i class="fas fa-file-pdf"></i> PDF Report
     </a>
   </div>
 </div>
 
-<div class="card mt-4">
+<!-- Security -->
+<div class="card mb-4">
   <div class="card-title">🔐 Security</div>
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface2);border-radius:8px;">
-      <div>
-        <div style="font-size:0.875rem;font-weight:600;">Authentication</div>
-        <div style="font-size:0.78rem;color:var(--text2);">Secured via Auth0 — Google or Email login</div>
-      </div>
-      <span class="badge-pill badge-green">Active</span>
+  <div style="background:var(--surface2);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div>
+      <div style="font-size:0.875rem;font-weight:600;">Authentication</div>
+      <div style="font-size:0.78rem;color:var(--text2);">{{ user.email or 'Auth0' }}</div>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface2);border-radius:8px;">
-      <div>
-        <div style="font-size:0.875rem;font-weight:600;">Account Email</div>
-        <div style="font-size:0.78rem;color:var(--text2);">{{ user.email or 'Not available' }}</div>
-      </div>
-      <span style="font-size:0.72rem;color:var(--text3);">via Auth0</span>
-    </div>
+    <span class="badge-pill badge-green">Active</span>
   </div>
 </div>
 
-<div class="card mt-4" style="border-color:#fed7d7;">
+<!-- Danger -->
+<div class="card" style="border-color:#fed7d7;">
   <div class="card-title" style="color:#e53e3e;">⚠️ Danger Zone</div>
-  <p style="font-size:0.875rem;color:var(--text2);margin-bottom:16px;">These actions are permanent and cannot be undone.</p>
   <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">
     <i class="fas fa-right-from-bracket"></i> Sign Out
   </a>
 </div>
 
-{% endblock %}
-
-{% block scripts %}
-<style>
-.theme-opt {
-  display: flex; align-items: center; gap: 8px; cursor: pointer;
-  padding: 10px 16px; border: 1.5px solid var(--border2); border-radius: 8px;
-  font-size: 0.875rem; font-weight: 500; transition: all 0.15s;
-}
-.theme-opt:hover { border-color: var(--accent); }
-</style>
-<script>
-function setThemeOpt(mode) {
-  const light = document.getElementById('light-opt');
-  const dark = document.getElementById('dark-opt');
-  if (mode === 'light') {
-    light.style.borderColor = 'var(--accent)';
-    light.style.background = 'var(--accent-glow)';
-    dark.style.borderColor = 'var(--border2)';
-    dark.style.background = 'transparent';
-  } else {
-    dark.style.borderColor = 'var(--accent)';
-    dark.style.background = 'var(--accent-glow)';
-    light.style.borderColor = 'var(--border2)';
-    light.style.background = 'transparent';
-  }
-}
-</script>
+</div>
 {% endblock %}

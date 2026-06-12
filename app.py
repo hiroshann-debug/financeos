@@ -4,8 +4,7 @@ from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, Wall
     Investment, InvestmentIncome, Debt, FavouriteStock
 import requests as req_lib
 from calendar import monthrange
-from datetime import datetime, date, timedelta
-
+from datetime import datetime, date, timedelta, time
 from dateutil.relativedelta import relativedelta
 import json, csv, io, os
 from collections import defaultdict
@@ -496,7 +495,6 @@ def dashboard():
     return render_template(
         "dashboard.html",
         preferred_name=preferred_name,
-        now=datetime.now(ZoneInfo("Asia/Colombo")),
         wallets=wallets,
         total_income=total_income,
         total_expense=total_expense,
@@ -1788,11 +1786,11 @@ def settings():
 
     user = session.get("user", {})
     return render_template("settings.html",
-                           salary_cycle_day=get_setting("salary_cycle_day", "25"),
-                           currency_symbol=get_setting("currency_symbol", "LKR"),
-                           dark_mode=get_setting("dark_mode", "false") == "true",
-                           preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else ""),
-                           user=user)
+                       salary_cycle_day=get_setting("salary_cycle_day", "25", user_id=uid()),
+                       currency_symbol=get_setting("currency_symbol", "LKR", user_id=uid()),
+                       dark_mode=get_setting("dark_mode", "false", user_id=uid()) == "true",
+                       preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else "", user_id=uid()),
+                       user=user)
 
 
 # ─────────────────────────────────────────
