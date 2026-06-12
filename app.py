@@ -33,6 +33,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,         # recycle connections every 5 min
 }
 app.secret_key = os.getenv('APP_SECRET_KEY', 'fallback_dev_secret_change_this')
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
 
 db.init_app(app)
 migrate = Migrate(app, db)
