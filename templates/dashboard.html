@@ -75,37 +75,52 @@
  
 <!-- ── STAT CARDS ── -->
 <div class="stat-grid">
-  <div class="stat-card">
+  <a href="{{ url_for('income') }}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;">
     <div class="stat-icon" style="background:var(--green-soft);color:var(--green)"><i class="fas fa-arrow-down"></i></div>
     <div class="stat-label">Income This Period</div>
     <div class="stat-value text-green">{{ "{:,.0f}".format(total_income) }}</div>
-    <div class="stat-change">{{ currency_symbol }}</div>
-  </div>
-  <div class="stat-card">
+    <div class="stat-change" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>{{ currency_symbol }}</span>
+      <span style="font-size:0.65rem;color:var(--text3);">View all →</span>
+    </div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;">
     <div class="stat-icon" style="background:var(--red-soft);color:var(--red)"><i class="fas fa-arrow-up"></i></div>
     <div class="stat-label">Expenses This Period</div>
     <div class="stat-value text-red">{{ "{:,.0f}".format(total_expense) }}</div>
-    <div class="stat-change">{{ currency_symbol }}</div>
-  </div>
-  <div class="stat-card">
+    <div class="stat-change" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>{{ currency_symbol }}</span>
+      <span style="font-size:0.65rem;color:var(--text3);">View all →</span>
+    </div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;">
     <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-scale-balanced"></i></div>
     <div class="stat-label">Net Balance (Period)</div>
     <div class="stat-value {% if balance >= 0 %}text-green{% else %}text-red{% endif %}">{{ "{:,.0f}".format(balance) }}</div>
-    <div class="stat-change">{{ currency_symbol }} income − expenses</div>
-  </div>
-  <div class="stat-card">
+    <div class="stat-change" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>{{ currency_symbol }} income − expenses</span>
+      <span style="font-size:0.65rem;color:var(--text3);">Details →</span>
+    </div>
+  </a>
+  <a href="{{ url_for('credit_cards') }}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;">
     <div class="stat-icon" style="background:var(--orange-soft);color:var(--orange)"><i class="fas fa-credit-card"></i></div>
     <div class="stat-label">Credit Used</div>
     <div class="stat-value" style="color:var(--orange)">{{ "{:,.0f}".format(total_used_credit) }}</div>
-    <div class="stat-change">of {{ "{:,.0f}".format(total_credit_limit) }} limit</div>
-  </div>
-  <div class="stat-card">
+    <div class="stat-change" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>of {{ "{:,.0f}".format(total_credit_limit) }} limit</span>
+      <span style="font-size:0.65rem;color:var(--text3);">Manage →</span>
+    </div>
+  </a>
+  <a href="{{ url_for('wallets') }}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;">
     <div class="stat-icon" style="background:rgba(14,165,233,0.1);color:var(--blue)"><i class="fas fa-wallet"></i></div>
     <div class="stat-label">Total Wallet Balance</div>
     <div class="stat-value" style="color:var(--blue)">{{ "{:,.0f}".format(total_wallet_balance) }}</div>
-    <div class="stat-change">actual cash · {{ wallets|length }} wallet{{ 's' if wallets|length != 1 }}</div>
-  </div>
-  <div class="stat-card" style="border-color:{{ health.color }}33;">
+    <div class="stat-change" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>{{ wallets|length }} wallet{{ 's' if wallets|length != 1 }}</span>
+      <span style="font-size:0.65rem;color:var(--text3);">Manage →</span>
+    </div>
+  </a>
+  <a href="{{ url_for('analytics') }}" class="stat-card" style="text-decoration:none;display:block;cursor:pointer;border-color:{{ health.color }}33;">
     <div class="stat-icon" style="background:{{ health.color }}18;color:{{ health.color }}"><i class="fas fa-heart-pulse"></i></div>
     <div class="stat-label">Financial Health</div>
     <div class="stat-value" style="color:{{ health.color }}">{{ health.score }}</div>

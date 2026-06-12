@@ -53,7 +53,7 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
   letter-spacing: 0.01em;
 }
 .hero h1 {
-  font-family: 'Playfair Display', serif; font-weight: 700;
+  font-size: 3.4rem; font-weight: 800;
   letter-spacing: -0.04em; line-height: 1.08;
   color: var(--navy); margin-bottom: 22px;
 }
@@ -196,23 +196,80 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
 .footer-bottom p { font-size: 0.78rem; color: rgba(255,255,255,0.3); }
 
 @media (max-width: 960px) {
-  .hero, .ai-inner { grid-template-columns: 1fr !important; gap: 40px !important; padding: 60px 24px !important; }
-  .hero-dashboard { display: none; }
-  .hero h1 { font-size: 4.4rem; }
-  .stats-inner, .steps-grid, .features-bento, .eco-grid { grid-template-columns: 1fr 1fr !important; }
-  .feat-big { grid-row: span 1 !important; min-height: auto !important; }
-  .footer-top { grid-template-columns: 1fr 1fr !important; }
-  .lp-nav { padding: 0 24px; }
+  /* Nav */
+  .lp-nav { padding: 0 16px; height: 56px; }
   .nav-links { display: none; }
-  .stats-section, .how-section, .features-section, .eco-section, .ai-section, .cta-section { padding: 60px 24px !important; }
+  .btn-signup, .btn-signin { padding: 7px 14px; font-size: 0.8rem; }
+
+  /* Hero */
+  [style*="grid-template-columns:1.1fr 0.9fr"] { grid-template-columns: 1fr !important; padding: 48px 20px 40px !important; }
+  .hero-dashboard { display: none !important; }
+  h1[style*="3.4rem"] { font-size: 2.2rem !important; }
+
+  /* Sections — full width, no overflow */
+  .stats-section { padding: 40px 20px !important; }
+  .stats-inner { grid-template-columns: 1fr 1fr !important; gap: 0 !important; }
+  .stat-item { padding: 16px 12px !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .stat-item h2 { font-size: 2rem !important; }
+
+  .how-section { padding: 56px 20px !important; }
+  .steps-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+
+  .features-section { padding: 56px 20px !important; }
+  .features-bento { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: 1fr 1fr !important; }
+  .feat-big { grid-row: span 1 !important; min-height: auto !important; }
+
+  .eco-section { padding: 56px 20px !important; }
+  .eco-grid { grid-template-columns: 1fr 1fr !important; max-width: 100% !important; }
+  .eco-center-badge { grid-column: span 2 !important; }
+
+  [style*="grid-template-columns:1fr 1fr;gap:64px"] { grid-template-columns: 1fr !important; gap: 32px !important; padding: 56px 20px !important; }
+
+  .cta-section { padding: 40px 20px !important; }
+  .cta-inner { padding: 40px 24px !important; border-radius: 16px; }
+  .cta-inner h2 { font-size: 1.6rem !important; }
+
+  .footer-top { grid-template-columns: 1fr 1fr !important; gap: 24px !important; }
+  .lp-footer { padding: 40px 20px 24px !important; }
+
+  /* Prevent overflow */
+  body { overflow-x: hidden; }
+  * { max-width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 480px) {
+  .stats-inner { grid-template-columns: 1fr 1fr !important; }
+  [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: 1fr !important; }
+  .eco-grid { grid-template-columns: 1fr !important; }
+  .eco-center-badge { grid-column: 1 !important; }
+  .footer-top { grid-template-columns: 1fr !important; }
+  h1[style*="3.4rem"], h1[style*="2.2rem"] { font-size: 1.9rem !important; }
+  .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
+  [style*="display:flex;gap:12px"] { flex-direction: column; }
 }
 {% endblock %}
 
 {% block content %}
-
+<!-- ── NAV ── -->
+<nav class="lp-nav">
+  <a href="{{ url_for('landing') }}" class="nav-logo">
+    <div class="nav-logo-icon">💰</div>
+    <span class="nav-logo-text">FinanceOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#ecosystem">Ecosystem</a>
+  </div>
+  <div class="nav-actions">
+    <a href="{{ url_for('auth_login') }}" class="btn-signin">Sign In</a>
+    <a href="{{ url_for('auth_signup') }}" class="btn-signup">Get Started Free</a>
+  </div>
+</nav>
 
 <!-- ── HERO ── -->
-<section style="background:linear-gradient(135deg,#168143 0%,#0a7c37 40%,#0d6e35 70%,#12b553 100%);position:relative;overflow:hidden;min-height:580px;display:flex;align-items:center;">
+<section style="background:linear-gradient(135deg,#0a3d1f 0%,#0f5c2e 40%,#0d6e35 70%,#0f5c2e 100%);position:relative;overflow:hidden;min-height:580px;display:flex;align-items:center;">
   <!-- Background decorative circles -->
   <div style="position:absolute;top:-120px;right:-120px;width:500px;height:500px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
   <div style="position:absolute;bottom:-80px;left:30%;width:300px;height:300px;border-radius:50%;background:rgba(0,200,83,0.08);pointer-events:none;"></div>
@@ -223,7 +280,7 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
     <div>
       <span class="hero-badge" style="background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.2);color:white;">🚀 Trusted Personal Finance Platform</span>
       <h1 style="font-size:3.4rem;font-weight:800;letter-spacing:-0.04em;line-height:1.08;color:white;margin-bottom:22px;">
-        Built for serious money management <br>ශ්‍රී ලාංකිකයන් සඳහාම නිර්මාණය කරන ලදී. <span style="color:#00C853;">FinanceOS</span>
+        Smart financial decisions<br>start with <span style="color:#00C853;">FinanceOS</span>
       </h1>
       <p style="font-size:1.05rem;color:rgba(255,255,255,0.75);line-height:1.75;margin-bottom:32px;max-width:480px;">
         Track expenses, manage loans, monitor credit cards, plan savings goals and understand your financial health from one powerful dashboard.
@@ -329,7 +386,7 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
   </div>
 </section>
 
-<!-- ── HOW IT WORKS ── -->-se
+<!-- ── HOW IT WORKS ── -->
 <section id="how-it-works" class="how-section">
   <div class="section-eyebrow">How it works</div>
   <h2 class="section-heading">Up and running in 3 steps</h2>

@@ -70,7 +70,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 14.5px; }
+    html { font-size: 15.5px; }
     body {
       font-family: var(--font);
       background: var(--bg);
@@ -204,15 +204,15 @@
     .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
     .stat-card {
       background: var(--surface);
-      border: 0.5px solid var(--border2);
+      border: 1px solid var(--border2);
       border-radius: var(--radius-lg);
-      padding: 16px;
-      transition: box-shadow var(--transition);
+      padding: 20px;
+      transition: all 0.2s;
     }
-    .stat-card:hover { box-shadow: var(--shadow); }
+    .stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
     .stat-icon {
-      width: 32px; height: 32px; border-radius: 7px;
-      display: grid; place-items: center; font-size: 0.85rem;
+      width: 42px; height: 42px; border-radius: 10px;
+      display: grid; place-items: center; font-size: 1.1rem;
       margin-bottom: 10px;
     }
     .stat-label { font-size: 0.72rem; color: var(--text2); font-weight: 500; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.05em; }

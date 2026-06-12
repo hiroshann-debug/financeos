@@ -107,13 +107,17 @@ def check_and_create_notifications(user_id=None):
     today_str = today.strftime('%Y-%m-%d')
 
     def already_notified(related_type, related_id, title_contains):
-        """Check if a notification was already created today for this item."""
+        """Check if this notification already exists — ever (not just today).
+        Prevents duplicates accumulating over time."""
+        from datetime import datetime, time, timedelta
+        # Check last 30 days to avoid spam but allow re-notification after a month
+        thirty_days_ago = datetime.combine(today - timedelta(days=30), time(0, 0))
         return Notification.query.filter(
             Notification.user_id == user_id,
             Notification.related_type == related_type,
             Notification.related_id == related_id,
             Notification.title.contains(title_contains),
-            Notification.created_at >= datetime.combine(today, time(0, 0)),
+            Notification.created_at >= thirty_days_ago,
         ).first() is not None
 
     # Loan due soon
