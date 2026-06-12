@@ -6,9 +6,7 @@
 <div class="flex items-center justify-between mb-6">
   <div>
     <h1 style="font-size:1.6rem;font-weight:700;letter-spacing:-0.02em;">
-      {% set hr = now.hour %}
-      {% if hr < 12 %}Good Morning{% elif hr < 17 %}Good Afternoon{% else %}Good Evening{% endif %},
-      {{ preferred_name }} 👋
+      <span id="greeting">Good Day</span>, {{ preferred_name }} 👋
     </h1>
     <p class="text-muted text-sm mt-1">Salary cycle: <strong>{{ salary_period }}</strong></p>
   </div>
@@ -506,5 +504,11 @@ function openPayCard(id, name, amount) {
 function openPayLoan(id, name, amount, walletId) {
   window.location.href = '/loan';
 }
+
+</script>
+<script>
+const hr = new Date().getHours();
+const greeting = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
+document.getElementById('greeting').textContent = greeting;
 </script>
 {% endblock %}

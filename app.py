@@ -1,11 +1,12 @@
+from time import time
+
 from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
     Investment, InvestmentIncome, Debt, FavouriteStock
 import requests as req_lib
 from calendar import monthrange
-from datetime import datetime, date, timedelta
-from zoneinfo import ZoneInfo, time
+from datetime import datetime, date, timedelta, time
 from dateutil.relativedelta import relativedelta
 import json, csv, io, os
 from collections import defaultdict
@@ -496,7 +497,6 @@ def dashboard():
     return render_template(
         "dashboard.html",
         preferred_name=preferred_name,
-        now=datetime.now(ZoneInfo("Asia/Colombo")),
         wallets=wallets,
         total_income=total_income,
         total_expense=total_expense,
