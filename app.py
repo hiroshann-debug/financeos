@@ -497,6 +497,7 @@ def dashboard():
     return render_template(
         "dashboard.html",
         preferred_name=preferred_name,
+        now=datetime.now(ZoneInfo("Asia/Colombo")),
         wallets=wallets,
         total_income=total_income,
         total_expense=total_expense,
@@ -1762,32 +1763,6 @@ def mark_all_read():
 # ─────────────────────────────────────────
 #  Settings (NEW)
 # ─────────────────────────────────────────
-@app.route("/run-settings-migration")
-def run_settings_migration():
-    """One-time fix — drop unique constraint and deduplicate settings. Remove after running."""
-    results = []
-    with db.engine.connect() as conn:
-        try:
-            conn.execute(db.text('ALTER TABLE app_settings DROP CONSTRAINT IF EXISTS app_settings_key_key;'))
-            conn.commit()
-            results.append("✅ Unique constraint dropped")
-        except Exception as e:
-            results.append(f"Constraint note: {e}")
-        try:
-            conn.execute(db.text("""
-                DELETE FROM app_settings a
-                USING app_settings b
-                WHERE a.id < b.id
-                AND a.key = b.key
-                AND a.user_id = b.user_id;
-            """))
-            conn.commit()
-            results.append("✅ Duplicate settings cleaned")
-        except Exception as e:
-            results.append(f"Cleanup note: {e}")
-    return "<br>".join(results) + "<br><br>Done! Remove this route from app.py now."
-
-
 @app.route("/toggle-dark-mode", methods=["POST"])
 @login_required
 def toggle_dark_mode():
