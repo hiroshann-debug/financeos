@@ -66,7 +66,7 @@ auth0 = oauth.register(
     client_kwargs={'scope': 'openid profile email'},
     server_metadata_url=f'https://{os.getenv("AUTH0_DOMAIN")}/.well-known/openid-configuration'
 )
- 
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -74,36 +74,36 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────
 def uid():
     user = session.get('user')
     return user['id'] if user else None
- 
+
 def currency_fmt(amount):
     sym = get_setting("currency_symbol", "LKR", user_id=uid())
     return f"{sym} {amount:,.2f}" 
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Error handlers
 # ─────────────────────────────────────────
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
- 
+
 @app.errorhandler(500)
 def server_error(e):
     return render_template('500.html'), 500
- 
+
 @app.errorhandler(403)
 def forbidden(e):
     return render_template('404.html'), 403
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Validation helpers
 # ─────────────────────────────────────────
@@ -117,7 +117,7 @@ def validate_amount(value, field_name="Amount"):
         return round(amount, 2), None
     except (TypeError, ValueError):
         return None, f"{field_name} must be a valid number."
- 
+
 def validate_date(value, field_name="Date"):
     if not value:
         return None, f"{field_name} is required."
@@ -125,7 +125,7 @@ def validate_date(value, field_name="Date"):
         return datetime.strptime(value, '%Y-%m-%d').date(), None
     except ValueError:
         return None, f"{field_name} must be a valid date (YYYY-MM-DD)."
- 
+
 def validate_text(value, field_name="Field", max_len=100, required=True):
     if not value or not str(value).strip():
         if required:
@@ -135,8 +135,8 @@ def validate_text(value, field_name="Field", max_len=100, required=True):
     if len(value) > max_len:
         return None, f"{field_name} must be under {max_len} characters."
     return value, None
- 
- 
+
+
 def get_salary_period(for_date):
     cycle_day = int(get_setting("salary_cycle_day", "25", user_id=uid()))
     if for_date.day >= cycle_day:
@@ -146,8 +146,8 @@ def get_salary_period(for_date):
         period_start = (for_date - relativedelta(months=1)).replace(day=cycle_day)
         period_end = for_date.replace(day=cycle_day) - timedelta(days=1)
     return period_start, period_end
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Context processors
 # ─────────────────────────────────────────
@@ -164,50 +164,50 @@ def inject_globals():
         currency_symbol=currency_symbol,
         current_user=user
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Core routes
 # ─────────────────────────────────────────
 @app.route('/')
 def index():
     return redirect(url_for('dashboard'))
- 
- 
+
+
 @app.route('/landing')
 def landing():
     return render_template('landing.html')
- 
- 
+
+
 @app.route('/login')
 def login():
     if 'user' in session:
         return redirect(url_for('dashboard'))
     return render_template('login.html')
- 
- 
+
+
 @app.route('/signup')
 def signup():
     if 'user' in session:
         return redirect(url_for('dashboard'))
     return render_template('signup.html')
- 
- 
+
+
 @app.route('/auth/login')
 def auth_login():
     return auth0.authorize_redirect(
         redirect_uri=url_for('callback', _external=True)
     )
- 
- 
+
+
 @app.route('/auth/signup')
 def auth_signup():
     return auth0.authorize_redirect(
         redirect_uri=url_for('callback', _external=True),
         screen_hint='signup'
     )
- 
- 
+
+
 @app.route('/callback')
 def callback():
     token = auth0.authorize_access_token()
@@ -220,8 +220,8 @@ def callback():
     }
     flash(f"Welcome back, {session['user']['name'].split()[0]}! 👋", "success")
     return redirect(url_for('dashboard'))
- 
- 
+
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -230,8 +230,8 @@ def logout():
         f"returnTo={url_for('landing', _external=True)}"
         f"&client_id={os.getenv('AUTH0_CLIENT_ID')}"
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Dashboard
 # ─────────────────────────────────────────
@@ -240,11 +240,11 @@ def logout():
 def dashboard():
     apply_due_recurring_payments(user_id=uid())
     check_and_create_notifications(user_id=uid())
- 
+
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     today = date.today()
     period_start, period_end = get_salary_period(today)
- 
+
     month_str = request.args.get("month")
     if month_str:
         try:
@@ -254,33 +254,33 @@ def dashboard():
             period_start, period_end = get_salary_period(override_date)
         except:
             pass
- 
+
     start_of_month = datetime.combine(today.replace(day=1), time.min)
     end_of_today = datetime.combine(today, time.max)
- 
+
     # Show all transactions this period including future-dated ones
     this_month_transactions = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.date >= start_of_month
     ).order_by(Transaction.date.desc()).all()
- 
+
     # Separate future transactions for visual indicator
     future_txn_ids = set(
         t.id for t in this_month_transactions
         if (t.date.date() if isinstance(t.date, datetime) else t.date) > today
     )
- 
+
     transactions = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.date >= period_start,
         Transaction.date <= period_end
     ).all()
- 
+
     income_by_category = defaultdict(float)
     expense_by_category = defaultdict(float)
     total_income = 0
     total_expense = 0
- 
+
     for t in transactions:
         category = t.category or t.description or "Other"
         if t.trans_type == "income":
@@ -289,7 +289,7 @@ def dashboard():
         elif t.trans_type == "expense":
             total_expense += t.amount
             expense_by_category[category] += t.amount
- 
+
     previous_transactions = Transaction.query.filter(Transaction.user_id == uid(), Transaction.date < period_start).all()
     carryover_balance = sum(t.amount if t.trans_type == "income" else -t.amount for t in previous_transactions)
     current_balance = carryover_balance + total_income - total_expense
@@ -297,18 +297,18 @@ def dashboard():
     total_wallet_balance = sum(w.balance for w in wallets)
     # Net Balance = wallet balance is the real number; transaction-based is for period tracking
     # We show both: wallet balance = actual cash, net balance = period performance
- 
+
     chart_data = {
         "income": dict(income_by_category),
         "expense": dict(expense_by_category),
         "balance": current_balance
     }
- 
+
     # Names already paid this period
     paid_names_period = set(t.description for t in transactions if t.trans_type == 'expense')
- 
+
     upcoming_payments = []
- 
+
     # 1. Credit card due dates
     cards_all = CreditCard.query.filter_by(user_id=uid()).all()
     upcoming_30 = today + timedelta(days=30)
@@ -332,7 +332,7 @@ def dashboard():
                 "paid": bool(card_paid),
                 "id": c.id,
             })
- 
+
     # 1b. Loan installments due in next 30 days
     loans_all = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
     for l in loans_all:
@@ -354,7 +354,7 @@ def dashboard():
                 "paid": bool(loan_paid),
                 "id": l.id,
             })
- 
+
     # 2. Fixed expenses due this period (unpaid only)
     fixed_expenses_all = FixedExpense.query.filter_by(user_id=uid()).all()
     for exp in fixed_expenses_all:
@@ -367,7 +367,7 @@ def dashboard():
         else:
             next_due = exp.date
             in_period = not exp.repeat and period_start <= next_due <= period_end
- 
+
         if in_period:
             paid = exp.name in paid_names_period
             days_left = (next_due - today).days
@@ -380,7 +380,7 @@ def dashboard():
                 "paid": paid,
                 "id": exp.id,
             })
- 
+
     # 3. Recurring payments due this period (unpaid only)
     recurring_all = RecurringPayment.query.filter_by(is_active=True, user_id=uid()).all()
     for rec in recurring_all:
@@ -396,11 +396,11 @@ def dashboard():
                 "paid": paid,
                 "id": rec.id,
             })
- 
+
     # Show only UNPAID, sorted by due date
     unpaid = [p for p in upcoming_payments if not p["paid"]]
     upcoming_fixed_sorted = sorted(unpaid, key=lambda x: x["due_date"])
- 
+
     # Salary bar calculations
     unpaid_fixed_total = sum(p["amount"] for p in unpaid)
     days_left_in_period = max(0, (period_end - today).days)
@@ -412,13 +412,13 @@ def dashboard():
     available_after_fixed = total_wallet_balance - unpaid_fixed_total
     # Daily budget remaining
     daily_budget_remaining = available_after_fixed / days_left_in_period if days_left_in_period > 0 else 0
- 
+
     cards = CreditCard.query.filter_by(user_id=uid()).all()
     total_credit_limit = sum(c.credit_limit for c in cards)
     total_available = sum(c.available_balance for c in cards)
     total_used = total_credit_limit - total_available
     total_monthly_due = sum(c.minimum_payment for c in cards)
- 
+
     fixed_chart_data = defaultdict(float)
     for f in fixed_expenses_all:
         repeat_until = f.repeat_until or date.max
@@ -430,7 +430,7 @@ def dashboard():
                 fixed_chart_data[f.category] += f.amount
         elif not f.repeat and period_start <= f.date <= period_end:
             fixed_chart_data[f.category] += f.amount
- 
+
     six_month_anchor = period_start - relativedelta(months=5)
     expenses_last_six = Transaction.query.filter(
         Transaction.user_id == uid(),
@@ -450,11 +450,11 @@ def dashboard():
     for t in income_last_six:
         month_key = t.date.strftime("%Y-%m") if isinstance(t.date, date) else t.date.date().strftime("%Y-%m")
         monthly_income_map[month_key] += t.amount
- 
+
     monthly_labels = sorted(set(list(monthly_expenses.keys()) + list(monthly_income_map.keys())))
     monthly_values = [monthly_expenses[m] for m in monthly_labels]
     monthly_income_values = [monthly_income_map[m] for m in monthly_labels]
- 
+
     next_period_start = period_start + relativedelta(months=1)
     next_period_end = next_period_start + relativedelta(months=1) - timedelta(days=1)
     next_month_expenses = []
@@ -474,7 +474,7 @@ def dashboard():
                 "id": exp.id, "name": exp.name, "amount": exp.amount,
                 "date": exp.date, "repeat": False
             })
- 
+
     # Add loan installments to next period forecast
     for l in Loan.query.filter_by(user_id=uid(), loan_status='Active').all():
         next_month_expenses.append({
@@ -492,22 +492,28 @@ def dashboard():
                 "date": c.due_date,
                 "repeat": True, "category": "Credit Card"
             })
- 
+
     next_month_total = sum(e["amount"] for e in next_month_expenses)
- 
+
     calendar_expenses = defaultdict(list)
     for e in next_month_expenses:
         calendar_expenses[e["date"].day].append(e)
- 
+
     salary_period_str = f"{period_start.strftime('%d %b %Y')} - {period_end.strftime('%d %b %Y')}"
- 
+
     health = get_financial_health_score(user_id=uid())
     active_goals = Goal.query.filter_by(status='active', user_id=uid()).limit(3).all()
     recent_notifications = Notification.query.filter_by(is_read=False, user_id=uid()).order_by(
         Notification.created_at.desc()).limit(5).all()
- 
+
+    user = session.get("user", {})
+    default_name = user.get("name", "").split()[0] if user.get("name") else "there"
+    preferred_name = get_setting("preferred_name", default_name, user_id=uid())
+
     return render_template(
         "dashboard.html",
+        preferred_name=preferred_name,
+        now=datetime.now(),
         wallets=wallets,
         total_income=total_income,
         total_expense=total_expense,
@@ -546,8 +552,8 @@ def dashboard():
         active_goals=active_goals,
         recent_notifications=recent_notifications,
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Transactions
 # ─────────────────────────────────────────
@@ -558,9 +564,9 @@ def transactions():
     end_date = request.args.get("end_date")
     trans_type = request.args.get("type", "")
     category_filter = request.args.get("category", "")
- 
+
     query = Transaction.query.filter_by(user_id=uid())
- 
+
     if start_date:
         try:
             start = datetime.strptime(start_date, "%Y-%m-%d")
@@ -577,11 +583,11 @@ def transactions():
         query = query.filter(Transaction.trans_type == trans_type)
     if category_filter:
         query = query.filter(Transaction.category.ilike(f"%{category_filter}%"))
- 
+
     all_txns = query.order_by(Transaction.date.desc()).all()
     categories = db.session.query(Transaction.category).filter(Transaction.user_id == uid()).distinct().all()
     categories = [c[0] for c in categories if c[0]]
- 
+
     return render_template(
         "all_transactions.html",
         transactions=all_txns,
@@ -592,24 +598,24 @@ def transactions():
         categories=categories,
         total=sum(t.amount if t.trans_type == "income" else -t.amount for t in all_txns)
     )
- 
- 
+
+
 @app.route('/add', methods=['POST'])
 @login_required
 def add():
     amount, err = validate_amount(request.form.get('amount'), "Amount")
     if err: flash(err, "danger"); return redirect(request.referrer or url_for('dashboard'))
- 
+
     description, err = validate_text(request.form.get('description'), "Description", max_len=100)
     if err: flash(err, "danger"); return redirect(request.referrer or url_for('dashboard'))
- 
+
     date_obj, err = validate_date(request.form.get('date'))
     if err: flash(err, "danger"); return redirect(request.referrer or url_for('dashboard'))
- 
+
     category, _ = validate_text(request.form.get('category', 'General'), "Category", required=False)
     notes, _ = validate_text(request.form.get('notes', ''), "Notes", max_len=500, required=False)
     payment_method = request.form.get('payment_method', '')
- 
+
     wallet_id, credit_id = None, None
     if payment_method.startswith("wallet_"):
         wallet_id = int(payment_method.split("_")[1])
@@ -618,7 +624,7 @@ def add():
     elif not payment_method or payment_method == "none":
         # Allow no payment source — cash or untracked
         pass
- 
+
     add_transaction(
         amount=amount, description=description, trans_type="expense",
         wallet_id=wallet_id, linked_credit=credit_id,
@@ -627,8 +633,8 @@ def add():
     )
     flash("Expense added successfully.", "success")
     return redirect(request.referrer or url_for('dashboard'))
- 
- 
+
+
 @app.route('/delete_transaction/<int:transaction_id>', methods=['POST'])
 def delete_transaction(transaction_id):
     tr = Transaction.query.filter_by(id=transaction_id, user_id=uid()).first_or_404()
@@ -636,8 +642,8 @@ def delete_transaction(transaction_id):
     db.session.commit()
     flash(f"Transaction '{tr.description}' deleted.", "success")
     return redirect(request.referrer or url_for('dashboard'))
- 
- 
+
+
 @app.route('/edit_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 def edit_transaction(transaction_id):
     tr = Transaction.query.filter_by(id=transaction_id, user_id=uid()).first_or_404()
@@ -656,8 +662,8 @@ def edit_transaction(transaction_id):
         flash("Transaction updated.", "success")
         return redirect(url_for('transactions'))
     return render_template('edit_transaction.html', transaction=tr, wallets=wallets, cards=cards)
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Income
 # ─────────────────────────────────────────
@@ -667,17 +673,17 @@ def income():
     if request.method == 'POST':
         amount, err = validate_amount(request.form.get('amount'), "Amount")
         if err: flash(err, "danger"); return redirect(url_for('income'))
- 
+
         description, err = validate_text(request.form.get('description'), "Description")
         if err: flash(err, "danger"); return redirect(url_for('income'))
- 
+
         date_obj, err = validate_date(request.form.get('date'))
         if err: flash(err, "danger"); return redirect(url_for('income'))
- 
+
         category, _ = validate_text(request.form.get('category', 'Income'), required=False)
         notes, _ = validate_text(request.form.get('notes', ''), max_len=500, required=False)
         wallet_id = request.form.get('wallet_id')
- 
+
         add_transaction(
             amount=amount, description=description, trans_type='income',
             wallet_id=int(wallet_id) if wallet_id else None,
@@ -686,14 +692,14 @@ def income():
         )
         flash('Income added successfully!', 'success')
         return redirect(url_for('income'))
- 
+
     income_list = Transaction.query.filter_by(trans_type='income', user_id=uid()).order_by(Transaction.date.desc()).all()
     total_income = sum(i.amount for i in income_list)
     this_month_str = datetime.today().strftime("%Y-%m")
     this_month_income_list = [i for i in income_list if i.date.strftime("%Y-%m") == this_month_str]
     this_month_income_total = sum(i.amount for i in this_month_income_list)
     wallets = Wallet.query.filter_by(user_id=uid()).all()
- 
+
     return render_template(
         'income.html',
         income_list=income_list,
@@ -703,8 +709,8 @@ def income():
         wallets=wallets,
         now=datetime.now
     )
- 
- 
+
+
 @app.route('/delete_income/<int:income_id>', methods=['POST'])
 def delete_income(income_id):
     income = Transaction.query.filter_by(id=income_id, user_id=uid()).first_or_404()
@@ -712,8 +718,8 @@ def delete_income(income_id):
     db.session.commit()
     flash('Income deleted.', 'info')
     return redirect(url_for('income'))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Wallets
 # ─────────────────────────────────────────
@@ -723,8 +729,8 @@ def wallets():
     all_wallets = Wallet.query.filter_by(user_id=uid()).all()
     transfers = WalletTransfer.query.filter_by(user_id=uid()).order_by(WalletTransfer.date.desc()).limit(20).all()
     return render_template("wallets.html", wallets=all_wallets, transfers=transfers)
- 
- 
+
+
 @app.route("/add_wallet", methods=["POST"])
 def add_wallet():
     name = request.form["name"]
@@ -740,8 +746,8 @@ def add_wallet():
     update_networth_snapshot(user_id=uid())
     flash("Wallet added!", "success")
     return redirect(url_for("wallets"))
- 
- 
+
+
 @app.route("/edit_wallet/<int:wallet_id>", methods=["POST"])
 def edit_wallet(wallet_id):
     wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first_or_404()
@@ -755,8 +761,8 @@ def edit_wallet(wallet_id):
     update_networth_snapshot(user_id=uid())
     flash("Wallet updated!", "success")
     return redirect(url_for("wallets"))
- 
- 
+
+
 @app.route("/delete_wallet/<int:wallet_id>", methods=["POST"])
 def delete_wallet(wallet_id):
     wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first_or_404()
@@ -764,34 +770,34 @@ def delete_wallet(wallet_id):
     db.session.commit()
     flash("Wallet deleted!", "success")
     return redirect(url_for("wallets"))
- 
- 
+
+
 @app.route("/transfer_wallet", methods=["POST"])
 def transfer_wallet():
     from_id = int(request.form["from_wallet"])
     to_id = int(request.form["to_wallet"])
     amount = float(request.form["amount"])
     note = request.form.get("note", "")
- 
+
     if from_id == to_id:
         flash("Cannot transfer to the same wallet.", "danger")
         return redirect(url_for("wallets"))
- 
+
     amount_val, err = validate_amount(request.form.get("amount"), "Transfer amount")
     if err: flash(err, "danger"); return redirect(url_for("wallets"))
     amount = amount_val
- 
+
     from_wallet = Wallet.query.filter_by(id=from_id, user_id=uid()).first()
     to_wallet = Wallet.query.filter_by(id=to_id, user_id=uid()).first()
- 
+
     if not from_wallet or not to_wallet:
         flash("Invalid wallet selected.", "danger")
         return redirect(url_for("wallets"))
- 
+
     if from_wallet.balance < amount:
         flash("Insufficient balance in source wallet.", "danger")
         return redirect(url_for("wallets"))
- 
+
     from_wallet.balance -= amount
     to_wallet.balance += amount
     transfer = WalletTransfer(from_wallet_id=from_id, to_wallet_id=to_id, amount=amount, note=note, user_id=uid())
@@ -800,8 +806,8 @@ def transfer_wallet():
     update_networth_snapshot(user_id=uid())
     flash("Transfer completed!", "success")
     return redirect(url_for("wallets"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Fixed Expenses
 # ─────────────────────────────────────────
@@ -814,18 +820,18 @@ def fixed_expenses():
         selected_month = datetime.strptime(month_str, "%Y-%m").date() if month_str else today
     except ValueError:
         selected_month = today
- 
+
     current_month_start = selected_month.replace(day=1)
     current_month_end = current_month_start + relativedelta(months=1) - timedelta(days=1)
     next_month_start = current_month_start + relativedelta(months=1)
     next_month_end = next_month_start + relativedelta(months=1) - timedelta(days=1)
- 
+
     def get_next_occurrence(start_date, after_date):
         next_date = start_date
         while next_date < after_date:
             next_date += relativedelta(months=1)
         return next_date
- 
+
     # Build paid set using salary period so it matches dashboard
     period_start_fe, period_end_fe = get_salary_period(today)
     paid_txns = Transaction.query.filter(
@@ -835,11 +841,11 @@ def fixed_expenses():
         Transaction.date <= today
     ).all()
     paid_names_fe = set(t.description for t in paid_txns)
- 
+
     all_expenses = FixedExpense.query.filter_by(user_id=uid()).order_by(FixedExpense.date).all()
     fixed_recurring, monthly_recurring, fixed_this_month, next_month_expenses = [], [], [], []
     fixed_chart_data = defaultdict(float)
- 
+
     for exp in all_expenses:
         repeat_until = exp.repeat_until or date.max
         if not exp.repeat and exp.repeat_until:
@@ -880,10 +886,10 @@ def fixed_expenses():
                 fixed_chart_data[exp.category or "Uncategorized"] += exp.amount
         elif not exp.repeat and current_month_start <= exp.date <= current_month_end:
             fixed_chart_data[exp.category or "Uncategorized"] += exp.amount
- 
+
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
- 
+
     return render_template(
         'fixed_expenses.html',
         repeat_until_expenses=fixed_recurring,
@@ -903,8 +909,8 @@ def fixed_expenses():
         wallets=wallets,
         credit_cards=credit_cards,
     )
- 
- 
+
+
 @app.route('/add-fixed', methods=['POST'])
 def add_fixed():
     name = request.form['name']
@@ -914,20 +920,20 @@ def add_fixed():
     date_str = request.form['date']
     date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
     notes = request.form.get('notes', '')
- 
+
     repeat_until_str = request.form.get('repeat_until')
     repeat_until = None
     if repeat_until_str:
         year, month = map(int, repeat_until_str.split('-'))
         last_day = monthrange(year, month)[1]
         repeat_until = date(year, month, last_day)
- 
+
     name, err = validate_text(name, "Expense name")
     if err: flash(err, "danger"); return redirect(url_for('fixed_expenses'))
- 
+
     amount_val, err = validate_amount(amount, "Amount")
     if err: flash(err, "danger"); return redirect(url_for('fixed_expenses'))
- 
+
     new_expense = FixedExpense(
         name=name, category=category or "General", amount=amount_val,
         repeat=repeat, date=date_obj, repeat_until=repeat_until,
@@ -937,14 +943,14 @@ def add_fixed():
     db.session.commit()
     flash('Fixed expense added!', 'success')
     return redirect(url_for('fixed_expenses'))
- 
- 
+
+
 @app.route("/apply-fixed/<int:expense_id>", methods=["POST"])
 def apply_fixed(expense_id):
     fixed_exp = FixedExpense.query.filter_by(id=expense_id, user_id=uid()).first_or_404()
     today = date.today()
     period_start, _ = get_salary_period(today)
- 
+
     already = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.description == fixed_exp.name,
@@ -955,14 +961,14 @@ def apply_fixed(expense_id):
     if already:
         flash(f"⚠️ '{fixed_exp.name}' already paid this period on {already.date.strftime('%d %b')}. Delete that transaction first to re-apply.", "warning")
         return redirect(request.referrer or url_for("dashboard"))
- 
+
     payment_method = request.form.get('payment_method')
     wallet_id, credit_id = None, None
     if payment_method and payment_method.startswith("wallet_"):
         wallet_id = int(payment_method.split("_")[1])
     elif payment_method and payment_method.startswith("credit_"):
         credit_id = int(payment_method.split("_")[1])
- 
+
     add_transaction(
         amount=fixed_exp.amount, description=fixed_exp.name,
         trans_type="expense", wallet_id=wallet_id, linked_credit=credit_id,
@@ -970,8 +976,8 @@ def apply_fixed(expense_id):
     )
     flash(f"✅ {fixed_exp.name} applied.", "success")
     return redirect(request.referrer or url_for("dashboard"))
- 
- 
+
+
 @app.route('/delete_fixed/<int:expense_id>', methods=['POST'])
 def delete_fixed(expense_id):
     expense = FixedExpense.query.filter_by(id=expense_id, user_id=uid()).first_or_404()
@@ -979,14 +985,14 @@ def delete_fixed(expense_id):
     db.session.commit()
     flash("Fixed expense deleted.", "success")
     return redirect(request.referrer or url_for('fixed_expenses'))
- 
- 
+
+
 @app.route("/mark-fixed-paid/<int:expense_id>", methods=["POST"])
 def mark_fixed_paid(expense_id):
     exp = FixedExpense.query.filter_by(id=expense_id, user_id=uid()).first_or_404()
     today = date.today()
     month_start = today.replace(day=1)
- 
+
     already = Transaction.query.filter(
         Transaction.description == exp.name,
         Transaction.trans_type == "expense",
@@ -996,15 +1002,15 @@ def mark_fixed_paid(expense_id):
     if already:
         flash(f"⚠️ '{exp.name}' already paid this month on {already.date.strftime('%d %b')}.", "warning")
         return redirect(url_for("dashboard"))
- 
+
     add_transaction(
         amount=exp.amount, description=exp.name, trans_type="expense",
         date_obj=today, category=exp.category, user_id=uid()
     )
     flash(f"✅ {exp.name} marked as paid.", "success")
     return redirect(url_for("dashboard"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Expense Scheduler
 # ─────────────────────────────────────────
@@ -1015,18 +1021,18 @@ def expense_scheduler():
     current_month_start = today.replace(day=1)
     next_month_start = current_month_start + relativedelta(months=1)
     next_month_end = next_month_start + relativedelta(months=1) - timedelta(days=1)
- 
+
     all_expenses = FixedExpense.query.filter_by(user_id=uid()).order_by(FixedExpense.date).all()
- 
+
     def get_next_occurrence(start_date, after_date):
         next_date = start_date
         while next_date < after_date:
             next_date += relativedelta(months=1)
         return next_date
- 
+
     upcoming_fixed, next_month_expenses = [], []
     month_end = current_month_start + relativedelta(months=1) - timedelta(days=1)
- 
+
     for exp in all_expenses:
         if exp.repeat_until and exp.repeat_until < exp.date:
             continue
@@ -1061,7 +1067,7 @@ def expense_scheduler():
                     "date": exp.date, "repeat": False,
                     "repeat_until": exp.repeat_until, "category": exp.category or "Uncategorized"
                 })
- 
+
     # Add loan + card installments to scheduler
     loans_active = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
     cards_active = CreditCard.query.filter_by(user_id=uid()).all()
@@ -1081,10 +1087,10 @@ def expense_scheduler():
                 "due_date": c.due_date.strftime('%Y-%m-%d'),
                 "repeat": True, "category": "Credit Card"
             })
- 
+
     total_this_month_all = sum(e["amount"] for e in upcoming_fixed)
     total_next_month_all = sum(e["amount"] for e in next_month_expenses)
- 
+
     return render_template(
         'expense_scheduler.html',
         upcoming_fixed=sorted(upcoming_fixed, key=lambda x: x["due_date"]),
@@ -1092,8 +1098,8 @@ def expense_scheduler():
         total_this_month=total_this_month_all,
         total_next_month=total_next_month_all,
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Budget Planner
 # ─────────────────────────────────────────
@@ -1103,7 +1109,7 @@ def budget_planner():
     today = date.today()
     month_str = request.args.get("month", today.strftime("%Y-%m"))
     current_month = month_str
- 
+
     if request.method == "POST":
         category = request.form["category"]
         amount = float(request.form["amount"])
@@ -1116,27 +1122,27 @@ def budget_planner():
         db.session.commit()
         flash("Budget saved!", "success")
         return redirect(url_for("budget_planner", month=current_month))
- 
+
     try:
         month_date = datetime.strptime(current_month, "%Y-%m").date()
     except:
         month_date = today.replace(day=1)
- 
+
     month_start = month_date.replace(day=1)
     month_end = month_start + relativedelta(months=1) - timedelta(days=1)
- 
+
     budgets = BudgetPlanner.query.filter_by(month=current_month, user_id=uid()).all()
     transactions = Transaction.query.filter(
         Transaction.trans_type == "expense",
         Transaction.date >= month_start,
         Transaction.date <= month_end
     ).all()
- 
+
     spending_by_category = defaultdict(float)
     for t in transactions:
         cat = t.category or t.description
         spending_by_category[cat] += t.amount
- 
+
     budget_summary = []
     for b in budgets:
         # Match by exact category OR partial match (case-insensitive)
@@ -1155,10 +1161,10 @@ def budget_planner():
             "remaining": remaining,
             "pct": pct
         })
- 
+
     total_budgeted = sum(b.amount for b in budgets)
     total_spent = sum(s["spent"] for s in budget_summary)
- 
+
     return render_template(
         "budget_planner.html",
         budget_summary=budget_summary,
@@ -1167,8 +1173,8 @@ def budget_planner():
         total_budgeted=total_budgeted,
         total_spent=total_spent
     )
- 
- 
+
+
 @app.route("/delete_budget/<int:budget_id>", methods=["POST"])
 def delete_budget(budget_id):
     b = BudgetPlanner.query.filter_by(id=budget_id, user_id=uid()).first_or_404()
@@ -1176,8 +1182,8 @@ def delete_budget(budget_id):
     db.session.commit()
     flash("Budget deleted.", "success")
     return redirect(url_for("budget_planner"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Credit Cards
 # ─────────────────────────────────────────
@@ -1200,29 +1206,29 @@ def credit_cards():
         card_colors=card_colors,
         total_monthly_due=sum(c.minimum_payment for c in cards),
     )
- 
- 
+
+
 @app.route("/add-credit-card", methods=["POST"])
 def add_credit_card():
     bank_name, err = validate_text(request.form.get('bank_name'), "Bank name")
     if err: flash(err, "danger"); return redirect(url_for("credit_cards"))
- 
+
     credit_limit, err = validate_amount(request.form.get('credit_limit'), "Credit limit")
     if err: flash(err, "danger"); return redirect(url_for("credit_cards"))
- 
+
     available, err = validate_amount(request.form.get('available_balance'), "Available balance")
     if err: flash(err, "danger"); return redirect(url_for("credit_cards"))
- 
+
     min_payment, err = validate_amount(request.form.get('minimum_payment'), "Minimum payment")
     if err: flash(err, "danger"); return redirect(url_for("credit_cards"))
- 
+
     due_date, err = validate_date(request.form.get('due_date'), "Due date")
     if err: flash(err, "danger"); return redirect(url_for("credit_cards"))
- 
+
     if available > credit_limit:
         flash("Available balance cannot exceed credit limit.", "danger")
         return redirect(url_for("credit_cards"))
- 
+
     card = CreditCard(
         bank_name=bank_name,
         card_number=request.form.get('card_number', '')[:4],
@@ -1235,8 +1241,8 @@ def add_credit_card():
     db.session.commit()
     flash("Credit card added!", "success")
     return redirect(url_for("credit_cards"))
- 
- 
+
+
 @app.route("/edit-credit-card/<int:card_id>", methods=["POST"])
 def edit_credit_card(card_id):
     card = CreditCard.query.filter_by(id=card_id, user_id=uid()).first_or_404()
@@ -1251,8 +1257,8 @@ def edit_credit_card(card_id):
     db.session.commit()
     flash("Credit card updated!", "success")
     return redirect(url_for("credit_cards"))
- 
- 
+
+
 @app.route("/pay-credit-card/<int:card_id>", methods=["POST"])
 @login_required
 def pay_credit_card(card_id):
@@ -1265,7 +1271,7 @@ def pay_credit_card(card_id):
     except (ValueError, TypeError):
         flash("Invalid payment amount.", "danger")
         return redirect(request.referrer or url_for("credit_cards"))
- 
+
     wallet_id = request.form.get('wallet_id')
     add_transaction(
         amount=amount,
@@ -1283,8 +1289,8 @@ def pay_credit_card(card_id):
     sym = get_setting("currency_symbol", "LKR", user_id=uid())
     flash(f"✅ Payment of {sym} {amount:,.0f} recorded. Available balance updated.", "success")
     return redirect(request.referrer or url_for("credit_cards"))
- 
- 
+
+
 @app.route("/delete-credit-card/<int:card_id>", methods=["POST"])
 def delete_credit_card(card_id):
     card = CreditCard.query.filter_by(id=card_id, user_id=uid()).first_or_404()
@@ -1292,8 +1298,8 @@ def delete_credit_card(card_id):
     db.session.commit()
     flash("Credit card deleted!", "success")
     return redirect(url_for("credit_cards"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Loans
 # ─────────────────────────────────────────
@@ -1327,38 +1333,38 @@ def loan_list():
         })
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     return render_template("loan.html", loans=loans, loan_data=loan_data, wallets=wallets)
- 
- 
+
+
 @app.route('/loan/add', methods=['POST'])
 def add_loan():
     loan_name, err = validate_text(request.form.get('loan_name'), "Loan name")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     lender_name, err = validate_text(request.form.get('lender_name'), "Lender name")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     principal, err = validate_amount(request.form.get('principal_amount'), "Principal amount")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     outstanding, err = validate_amount(request.form.get('outstanding_balance'), "Outstanding balance")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     monthly, err = validate_amount(request.form.get('monthly_payment'), "Monthly payment")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     start_date, err = validate_date(request.form.get('start_date'), "Start date")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     next_due, err = validate_date(request.form.get('next_due_date'), "Next due date")
     if err: flash(err, "danger"); return redirect(url_for('loan_list'))
- 
+
     try:
         interest_rate = float(request.form.get('interest_rate', 0))
         loan_term = int(request.form.get('loan_term', 12))
     except ValueError:
         flash("Interest rate and loan term must be numbers.", "danger")
         return redirect(url_for('loan_list'))
- 
+
     loan = Loan(
         loan_name=loan_name, lender_name=lender_name,
         principal_amount=principal, interest_rate=interest_rate,
@@ -1372,14 +1378,14 @@ def add_loan():
     db.session.commit()
     flash("Loan added!", "success")
     return redirect(url_for('loan_list'))
- 
- 
+
+
 @app.route('/loan/pay/<int:loan_id>', methods=['POST'])
 def pay_loan(loan_id):
     loan = Loan.query.filter_by(id=loan_id, user_id=uid()).first_or_404()
     amount = float(request.form.get('amount', loan.monthly_payment))
     wallet_id = request.form.get('wallet_id')
- 
+
     add_transaction(
         amount=amount,
         description=f"Loan payment: {loan.loan_name}",
@@ -1396,8 +1402,8 @@ def pay_loan(loan_id):
     db.session.commit()
     flash(f"Payment of LKR {amount:,.2f} recorded for {loan.loan_name}.", "success")
     return redirect(url_for('loan_list'))
- 
- 
+
+
 @app.route('/loan/edit/<int:loan_id>', methods=['POST'])
 def edit_loan(loan_id):
     loan = Loan.query.filter_by(id=loan_id, user_id=uid()).first_or_404()
@@ -1415,8 +1421,8 @@ def edit_loan(loan_id):
     db.session.commit()
     flash('Loan updated!', 'success')
     return redirect(url_for('loan_list'))
- 
- 
+
+
 @app.route('/loan/delete/<int:loan_id>', methods=['POST'])
 def delete_loan(loan_id):
     loan = Loan.query.filter_by(id=loan_id, user_id=uid()).first_or_404()
@@ -1424,8 +1430,8 @@ def delete_loan(loan_id):
     db.session.commit()
     flash('Loan deleted!', 'success')
     return redirect(url_for('loan_list'))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Net Worth
 # ─────────────────────────────────────────
@@ -1440,7 +1446,7 @@ def net_worth_tracker():
     total_cards = sum(c.credit_limit - c.available_balance for c in cards)
     total_liabilities = total_loans + total_cards
     net_worth = total_assets - total_liabilities
- 
+
     today = date.today()
     existing = NetWorthHistory.query.filter_by(date=today, user_id=uid()).first()
     if not existing:
@@ -1451,13 +1457,13 @@ def net_worth_tracker():
         )
         db.session.add(snapshot)
         db.session.commit()
- 
+
     history = NetWorthHistory.query.filter_by(user_id=uid()).order_by(NetWorthHistory.date).all()
     dates = [h.date.strftime("%Y-%m-%d") for h in history]
     net_worth_values = [h.net_worth for h in history]
     assets_values = [h.total_assets for h in history]
     liab_values = [h.total_liabilities for h in history]
- 
+
     return render_template(
         "net_worth_tracker.html",
         total_assets=total_assets,
@@ -1472,8 +1478,8 @@ def net_worth_tracker():
         loans=loans,
         cards=cards
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Goals (NEW)
 # ─────────────────────────────────────────
@@ -1484,10 +1490,10 @@ def goals():
         target_date_str = request.form.get('target_date')
         name, err = validate_text(request.form.get('name'), "Goal name")
         if err: flash(err, "danger"); return redirect(url_for("goals"))
- 
+
         target_amount, err = validate_amount(request.form.get('target_amount'), "Target amount")
         if err: flash(err, "danger"); return redirect(url_for("goals"))
- 
+
         try:
             current_amount = float(request.form.get('current_amount') or 0)
             if current_amount < 0:
@@ -1496,12 +1502,12 @@ def goals():
         except ValueError:
             flash("Current amount must be a number.", "danger")
             return redirect(url_for("goals"))
- 
+
         target_date = None
         if target_date_str:
             target_date, err = validate_date(target_date_str, "Target date")
             if err: flash(err, "danger"); return redirect(url_for("goals"))
- 
+
         goal = Goal(
             name=name,
             description=request.form.get('description', '')[:300],
@@ -1518,19 +1524,19 @@ def goals():
         db.session.commit()
         flash("Goal created!", "success")
         return redirect(url_for("goals"))
- 
+
     all_goals = Goal.query.filter_by(user_id=uid()).order_by(Goal.status, Goal.target_date).all()
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     return render_template("goals.html", goals=all_goals, wallets=wallets)
- 
- 
+
+
 @app.route("/goals/contribute/<int:goal_id>", methods=["POST"])
 def contribute_goal(goal_id):
     goal = Goal.query.filter_by(id=goal_id, user_id=uid()).first_or_404()
- 
+
     amount, err = validate_amount(request.form.get('amount'), "Contribution amount")
     if err: flash(err, "danger"); return redirect(url_for("goals"))
- 
+
     wallet_id = request.form.get('wallet_id')
     goal.current_amount += amount
     if goal.current_amount >= goal.target_amount:
@@ -1538,16 +1544,16 @@ def contribute_goal(goal_id):
         flash(f"🎉 Goal '{goal.name}' completed!", "success")
     else:
         flash(f"LKR {amount:,.2f} added to '{goal.name}'.", "success")
- 
+
     if wallet_id:
         wallet = Wallet.query.filter_by(id=int(wallet_id), user_id=uid()).first()
         if wallet:
             wallet.balance -= amount
- 
+
     db.session.commit()
     return redirect(url_for("goals"))
- 
- 
+
+
 @app.route("/goals/delete/<int:goal_id>", methods=["POST"])
 def delete_goal(goal_id):
     goal = Goal.query.filter_by(id=goal_id, user_id=uid()).first_or_404()
@@ -1555,8 +1561,8 @@ def delete_goal(goal_id):
     db.session.commit()
     flash("Goal deleted.", "info")
     return redirect(url_for("goals"))
- 
- 
+
+
 @app.route("/goals/status/<int:goal_id>", methods=["POST"])
 def toggle_goal_status(goal_id):
     goal = Goal.query.filter_by(id=goal_id, user_id=uid()).first_or_404()
@@ -1565,8 +1571,8 @@ def toggle_goal_status(goal_id):
     db.session.commit()
     flash(f"Goal status updated to {new_status}.", "success")
     return redirect(url_for("goals"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Recurring Payments (NEW)
 # ─────────────────────────────────────────
@@ -1591,7 +1597,7 @@ def recurring_payments():
         db.session.commit()
         flash("Recurring payment added!", "success")
         return redirect(url_for("recurring_payments"))
- 
+
     recs = RecurringPayment.query.filter_by(user_id=uid()).order_by(RecurringPayment.next_date).all()
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     cards = CreditCard.query.filter_by(user_id=uid()).all()
@@ -1601,8 +1607,8 @@ def recurring_payments():
     )
     return render_template("recurring.html", recurring=recs, wallets=wallets,
                            cards=cards, today=today, total_monthly=total_monthly)
- 
- 
+
+
 @app.route("/recurring/delete/<int:rec_id>", methods=["POST"])
 def delete_recurring(rec_id):
     rec = RecurringPayment.query.filter_by(id=rec_id, user_id=uid()).first_or_404()
@@ -1610,8 +1616,8 @@ def delete_recurring(rec_id):
     db.session.commit()
     flash("Recurring payment deleted.", "info")
     return redirect(url_for("recurring_payments"))
- 
- 
+
+
 @app.route("/recurring/apply/<int:rec_id>", methods=["POST"])
 def apply_recurring(rec_id):
     rec = RecurringPayment.query.filter_by(id=rec_id, user_id=uid()).first_or_404()
@@ -1630,8 +1636,8 @@ def apply_recurring(rec_id):
     db.session.commit()
     flash(f"{rec.name} applied.", "success")
     return redirect(url_for("recurring_payments"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Analytics (NEW)
 # ─────────────────────────────────────────
@@ -1640,7 +1646,7 @@ def apply_recurring(rec_id):
 def analytics():
     today = date.today()
     period = request.args.get("period", "month")
- 
+
     if period == "week":
         start = today - timedelta(days=7)
     elif period == "quarter":
@@ -1649,10 +1655,10 @@ def analytics():
         start = today - relativedelta(years=1)
     else:
         start = today.replace(day=1)
- 
+
     insights = get_spending_insights(start, today, user_id=uid())
     health = get_financial_health_score(user_id=uid())
- 
+
     # Month-over-month last 12 months
     monthly_data = []
     for i in range(11, -1, -1):
@@ -1669,7 +1675,7 @@ def analytics():
             "expense": expense,
             "savings": income - expense
         })
- 
+
     # Top categories last 3 months
     three_ago = today - relativedelta(months=3)
     cat_txns = Transaction.query.filter(
@@ -1681,7 +1687,7 @@ def analytics():
     for t in cat_txns:
         cat_totals[t.category or "Other"] += t.amount
     top_categories = sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:8]
- 
+
     # Weekday vs Weekend spending
     all_txns_period = Transaction.query.filter(
         Transaction.user_id == uid(),
@@ -1699,7 +1705,7 @@ def analytics():
         if (t.date.date() if isinstance(t.date, datetime) else t.date).weekday() >= 5))
     weekday_avg = weekday_total / weekday_count
     weekend_avg = weekend_total / weekend_count
- 
+
     # This month fixed total needed
     this_month_fixed_total = sum(
         e["amount"] for e in []  # calculated in fixed_expenses route
@@ -1710,7 +1716,7 @@ def analytics():
         sum(l.monthly_payment for l in loans_active) +
         sum(c.minimum_payment for c in cards_active)
     )
- 
+
     return render_template(
         "analytics.html",
         insights=insights,
@@ -1726,8 +1732,8 @@ def analytics():
         weekend_total=weekend_total,
         fixed_committed=fixed_committed,
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Notifications (NEW)
 # ─────────────────────────────────────────
@@ -1742,7 +1748,7 @@ def notifications():
         Notification.created_at < cutoff
     ).delete()
     db.session.commit()
- 
+
     check_and_create_notifications(user_id=uid())
     all_notifs = Notification.query.filter_by(user_id=uid()).order_by(
         Notification.is_read.asc(),
@@ -1751,8 +1757,8 @@ def notifications():
     unread = [n for n in all_notifs if not n.is_read]
     read = [n for n in all_notifs if n.is_read]
     return render_template("notifications.html", notifications=all_notifs, unread=unread, read_notifs=read)
- 
- 
+
+
 @app.route("/notifications/read/<int:notif_id>", methods=["POST"])
 def mark_notification_read(notif_id):
     n = Notification.query.filter_by(id=notif_id, user_id=uid()).first_or_404()
@@ -1760,16 +1766,16 @@ def mark_notification_read(notif_id):
     db.session.commit()
     flash("Notification marked as read.", "success")
     return redirect(request.referrer or url_for("notifications"))
- 
- 
+
+
 @app.route("/notifications/read-all", methods=["POST"])
 def mark_all_read():
     Notification.query.filter_by(user_id=uid()).update({"is_read": True})
     db.session.commit()
     flash("All notifications marked as read.", "success")
     return redirect(url_for("notifications"))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Settings (NEW)
 # ─────────────────────────────────────────
@@ -1780,8 +1786,8 @@ def toggle_dark_mode():
     new_val = "false" if current == "true" else "true"
     set_setting("dark_mode", new_val, user_id=uid())
     return jsonify({"dark_mode": new_val == "true"})
- 
- 
+
+
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
@@ -1790,15 +1796,22 @@ def settings():
         set_setting("currency_symbol", request.form.get("currency_symbol", "LKR"), user_id=uid())
         dark = "on" if "dark_mode" in request.form else "false"
         set_setting("dark_mode", "true" if dark == "on" else "false", user_id=uid())
+        # Save preferred name
+        preferred_name = request.form.get("preferred_name", "").strip()
+        if preferred_name:
+            set_setting("preferred_name", preferred_name, user_id=uid())
         flash("Settings saved!", "success")
         return redirect(url_for("settings"))
- 
+
+    user = session.get("user", {})
     return render_template("settings.html",
                            salary_cycle_day=get_setting("salary_cycle_day", "25"),
                            currency_symbol=get_setting("currency_symbol", "LKR"),
-                           dark_mode=get_setting("dark_mode", "false") == "true")
- 
- 
+                           dark_mode=get_setting("dark_mode", "false") == "true",
+                           preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else ""),
+                           user=user)
+
+
 # ─────────────────────────────────────────
 #  Export (NEW)
 # ─────────────────────────────────────────
@@ -1812,22 +1825,22 @@ def export_transactions():
     if end_str:
         query = query.filter(Transaction.date <= datetime.strptime(end_str, "%Y-%m-%d").replace(hour=23, minute=59))
     txns = query.order_by(Transaction.date.desc()).all()
- 
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["Date", "Type", "Category", "Description", "Amount", "Notes"])
     for t in txns:
         d = t.date.strftime("%Y-%m-%d") if isinstance(t.date, (date, datetime)) else str(t.date)
         writer.writerow([d, t.trans_type, t.category or "", t.description, t.amount, t.notes or ""])
- 
+
     output.seek(0)
     return Response(
         output.getvalue(),
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=transactions.csv"}
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Reports
 # ─────────────────────────────────────────
@@ -1841,8 +1854,8 @@ def reports():
         m = (today - relativedelta(months=i)).replace(day=1)
         months.append(m)
     return render_template("reports.html", months=months, today=today)
- 
- 
+
+
 @app.route("/reports/download")
 @login_required
 def download_report():
@@ -1851,17 +1864,17 @@ def download_report():
         month_date = datetime.strptime(month_str, "%Y-%m").date()
     except:
         month_date = date.today().replace(day=1)
- 
+
     month_start = month_date.replace(day=1)
     month_end = month_start + relativedelta(months=1) - timedelta(days=1)
- 
+
     # Gather all data for this user
     transactions = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.date >= month_start,
         Transaction.date <= month_end
     ).order_by(Transaction.date.desc()).all()
- 
+
     wallets  = Wallet.query.filter_by(user_id=uid()).all()
     loans    = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
     cards    = CreditCard.query.filter_by(user_id=uid()).all()
@@ -1869,10 +1882,10 @@ def download_report():
     fixed    = FixedExpense.query.filter_by(user_id=uid()).all()
     health   = get_financial_health_score(user_id=uid())
     settings = {}
- 
+
     user     = session.get('user', {})
     currency = get_setting("currency_symbol", "LKR", user_id=uid())
- 
+
     pdf_bytes = generate_monthly_report(
         user_id      = uid(),
         user_name    = user.get('name', 'User'),
@@ -1888,15 +1901,15 @@ def download_report():
         health       = health,
         settings     = settings,
     )
- 
+
     filename = f"FinanceOS_{month_date.strftime('%B_%Y')}_Report.pdf"
     return Response(
         pdf_bytes,
         mimetype="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Financial Tools
 # ─────────────────────────────────────────
@@ -1922,14 +1935,14 @@ def financial_tools():
         monthly_income_avg=monthly_income_avg,
         total_savings=sum(w.balance for w in wallets),
     )
- 
- 
- 
+
+
+
 @app.route("/api/health-score")
 def api_health_score():
     return jsonify(get_financial_health_score())
- 
- 
+
+
 @app.route("/api/net-worth-history")
 def api_net_worth_history():
     history = NetWorthHistory.query.filter_by(user_id=uid()).order_by(NetWorthHistory.date).all()
@@ -1939,8 +1952,8 @@ def api_net_worth_history():
         "liabilities": h.total_liabilities,
         "net_worth": h.net_worth
     } for h in history])
- 
- 
+
+
 @app.route("/api/spending-by-category")
 def api_spending_by_category():
     today = date.today()
@@ -1953,11 +1966,11 @@ def api_spending_by_category():
     for t in txns:
         by_cat[t.category or "Other"] += t.amount
     return jsonify(dict(by_cat))
- 
- 
+
+
 import models
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Investments
 # ─────────────────────────────────────────
@@ -1967,7 +1980,7 @@ def investments():
     investments = Investment.query.filter_by(user_id=uid()).order_by(Investment.asset_type, Investment.name).all()
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     income_records = InvestmentIncome.query.filter_by(user_id=uid()).order_by(InvestmentIncome.date.desc()).limit(20).all()
- 
+
     # Group by type
     by_type = {}
     total_invested = 0
@@ -1982,10 +1995,10 @@ def investments():
             by_type[t]['value'] += inv.current_value
             total_invested += inv.total_invested
             total_value += inv.current_value
- 
+
     total_gain = total_value - total_invested
     total_gain_pct = (total_gain / total_invested * 100) if total_invested > 0 else 0
- 
+
     return render_template('investments.html',
         investments=investments,
         by_type=by_type,
@@ -1997,18 +2010,18 @@ def investments():
         total_gain_pct=total_gain_pct,
         today=date.today(),
     )
- 
- 
+
+
 @app.route("/investments/add", methods=["POST"])
 @login_required
 def add_investment():
     name, err = validate_text(request.form.get('name'), "Investment name")
     if err: flash(err, "danger"); return redirect(url_for('investments'))
- 
+
     units = float(request.form.get('units') or 0)
     purchase_price = float(request.form.get('purchase_price') or 0)
     current_price = float(request.form.get('current_price') or purchase_price)
- 
+
     inv = Investment(
         user_id=uid(),
         name=name,
@@ -2025,20 +2038,20 @@ def add_investment():
         notes=request.form.get('notes', ''),
         wallet_id=int(request.form['wallet_id']) if request.form.get('wallet_id') else None,
     )
- 
+
     # Deduct from wallet if linked (money went into investment)
     if inv.wallet_id and inv.total_invested > 0:
         wallet = Wallet.query.filter_by(id=inv.wallet_id, user_id=uid()).first()
         if wallet:
             wallet.balance -= inv.total_invested
- 
+
     db.session.add(inv)
     db.session.commit()
     update_networth_snapshot(user_id=uid())
     flash(f"✅ {name} added to investments.", "success")
     return redirect(url_for('investments'))
- 
- 
+
+
 @app.route("/investments/update-price/<int:inv_id>", methods=["POST"])
 @login_required
 def update_investment_price(inv_id):
@@ -2049,18 +2062,18 @@ def update_investment_price(inv_id):
     update_networth_snapshot(user_id=uid())
     flash(f"Price updated for {inv.name}.", "success")
     return redirect(url_for('investments'))
- 
- 
+
+
 @app.route("/investments/income/<int:inv_id>", methods=["POST"])
 @login_required
 def record_investment_income(inv_id):
     inv = Investment.query.filter_by(id=inv_id, user_id=uid()).first_or_404()
     amount, err = validate_amount(request.form.get('amount'), "Amount")
     if err: flash(err, "danger"); return redirect(url_for('investments'))
- 
+
     action = request.form.get('action', 'record_only')
     wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
- 
+
     income = InvestmentIncome(
         user_id=uid(),
         investment_id=inv_id,
@@ -2072,7 +2085,7 @@ def record_investment_income(inv_id):
         notes=request.form.get('notes', ''),
     )
     db.session.add(income)
- 
+
     if action == 'add_to_wallet' and wallet_id:
         wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
         if wallet:
@@ -2086,13 +2099,13 @@ def record_investment_income(inv_id):
         # Add to units at current price
         if inv.current_price > 0:
             inv.units += amount / inv.current_price
- 
+
     db.session.commit()
     update_networth_snapshot(user_id=uid())
     flash(f"✅ {income.income_type} of {amount:,.0f} recorded.", "success")
     return redirect(url_for('investments'))
- 
- 
+
+
 @app.route("/investments/sell/<int:inv_id>", methods=["POST"])
 @login_required
 def sell_investment(inv_id):
@@ -2100,10 +2113,10 @@ def sell_investment(inv_id):
     units_sold = float(request.form.get('units_sold') or inv.units)
     sale_price = float(request.form.get('sale_price') or inv.current_price)
     wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
- 
+
     proceeds = units_sold * sale_price
     gain = (sale_price - inv.purchase_price) * units_sold
- 
+
     if wallet_id:
         wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
         if wallet:
@@ -2113,19 +2126,19 @@ def sell_investment(inv_id):
             trans_type='income', wallet_id=wallet_id,
             date_obj=date.today(), category='Investment Sale', user_id=uid()
         )
- 
+
     if units_sold >= inv.units:
         inv.status = 'sold'
         inv.units = 0
     else:
         inv.units -= units_sold
- 
+
     db.session.commit()
     update_networth_snapshot(user_id=uid())
     flash(f"✅ Sold {units_sold} units of {inv.name} for {proceeds:,.0f}. {'Gain' if gain >= 0 else 'Loss'}: {abs(gain):,.0f}", "success")
     return redirect(url_for('investments'))
- 
- 
+
+
 @app.route("/investments/delete/<int:inv_id>", methods=["POST"])
 @login_required
 def delete_investment(inv_id):
@@ -2134,8 +2147,8 @@ def delete_investment(inv_id):
     db.session.commit()
     flash("Investment deleted.", "success")
     return redirect(url_for('investments'))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Debt Tracker
 # ─────────────────────────────────────────
@@ -2154,8 +2167,8 @@ def debts():
         i_owe=i_owe, owed_to_me=owed_to_me,
         today=date.today(),
     )
- 
- 
+
+
 @app.route("/debts/add", methods=["POST"])
 @login_required
 def add_debt():
@@ -2163,10 +2176,10 @@ def add_debt():
     if err: flash(err, "danger"); return redirect(url_for('debts'))
     amount, err = validate_amount(request.form.get('amount'), "Amount")
     if err: flash(err, "danger"); return redirect(url_for('debts'))
- 
+
     direction = request.form.get('direction', 'owe')
     wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
- 
+
     debt = Debt(
         user_id=uid(),
         contact_name=contact,
@@ -2177,7 +2190,7 @@ def add_debt():
         wallet_id=wallet_id,
         notes=request.form.get('notes', ''),
     )
- 
+
     # Record transaction
     if wallet_id:
         wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
@@ -2186,20 +2199,20 @@ def add_debt():
                 wallet.balance -= amount
             else:  # I borrowed → add to wallet
                 wallet.balance += amount
- 
+
     db.session.add(debt)
     db.session.commit()
     label = "lent to" if direction == "lent" else "borrowed from"
     flash(f"✅ {get_setting('currency_symbol','LKR',user_id=uid())} {amount:,.0f} {label} {contact} recorded.", "success")
     return redirect(url_for('debts'))
- 
- 
+
+
 @app.route("/debts/settle/<int:debt_id>", methods=["POST"])
 @login_required
 def settle_debt(debt_id):
     debt = Debt.query.filter_by(id=debt_id, user_id=uid()).first_or_404()
     wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
- 
+
     if wallet_id:
         wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first()
         if wallet:
@@ -2207,14 +2220,14 @@ def settle_debt(debt_id):
                 wallet.balance -= debt.amount
             else:  # They repay me → add
                 wallet.balance += debt.amount
- 
+
     debt.status = 'settled'
     db.session.commit()
     update_networth_snapshot(user_id=uid())
     flash(f"✅ Debt with {debt.contact_name} settled.", "success")
     return redirect(url_for('debts'))
- 
- 
+
+
 @app.route("/debts/delete/<int:debt_id>", methods=["POST"])
 @login_required
 def delete_debt(debt_id):
@@ -2223,8 +2236,8 @@ def delete_debt(debt_id):
     db.session.commit()
     flash("Debt record deleted.", "success")
     return redirect(url_for('debts'))
- 
- 
+
+
 # ─────────────────────────────────────────
 #  Exchange Rates
 # ─────────────────────────────────────────
@@ -2235,7 +2248,7 @@ def exchange_rates():
     rates = {}
     error = None
     last_updated = None
- 
+
     try:
         resp = http.get(
             "https://open.er-api.com/v6/latest/USD",
@@ -2277,7 +2290,7 @@ def exchange_rates():
             error = "Could not fetch rates. Try again later."
     except Exception as e:
         error = f"Service unavailable: {str(e)[:60]}"
- 
+
     currency_symbol = get_setting("currency_symbol", "LKR", user_id=uid())
     return render_template("exchange_rates.html",
         rates=rates,
@@ -2285,8 +2298,8 @@ def exchange_rates():
         last_updated=last_updated,
         currency_symbol=currency_symbol,
     )
- 
- 
+
+
 # ─────────────────────────────────────────
 #  CSE Stock Prices
 # ─────────────────────────────────────────
@@ -2298,7 +2311,7 @@ def cse_stocks():
     top_gainers = []
     top_losers = []
     most_active = []
- 
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
@@ -2312,16 +2325,16 @@ def cse_stocks():
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
     }
- 
+
     session = http.Session()
     session.headers.update(headers)
- 
+
     # First hit the main page to get any cookies
     try:
         session.get("https://www.cse.lk/", timeout=6)
     except Exception:
         pass
- 
+
     try:
         r = session.post("https://www.cse.lk/api/topGainers",
             data={}, timeout=10)
@@ -2330,7 +2343,7 @@ def cse_stocks():
         top_gainers = gainers_data.get("reqTopGainers", [])[:10]
     except Exception as e:
         error = f"CSE API unavailable: {str(e)[:60]}"
- 
+
     try:
         r = session.post("https://www.cse.lk/api/topLooses",
             data={}, timeout=10)
@@ -2339,7 +2352,7 @@ def cse_stocks():
         top_losers = losers_data.get("reqTopLooses", [])[:10]
     except Exception:
         pass
- 
+
     try:
         r = session.post("https://www.cse.lk/api/mostActiveTrades",
             data={}, timeout=10)
@@ -2348,7 +2361,7 @@ def cse_stocks():
         most_active = active_data.get("reqMostActiveTrades", [])[:10]
     except Exception:
         pass
- 
+
     favourites = FavouriteStock.query.filter_by(user_id=uid()).order_by(FavouriteStock.added_at).all()
     return render_template("cse_stocks.html",
         top_gainers=top_gainers,
@@ -2357,8 +2370,8 @@ def cse_stocks():
         favourites=favourites,
         error=error,
     )
- 
- 
+
+
 @app.route("/cse/search", methods=["POST"])
 @login_required
 def cse_search():
@@ -2366,11 +2379,11 @@ def cse_search():
     symbol = request.form.get("symbol", "").strip().upper()
     if not symbol:
         return jsonify({"error": "Symbol required"})
- 
+
     # Add suffix if not present
     if "." not in symbol:
         symbol = symbol + ".N0000"
- 
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
@@ -2386,8 +2399,8 @@ def cse_search():
         return jsonify({"success": True, "data": info})
     except Exception as e:
         return jsonify({"error": str(e)[:80]})
- 
- 
+
+
 # ─────────────────────────────────────────
 #  CSE Favourites
 # ─────────────────────────────────────────
@@ -2409,8 +2422,8 @@ def add_favourite_stock():
     db.session.add(fav)
     db.session.commit()
     return jsonify({"success": True, "id": fav.id, "symbol": symbol, "name": name})
- 
- 
+
+
 @app.route("/cse/favourites/remove", methods=["POST"])
 @login_required
 def remove_favourite_stock():
@@ -2422,8 +2435,8 @@ def remove_favourite_stock():
         db.session.delete(fav)
         db.session.commit()
     return jsonify({"success": True})
- 
- 
+
+
 @app.route("/cse/favourites/prices", methods=["POST"])
 @login_required
 def favourite_stock_prices():
@@ -2463,7 +2476,7 @@ def favourite_stock_prices():
                 "marketCap": None,
             })
     return jsonify({"stocks": results})
- 
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
