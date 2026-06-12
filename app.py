@@ -1794,8 +1794,8 @@ def settings():
     if request.method == "POST":
         set_setting("salary_cycle_day", request.form.get("salary_cycle_day", "25"), user_id=uid())
         set_setting("currency_symbol", request.form.get("currency_symbol", "LKR"), user_id=uid())
-        dark = "on" if "dark_mode" in request.form else "false"
-        set_setting("dark_mode", "true" if dark == "on" else "false", user_id=uid())
+        dark_mode_val = request.form.get("dark_mode", "off")
+        set_setting("dark_mode", "true" if dark_mode_val == "on" else "false", user_id=uid())
         # Save preferred name
         preferred_name = request.form.get("preferred_name", "").strip()
         if preferred_name:
