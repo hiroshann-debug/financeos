@@ -29,12 +29,7 @@
           value="{{ preferred_name }}"
           placeholder="e.g. Hiroshan">
       </div>
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input type="text" class="form-control" value="{{ user.name or '' }}" disabled
-          style="opacity:0.6;cursor:not-allowed;" title="Managed by Auth0">
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Managed by Auth0 — <a href="https://auth0.com" target="_blank" style="color:var(--accent);">change there</a></div>
-      </div>
+
     </div>
   </div>
 
@@ -51,7 +46,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Salary Cycle Day</label>
+        <label class="form-label">Income / Salary Day</label>
         <select name="salary_cycle_day" class="form-control">
           {% for d in range(1, 32) %}
           <option value="{{ d }}" {% if salary_cycle_day|int == d %}selected{% endif %}>{{ d }}{% if d == 1 %}st{% elif d == 2 %}nd{% elif d == 3 %}rd{% else %}th{% endif %} of each month</option>
@@ -68,16 +63,14 @@
     <div class="form-group">
       <label class="form-label">Theme</label>
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid var(--border2);border-radius:8px;font-size:0.875rem;font-weight:500;transition:all 0.15s;"
-          onclick="this.style.borderColor='var(--accent)'" id="light-opt">
+        <label class="theme-opt" id="light-opt" style="{% if not dark_mode %}border-color:var(--accent);background:var(--accent-glow);{% endif %}">
           <input type="radio" name="dark_mode" value="off" {% if not dark_mode %}checked{% endif %}
-            style="accent-color:var(--accent);" onchange="document.getElementById('light-opt').style.borderColor='var(--accent)';document.getElementById('dark-opt').style.borderColor='var(--border2)'">
+            style="accent-color:var(--accent);" onchange="setThemeOpt('light')">
           ☀️ Light Mode
         </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid var(--border2);border-radius:8px;font-size:0.875rem;font-weight:500;transition:all 0.15s;"
-          id="dark-opt">
+        <label class="theme-opt" id="dark-opt" style="{% if dark_mode %}border-color:var(--accent);background:var(--accent-glow);{% endif %}">
           <input type="radio" name="dark_mode" value="on" {% if dark_mode %}checked{% endif %}
-            style="accent-color:var(--accent);" onchange="document.getElementById('dark-opt').style.borderColor='var(--accent)';document.getElementById('light-opt').style.borderColor='var(--border2)'">
+            style="accent-color:var(--accent);" onchange="setThemeOpt('dark')">
           🌙 Dark Mode
         </label>
       </div>
@@ -138,15 +131,29 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+.theme-opt {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 10px 16px; border: 1.5px solid var(--border2); border-radius: 8px;
+  font-size: 0.875rem; font-weight: 500; transition: all 0.15s;
+}
+.theme-opt:hover { border-color: var(--accent); }
+</style>
 <script>
-// Highlight selected theme on load
-document.addEventListener('DOMContentLoaded', function() {
-  const darkChecked = document.querySelector('input[name="dark_mode"][value="on"]').checked;
-  if (darkChecked) {
-    document.getElementById('dark-opt').style.borderColor = 'var(--accent)';
+function setThemeOpt(mode) {
+  const light = document.getElementById('light-opt');
+  const dark = document.getElementById('dark-opt');
+  if (mode === 'light') {
+    light.style.borderColor = 'var(--accent)';
+    light.style.background = 'var(--accent-glow)';
+    dark.style.borderColor = 'var(--border2)';
+    dark.style.background = 'transparent';
   } else {
-    document.getElementById('light-opt').style.borderColor = 'var(--accent)';
+    dark.style.borderColor = 'var(--accent)';
+    dark.style.background = 'var(--accent-glow)';
+    light.style.borderColor = 'var(--border2)';
+    light.style.background = 'transparent';
   }
-});
+}
 </script>
 {% endblock %}
