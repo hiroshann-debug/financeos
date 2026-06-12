@@ -16,7 +16,7 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
