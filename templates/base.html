@@ -201,7 +201,9 @@
     }
 
     /* ── STAT CARDS ── */
-    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 1200px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 768px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border2);
@@ -343,7 +345,7 @@
     .scroll-item:last-child { border-bottom: none; }
 
     /* ── CHART ── */
-    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap { position: relative; height: 260px; min-height: 220px; }
     .chart-wrap-sm { position: relative; height: 160px; }
 
     /* ── MOBILE ── */

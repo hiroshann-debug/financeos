@@ -3,13 +3,22 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-6" style="flex-wrap:wrap;gap:10px;">
   <div>
-    <h1 style="font-size:1.6rem;font-weight:500;letter-spacing:-0.02em;">Good {% if now is defined %}{{ now().strftime('%p')|lower == 'am' and 'Morning' or 'Evening' }}{% else %}Day{% endif %} 👋</h1>
-    <p class="text-muted text-sm mt-1">Salary cycle: <strong>{{ salary_period }}</strong></p>
+    <h1 style="font-size:1.7rem;font-weight:700;letter-spacing:-0.02em;">Good {% if now is defined %}{{ now().strftime('%p')|lower == 'am' and 'Morning' or 'Evening' }}{% else %}Day{% endif %} 👋</h1>
+    <p class="text-muted text-sm mt-1">Salary cycle: <strong>{{ salary_period }}</strong>
+      &nbsp;·&nbsp;
+      <select style="font-size:0.78rem;border:none;background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);" onchange="location='?month='+this.value">
+        {% for m in range(1,13) %}
+        {% set mv = '%04d-%02d'|format(now_year, m) if now_year is defined else '' %}
+        <option value="{{ selected_month }}" {% if loop.index == now_month %}selected{% endif %}>
+          {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][loop.index0] }} {{ now_year if now_year is defined else '' }}
+        </option>
+        {% endfor %}
+      </select>
+    </p>
   </div>
-  <div class="flex gap-2">
-    <input type="month" value="{{ selected_month }}" class="form-control" style="width:160px;" onchange="location='?month='+this.value">
+  <div class="flex gap-2" style="flex-wrap:wrap;">
     <button class="btn btn-primary btn-sm" onclick="document.getElementById('addExpenseModal').classList.add('open')">
       <i class="fas fa-plus"></i> Add Expense
     </button>
@@ -128,8 +137,8 @@
 </div>
 
 <!-- ── ROW 2: Trend + Upcoming Payments ── -->
-<div style="display:grid;grid-template-columns:1fr 1fr 340px;gap:20px;margin-bottom:20px;" class="dashboard-row2">
-  <div class="card" style="grid-column:span 2;">
+<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;margin-bottom:20px;" class="dashboard-row2">
+  <div class="card">
     <div class="flex items-center justify-between mb-4">
       <div class="card-title" style="margin-bottom:0">6-Month Trend</div>
       <div class="flex gap-2">
@@ -214,7 +223,7 @@
 </div>
 
 <!-- ── ROW 3: Pie + Wallets + Cards + Goals ── -->
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px;margin-bottom:20px;" class="dashboard-row3">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:20px;" class="dashboard-row3">
   <div class="card">
     <div class="card-title">Spending by Category</div>
     {% if chart_data.expense %}
@@ -302,7 +311,7 @@
 </div>
 
 <!-- ── ROW 4: Recent Transactions + Next Period Forecast ── -->
-<div style="display:grid;grid-template-columns:1fr 380px;gap:20px;" class="dashboard-row4">
+<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;" class="dashboard-row4">
   <div class="card">
     <div class="flex items-center justify-between mb-4">
       <div class="card-title" style="margin-bottom:0">Recent Transactions</div>
