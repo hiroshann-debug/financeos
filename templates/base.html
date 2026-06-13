@@ -611,6 +611,11 @@
       <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
     </a>
 
+    <a href="{{ url_for('card_offers') }}" class="nav-link {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-gift"></i></span> CC Offers
+      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:1px 6px;border-radius:999px;font-size:0.6rem;font-weight:700;margin-left:auto;">NEW</span>
+    </a>
+
     <div class="nav-section-label">System</div>
     <a href="{{ url_for('notifications') }}" class="nav-link {% if request.endpoint == 'notifications' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-bell"></i></span> Alerts

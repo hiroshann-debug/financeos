@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
-    Investment, InvestmentIncome, Debt, FavouriteStock
+    Investment, InvestmentIncome, Debt, FavouriteStock, CardOffer, OfferUpvote
 import requests as req_lib
 from calendar import monthrange
 from datetime import datetime, date, timedelta, time
@@ -2563,6 +2563,202 @@ def favourite_stock_prices():
                 "marketCap": None,
             })
     return jsonify({"stocks": results})
+
+
+# ─────────────────────────────────────────
+#  Credit Card Offers
+# ─────────────────────────────────────────
+@app.route("/offers")
+@login_required
+def card_offers():
+    # Get filter params
+    bank = request.args.get("bank", "")
+    offer_type = request.args.get("type", "")
+    category = request.args.get("category", "")
+    my_cards = request.args.get("my_cards", "")
+
+    q = CardOffer.query.filter_by(status="approved", is_active=True)
+
+    # Filter by user's own cards if requested
+    user_card_banks = []
+    user_cards = CreditCard.query.filter_by(user_id=uid()).all()
+    if my_cards:
+        user_bank_names = [c.bank_name.lower() for c in user_cards]
+        q = q.filter(db.func.lower(CardOffer.bank_name).in_(user_bank_names))
+        user_card_banks = user_bank_names
+
+    if bank:
+        q = q.filter(CardOffer.bank_name == bank)
+    if offer_type:
+        q = q.filter(CardOffer.offer_type == offer_type)
+    if category:
+        q = q.filter(CardOffer.category == category)
+
+    # Sort: verified first, then by upvotes, then by expiry
+    offers = q.order_by(
+        CardOffer.verified.desc(),
+        CardOffer.upvotes.desc(),
+        CardOffer.valid_until.asc()
+    ).all()
+
+    # Filter expired
+    today = date.today()
+    active_offers = [o for o in offers if not o.valid_until or o.valid_until >= today]
+    expired_offers = [o for o in offers if o.valid_until and o.valid_until < today]
+
+    # Get user upvotes
+    user_upvotes = {u.offer_id for u in OfferUpvote.query.filter_by(user_id=uid()).all()}
+
+    # Distinct filter values
+    all_banks = sorted(set(o.bank_name for o in CardOffer.query.filter_by(status="approved").all()))
+    all_types = sorted(set(o.offer_type for o in CardOffer.query.filter_by(status="approved").all()))
+    all_categories = sorted(set(o.category for o in CardOffer.query.filter_by(status="approved", is_active=True).all() if o.category))
+
+    # Stats
+    total_offers = CardOffer.query.filter_by(status="approved", is_active=True).count()
+    pending_count = CardOffer.query.filter_by(status="pending").count() if _is_admin() else 0
+
+    return render_template("card_offers.html",
+        offers=active_offers,
+        expired_offers=expired_offers,
+        user_cards=user_cards,
+        user_card_banks=user_card_banks,
+        user_upvotes=user_upvotes,
+        all_banks=all_banks,
+        all_types=all_types,
+        all_categories=all_categories,
+        selected_bank=bank,
+        selected_type=offer_type,
+        selected_category=category,
+        my_cards_filter=my_cards,
+        total_offers=total_offers,
+        pending_count=pending_count,
+        today=today,
+        is_admin=_is_admin(),
+    )
+
+
+def _is_admin():
+    """Check if current user is admin (you — Hiroshan)."""
+    user = session.get("user", {})
+    admin_emails = ["hiroshann@gmail.com"]  # add your email here
+    return user.get("email", "") in admin_emails
+
+
+@app.route("/offers/submit", methods=["GET", "POST"])
+@login_required
+def submit_offer():
+    if request.method == "POST":
+        bank = request.form.get("bank_name", "").strip()
+        title = request.form.get("title", "").strip()
+        if not bank or not title:
+            flash("Bank name and title are required.", "danger")
+            return redirect(url_for("submit_offer"))
+
+        valid_until = None
+        if request.form.get("valid_until"):
+            try:
+                valid_until = datetime.strptime(request.form["valid_until"], "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        valid_from = None
+        if request.form.get("valid_from"):
+            try:
+                valid_from = datetime.strptime(request.form["valid_from"], "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        offer = CardOffer(
+            bank_name=bank,
+            card_network=request.form.get("card_network", "All"),
+            offer_type=request.form.get("offer_type", "Installment"),
+            title=title,
+            description=request.form.get("description", ""),
+            merchant=request.form.get("merchant", ""),
+            category=request.form.get("category", ""),
+            discount_pct=float(request.form.get("discount_pct") or 0),
+            cashback_pct=float(request.form.get("cashback_pct") or 0),
+            installment_months=request.form.get("installment_months", ""),
+            interest_rate=float(request.form.get("interest_rate") or 0),
+            min_spend=float(request.form.get("min_spend") or 0),
+            valid_from=valid_from,
+            valid_until=valid_until,
+            source_url=request.form.get("source_url", ""),
+            submitted_by=uid(),
+            status="approved" if _is_admin() else "pending",
+            verified=_is_admin(),
+        )
+        db.session.add(offer)
+        db.session.commit()
+
+        if _is_admin():
+            flash("✅ Offer added and published!", "success")
+        else:
+            flash("✅ Offer submitted! It will appear after review.", "success")
+        return redirect(url_for("card_offers"))
+
+    return render_template("submit_offer.html", today=date.today())
+
+
+@app.route("/offers/upvote/<int:offer_id>", methods=["POST"])
+@login_required
+def upvote_offer(offer_id):
+    offer = CardOffer.query.get_or_404(offer_id)
+    existing = OfferUpvote.query.filter_by(offer_id=offer_id, user_id=uid()).first()
+    if existing:
+        # Remove upvote
+        db.session.delete(existing)
+        offer.upvotes = max(0, offer.upvotes - 1)
+        voted = False
+    else:
+        db.session.add(OfferUpvote(offer_id=offer_id, user_id=uid()))
+        offer.upvotes += 1
+        voted = True
+    db.session.commit()
+    return jsonify({"upvotes": offer.upvotes, "voted": voted})
+
+
+@app.route("/offers/delete/<int:offer_id>", methods=["POST"])
+@login_required
+def delete_offer(offer_id):
+    if not _is_admin():
+        flash("Not authorised.", "danger")
+        return redirect(url_for("card_offers"))
+    offer = CardOffer.query.get_or_404(offer_id)
+    db.session.delete(offer)
+    db.session.commit()
+    flash("Offer deleted.", "success")
+    return redirect(url_for("card_offers"))
+
+
+@app.route("/offers/approve/<int:offer_id>", methods=["POST"])
+@login_required
+def approve_offer(offer_id):
+    if not _is_admin():
+        flash("Not authorised.", "danger")
+        return redirect(url_for("card_offers"))
+    offer = CardOffer.query.get_or_404(offer_id)
+    offer.status = "approved"
+    offer.verified = True
+    db.session.commit()
+    flash(f"✅ Offer approved: {offer.title}", "success")
+    return redirect(url_for("admin_offers"))
+
+
+@app.route("/admin/offers")
+@login_required
+def admin_offers():
+    if not _is_admin():
+        flash("Not authorised.", "danger")
+        return redirect(url_for("card_offers"))
+    pending = CardOffer.query.filter_by(status="pending").order_by(CardOffer.created_at.desc()).all()
+    all_offers = CardOffer.query.filter_by(status="approved").order_by(CardOffer.created_at.desc()).all()
+    return render_template("admin_offers.html",
+        pending=pending,
+        all_offers=all_offers,
+        today=date.today(),
+    )
 
 if __name__ == '__main__':
     with app.app_context():

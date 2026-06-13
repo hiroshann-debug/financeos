@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Admin — Offers{% endblock %}
+{% block page_title %}Admin: Card Offers{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h2 style="font-size:1.4rem;font-weight:700;">🛡️ Offers Admin Panel</h2>
+  <a href="{{ url_for('card_offers') }}" class="btn btn-ghost btn-sm">← Back to Offers</a>
+</div>
+
+<!-- Pending Review -->
+{% if pending %}
+<div class="card mb-6" style="border-left:4px solid #f97316;">
+  <div class="card-title" style="color:#c2410c;">⏳ Pending Review ({{ pending|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Bank</th><th>Type</th><th>Title</th><th>Submitted</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for o in pending %}
+        <tr>
+          <td style="font-weight:600;">{{ o.bank_name }}</td>
+          <td><span style="background:#eff6ff;color:#6366f1;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">{{ o.offer_type }}</span></td>
+          <td style="font-size:0.875rem;">{{ o.title }}</td>
+          <td style="font-size:0.75rem;color:var(--text2);">{{ o.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('approve_offer', offer_id=o.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-primary" style="font-size:0.72rem;">✓ Approve</button>
+            </form>
+            <form method="POST" action="{{ url_for('delete_offer', offer_id=o.id) }}" style="display:inline;" onsubmit="return confirm('Delete?')">
+              <button class="btn btn-sm btn-danger" style="font-size:0.72rem;">✗ Reject</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card mb-6" style="text-align:center;padding:32px;">
+  <div style="font-size:2rem;margin-bottom:8px;">✅</div>
+  <div style="font-weight:600;">No pending submissions</div>
+</div>
+{% endif %}
+
+<!-- All Approved Offers -->
+<div class="card">
+  <div class="card-title">✅ All Approved Offers ({{ all_offers|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Bank</th><th>Type</th><th>Title</th><th>Expires</th><th>Upvotes</th><th>Verified</th><th></th></tr></thead>
+      <tbody>
+        {% for o in all_offers %}
+        {% set expired = o.valid_until and o.valid_until < today %}
+        <tr style="{% if expired %}opacity:0.5;{% endif %}">
+          <td style="font-weight:600;font-size:0.82rem;">{{ o.bank_name }}</td>
+          <td><span style="background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:4px;font-size:0.72rem;">{{ o.offer_type }}</span></td>
+          <td style="font-size:0.82rem;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ o.title }}</td>
+          <td style="font-size:0.75rem;color:{% if expired %}#ef4444{% else %}var(--text2){% endif %};">
+            {{ o.valid_until.strftime('%d %b %Y') if o.valid_until else '—' }}
+          </td>
+          <td style="font-family:var(--mono);font-size:0.82rem;">{{ o.upvotes }}</td>
+          <td>{% if o.verified %}<span style="color:#16a34a;">✓</span>{% else %}—{% endif %}</td>
+          <td>
+            <form method="POST" action="{{ url_for('delete_offer', offer_id=o.id) }}" style="display:inline;" onsubmit="return confirm('Delete this offer?')">
+              <button class="btn btn-sm btn-danger" style="font-size:0.7rem;"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
