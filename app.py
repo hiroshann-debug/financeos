@@ -1862,7 +1862,10 @@ def mark_all_read():
     flash("All notifications marked as read.", "success")
     return redirect(url_for("notifications"))
 
-
+@app.route("/run-db-migrate")
+def run_db_migrate():
+    db.create_all()
+    return "✅ Tables created. Remove this route now."
 # ─────────────────────────────────────────
 #  Settings (NEW)
 # ─────────────────────────────────────────
