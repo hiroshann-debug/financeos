@@ -1865,7 +1865,31 @@ def mark_all_read():
 @app.route("/run-db-migrate")
 def run_db_migrate():
     db.create_all()
-    return "✅ Tables created. Remove this route now."
+    # Seed offers if empty
+    from models import CardOffer
+    from datetime import date
+    if CardOffer.query.count() == 0:
+        offers = [
+            CardOffer(bank_name="Commercial Bank", card_network="All", offer_type="Installment", title="0% Installment for 24 months at Keells Super", description="Use your ComBank credit card for purchases above LKR 10,000 at any Keells Super outlet.", merchant="Keells Super", category="Supermarket", installment_months="3,6,12,24", interest_rate=0, min_spend=10000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=12),
+            CardOffer(bank_name="Commercial Bank", card_network="Visa", offer_type="Cashback", title="5% Cashback on online purchases", description="Get 5% cashback on all online transactions. Max LKR 2,500/month.", merchant="Online", category="Online", cashback_pct=5, min_spend=5000, valid_until=date(2026,9,30), status="approved", verified=True, upvotes=8),
+            CardOffer(bank_name="Commercial Bank", card_network="All", offer_type="Installment", title="0% Installment at Singer — 36 months", description="Purchase any Singer product above LKR 25,000 with 0% interest for up to 36 months.", merchant="Singer", category="Shopping", installment_months="6,12,24,36", interest_rate=0, min_spend=25000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=5),
+            CardOffer(bank_name="Sampath Bank", card_network="All", offer_type="Installment", title="0% Easy Payment Plan at Arpico", description="Convert purchases at Arpico Supercentre to 0% installments for 3-24 months.", merchant="Arpico", category="Supermarket", installment_months="3,6,12,24", interest_rate=0, min_spend=15000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=9),
+            CardOffer(bank_name="Sampath Bank", card_network="Mastercard", offer_type="Discount", title="10% Discount at selected restaurants", description="10% discount at participating restaurants with Sampath Mastercard. Dine-in only.", merchant="Selected Restaurants", category="Dining", discount_pct=10, min_spend=2000, valid_until=date(2026,8,31), status="approved", verified=True, upvotes=6),
+            CardOffer(bank_name="Sampath Bank", card_network="All", offer_type="Special Rate", title="0% Medical installment at Apollo Hospital", description="0% interest for up to 24 months on medical bills at Apollo Hospital.", merchant="Apollo Hospital", category="Medical", installment_months="3,6,12,24", interest_rate=0, min_spend=20000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=15),
+            CardOffer(bank_name="HNB", card_network="All", offer_type="Installment", title="0% Installment at Dialog — 12 months", description="Purchase Dialog devices with 12-month 0% installment. Min LKR 20,000.", merchant="Dialog", category="Shopping", installment_months="3,6,12", interest_rate=0, min_spend=20000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=7),
+            CardOffer(bank_name="HNB", card_network="Visa", offer_type="Cashback", title="3% Cashback on fuel purchases", description="HNB Visa cardholders earn 3% cashback at all CPC fuel stations.", merchant="CPC Fuel Stations", category="Fuel", cashback_pct=3, min_spend=0, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=11),
+            CardOffer(bank_name="Bank of Ceylon", card_network="All", offer_type="Installment", title="0% Installment at Damro — 24 months", description="Purchase Damro products above LKR 30,000 with 24-month 0% installment.", merchant="Damro", category="Shopping", installment_months="6,12,24", interest_rate=0, min_spend=30000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=4),
+            CardOffer(bank_name="Bank of Ceylon", card_network="All", offer_type="Special Rate", title="Education fee 0% installment — 12 months", description="Pay school and university fees up to LKR 500,000 via 12-month 0% plan.", merchant="Educational Institutions", category="Education", installment_months="3,6,12", interest_rate=0, min_spend=10000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=18),
+            CardOffer(bank_name="NTB", card_network="All", offer_type="Installment", title="0% Installment at Softlogic — 36 months", description="0% installments for up to 36 months at all Softlogic outlets.", merchant="Softlogic", category="Shopping", installment_months="6,12,24,36", interest_rate=0, min_spend=25000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=6),
+            CardOffer(bank_name="NTB", card_network="Mastercard", offer_type="Discount", title="15% discount at selected hotels", description="15% off room rates at participating hotels when paying with NTB Mastercard.", merchant="Selected Hotels", category="Travel", discount_pct=15, min_spend=0, valid_until=date(2026,9,30), status="approved", verified=True, upvotes=3),
+            CardOffer(bank_name="Seylan Bank", card_network="All", offer_type="Installment", title="0% Installment at Abans — 24 months", description="Purchase Abans electronics above LKR 15,000 with 24-month 0% installment.", merchant="Abans", category="Shopping", installment_months="3,6,12,24", interest_rate=0, min_spend=15000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=5),
+            CardOffer(bank_name="Seylan Bank", card_network="All", offer_type="Cashback", title="2% cashback at supermarkets", description="Earn 2% cashback on all supermarket purchases with Seylan credit cards.", merchant="All Supermarkets", category="Supermarket", cashback_pct=2, min_spend=3000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=7),
+        ]
+        for o in offers:
+            db.session.add(o)
+        db.session.commit()
+        return f"✅ Tables created + {len(offers)} offers seeded. Remove this route now."
+    return "✅ Tables created. Offers already exist. Remove this route now."
 # ─────────────────────────────────────────
 #  Settings (NEW)
 # ─────────────────────────────────────────
