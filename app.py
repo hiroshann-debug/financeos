@@ -2839,7 +2839,8 @@ INCOME & EXPENSES (this period):
 WALLETS (actual cash):
 """
         for w in wallets:
-            ctx += f"• {w.name} ({w.wallet_type}): {currency} {w.balance:,.0f}
+            ctx += f"• {w.name} ({w.wallet_type}): {currency} {w.balance:,.0f}\n"
+        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}
 "
         ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}
 "
