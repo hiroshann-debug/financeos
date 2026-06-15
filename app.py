@@ -17,6 +17,7 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
+
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
@@ -1862,34 +1863,7 @@ def mark_all_read():
     flash("All notifications marked as read.", "success")
     return redirect(url_for("notifications"))
 
-@app.route("/run-db-migrate")
-def run_db_migrate():
-    db.create_all()
-    # Seed offers if empty
-    from models import CardOffer
-    from datetime import date
-    if CardOffer.query.count() == 0:
-        offers = [
-            CardOffer(bank_name="Commercial Bank", card_network="All", offer_type="Installment", title="0% Installment for 24 months at Keells Super", description="Use your ComBank credit card for purchases above LKR 10,000 at any Keells Super outlet.", merchant="Keells Super", category="Supermarket", installment_months="3,6,12,24", interest_rate=0, min_spend=10000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=12),
-            CardOffer(bank_name="Commercial Bank", card_network="Visa", offer_type="Cashback", title="5% Cashback on online purchases", description="Get 5% cashback on all online transactions. Max LKR 2,500/month.", merchant="Online", category="Online", cashback_pct=5, min_spend=5000, valid_until=date(2026,9,30), status="approved", verified=True, upvotes=8),
-            CardOffer(bank_name="Commercial Bank", card_network="All", offer_type="Installment", title="0% Installment at Singer — 36 months", description="Purchase any Singer product above LKR 25,000 with 0% interest for up to 36 months.", merchant="Singer", category="Shopping", installment_months="6,12,24,36", interest_rate=0, min_spend=25000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=5),
-            CardOffer(bank_name="Sampath Bank", card_network="All", offer_type="Installment", title="0% Easy Payment Plan at Arpico", description="Convert purchases at Arpico Supercentre to 0% installments for 3-24 months.", merchant="Arpico", category="Supermarket", installment_months="3,6,12,24", interest_rate=0, min_spend=15000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=9),
-            CardOffer(bank_name="Sampath Bank", card_network="Mastercard", offer_type="Discount", title="10% Discount at selected restaurants", description="10% discount at participating restaurants with Sampath Mastercard. Dine-in only.", merchant="Selected Restaurants", category="Dining", discount_pct=10, min_spend=2000, valid_until=date(2026,8,31), status="approved", verified=True, upvotes=6),
-            CardOffer(bank_name="Sampath Bank", card_network="All", offer_type="Special Rate", title="0% Medical installment at Apollo Hospital", description="0% interest for up to 24 months on medical bills at Apollo Hospital.", merchant="Apollo Hospital", category="Medical", installment_months="3,6,12,24", interest_rate=0, min_spend=20000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=15),
-            CardOffer(bank_name="HNB", card_network="All", offer_type="Installment", title="0% Installment at Dialog — 12 months", description="Purchase Dialog devices with 12-month 0% installment. Min LKR 20,000.", merchant="Dialog", category="Shopping", installment_months="3,6,12", interest_rate=0, min_spend=20000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=7),
-            CardOffer(bank_name="HNB", card_network="Visa", offer_type="Cashback", title="3% Cashback on fuel purchases", description="HNB Visa cardholders earn 3% cashback at all CPC fuel stations.", merchant="CPC Fuel Stations", category="Fuel", cashback_pct=3, min_spend=0, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=11),
-            CardOffer(bank_name="Bank of Ceylon", card_network="All", offer_type="Installment", title="0% Installment at Damro — 24 months", description="Purchase Damro products above LKR 30,000 with 24-month 0% installment.", merchant="Damro", category="Shopping", installment_months="6,12,24", interest_rate=0, min_spend=30000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=4),
-            CardOffer(bank_name="Bank of Ceylon", card_network="All", offer_type="Special Rate", title="Education fee 0% installment — 12 months", description="Pay school and university fees up to LKR 500,000 via 12-month 0% plan.", merchant="Educational Institutions", category="Education", installment_months="3,6,12", interest_rate=0, min_spend=10000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=18),
-            CardOffer(bank_name="NTB", card_network="All", offer_type="Installment", title="0% Installment at Softlogic — 36 months", description="0% installments for up to 36 months at all Softlogic outlets.", merchant="Softlogic", category="Shopping", installment_months="6,12,24,36", interest_rate=0, min_spend=25000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=6),
-            CardOffer(bank_name="NTB", card_network="Mastercard", offer_type="Discount", title="15% discount at selected hotels", description="15% off room rates at participating hotels when paying with NTB Mastercard.", merchant="Selected Hotels", category="Travel", discount_pct=15, min_spend=0, valid_until=date(2026,9,30), status="approved", verified=True, upvotes=3),
-            CardOffer(bank_name="Seylan Bank", card_network="All", offer_type="Installment", title="0% Installment at Abans — 24 months", description="Purchase Abans electronics above LKR 15,000 with 24-month 0% installment.", merchant="Abans", category="Shopping", installment_months="3,6,12,24", interest_rate=0, min_spend=15000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=5),
-            CardOffer(bank_name="Seylan Bank", card_network="All", offer_type="Cashback", title="2% cashback at supermarkets", description="Earn 2% cashback on all supermarket purchases with Seylan credit cards.", merchant="All Supermarkets", category="Supermarket", cashback_pct=2, min_spend=3000, valid_until=date(2026,12,31), status="approved", verified=True, upvotes=7),
-        ]
-        for o in offers:
-            db.session.add(o)
-        db.session.commit()
-        return f"✅ Tables created + {len(offers)} offers seeded. Remove this route now."
-    return "✅ Tables created. Offers already exist. Remove this route now."
+
 # ─────────────────────────────────────────
 #  Settings (NEW)
 # ─────────────────────────────────────────
@@ -2786,6 +2760,201 @@ def admin_offers():
         all_offers=all_offers,
         today=date.today(),
     )
+
+
+# ─────────────────────────────────────────
+#  AI Financial Advisor
+# ─────────────────────────────────────────
+def _build_financial_context(user_id):
+    """Build a rich financial context string for the AI."""
+    try:
+        today = date.today()
+        period_start, period_end = get_salary_period(today)
+        currency = get_setting("currency_symbol", "LKR", user_id=user_id)
+        preferred_name = get_setting("preferred_name", "User", user_id=user_id)
+
+        # Wallets
+        wallets = Wallet.query.filter_by(user_id=user_id).all()
+        total_wallet = sum(w.balance for w in wallets)
+
+        # Transactions this period
+        txns = Transaction.query.filter(
+            Transaction.user_id == user_id,
+            Transaction.date >= period_start,
+            Transaction.date <= period_end
+        ).all()
+        total_income = sum(t.amount for t in txns if t.trans_type == "income")
+        total_expense = sum(t.amount for t in txns if t.trans_type == "expense")
+
+        # Top spending categories
+        from collections import defaultdict
+        cat_totals = defaultdict(float)
+        for t in txns:
+            if t.trans_type == "expense":
+                cat_totals[t.category or "Other"] += t.amount
+        top_cats = sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        # Credit cards
+        cards = CreditCard.query.filter_by(user_id=user_id).all()
+        total_credit_limit = sum(c.credit_limit for c in cards)
+        total_credit_used = sum(c.credit_limit - c.available_balance for c in cards)
+
+        # Loans
+        loans = Loan.query.filter_by(user_id=user_id, loan_status="Active").all()
+        total_loan_balance = sum(l.outstanding_balance for l in loans)
+
+        # Goals
+        goals = Goal.query.filter_by(user_id=user_id, status="active").all()
+
+        # Investments
+        investments = Investment.query.filter_by(user_id=user_id, status="active").all()
+        total_investments = sum(inv.current_value for inv in investments)
+
+        # Savings rate
+        savings_rate = round((total_income - total_expense) / total_income * 100, 1) if total_income > 0 else 0
+
+        # Net worth
+        net_worth = total_wallet + total_investments - total_loan_balance - total_credit_used
+
+        # Upcoming payments
+        upcoming = FixedExpense.query.filter_by(user_id=user_id).filter(
+            FixedExpense.date >= today,
+            FixedExpense.date <= period_end
+        ).all()
+        unpaid_total = sum(e.amount for e in upcoming)
+
+        ctx = f"""You are the FinanceOS AI Advisor for {preferred_name}. You have access to their real financial data below. Give specific, actionable, personalized advice. Be concise and friendly. Use {currency} for amounts. Never make up numbers — only use what's provided.
+
+CURRENT FINANCIAL SNAPSHOT ({today.strftime('%d %b %Y')}):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PERIOD: {period_start.strftime('%d %b')} → {period_end.strftime('%d %b %Y')}
+
+INCOME & EXPENSES (this period):
+• Total Income: {currency} {total_income:,.0f}
+• Total Expenses: {currency} {total_expense:,.0f}
+• Net Balance: {currency} {total_income - total_expense:,.0f}
+• Savings Rate: {savings_rate}%
+
+WALLETS (actual cash):
+"""
+        for w in wallets:
+            ctx += f"• {w.name} ({w.wallet_type}): {currency} {w.balance:,.0f}
+"
+        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}
+"
+
+        ctx += f"""
+UPCOMING PAYMENTS (this period):
+• Unpaid commitments: {currency} {unpaid_total:,.0f}
+• Available after paying fixed: {currency} {total_wallet - unpaid_total:,.0f}
+
+TOP SPENDING CATEGORIES:
+"""
+        for cat, amt in top_cats:
+            ctx += f"• {cat}: {currency} {amt:,.0f}
+"
+
+        if cards:
+            ctx += f"
+CREDIT CARDS:
+"
+            for c in cards:
+                used = c.credit_limit - c.available_balance
+                util = round(used / c.credit_limit * 100) if c.credit_limit > 0 else 0
+                ctx += f"• {c.bank_name}: {currency} {used:,.0f} used of {currency} {c.credit_limit:,.0f} ({util}% utilization), min payment {currency} {c.minimum_payment:,.0f}, due {c.due_date.strftime('%d %b') if c.due_date else 'N/A'}
+"
+
+        if loans:
+            ctx += f"
+ACTIVE LOANS:
+"
+            for l in loans:
+                ctx += f"• {l.loan_name}: {currency} {l.outstanding_balance:,.0f} outstanding, monthly payment {currency} {l.monthly_payment:,.0f}
+"
+
+        if goals:
+            ctx += f"
+SAVINGS GOALS:
+"
+            for g in goals:
+                pct = round(g.current_amount / g.target_amount * 100) if g.target_amount > 0 else 0
+                needed = g.target_amount - g.current_amount
+                ctx += f"• {g.name}: {currency} {g.current_amount:,.0f} of {currency} {g.target_amount:,.0f} ({pct}%), need {currency} {needed:,.0f} more
+"
+
+        if investments:
+            ctx += f"
+INVESTMENTS:
+"
+            for inv in investments:
+                ctx += f"• {inv.name} ({inv.asset_type}): current value {currency} {inv.current_value:,.0f}, gain/loss {currency} {inv.gain_loss:,.0f} ({inv.gain_loss_pct:+.1f}%)
+"
+
+        ctx += f"""
+NET WORTH SUMMARY:
+• Cash in wallets: {currency} {total_wallet:,.0f}
+• Investments: {currency} {total_investments:,.0f}
+• Outstanding loans: {currency} {total_loan_balance:,.0f}
+• Credit card debt: {currency} {total_credit_used:,.0f}
+• NET WORTH: {currency} {net_worth:,.0f}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Answer questions using this data. For questions about future planning, be realistic based on current income/expense patterns. Keep responses concise (3-5 sentences max unless asked for detail). Use bullet points for clarity when listing items."""
+
+        return ctx
+    except Exception as e:
+        return f"You are a helpful financial advisor. An error occurred loading user data: {str(e)}"
+
+
+@app.route("/advisor")
+@login_required
+def advisor_page():
+    return render_template("advisor.html",
+        preferred_name=get_setting("preferred_name", session.get("user", {}).get("name", "").split()[0] or "there", user_id=uid())
+    )
+
+
+@app.route("/advisor/chat", methods=["POST"])
+@login_required
+def advisor_chat():
+    """Stream AI response with real financial context."""
+    import requests as http
+    data = request.get_json()
+    messages = data.get("messages", [])
+    
+    if not messages:
+        return jsonify({"error": "No messages"}), 400
+
+    # Build system context with real user data
+    system_context = _build_financial_context(uid())
+
+    # Build API payload
+    api_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
+
+    try:
+        resp = http.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "Content-Type": "application/json",
+                "anthropic-version": "2023-06-01",
+            },
+            json={
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 1024,
+                "system": system_context,
+                "messages": api_messages,
+            },
+            timeout=30,
+        )
+        result = resp.json()
+        if "content" in result and result["content"]:
+            text = result["content"][0].get("text", "")
+            return jsonify({"response": text})
+        else:
+            return jsonify({"error": result.get("error", {}).get("message", "API error")}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

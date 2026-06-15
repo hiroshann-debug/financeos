@@ -723,6 +723,44 @@
       .content { padding-bottom: 80px; }
     }
 
+    /* ── AI CHAT BUBBLE ── */
+    .ai-bubble {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      display: grid; place-items: center;
+      font-size: 1.3rem;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.45);
+      z-index: 300;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .ai-bubble:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(99,102,241,0.55); }
+    .ai-bubble-tooltip {
+      position: fixed;
+      bottom: 84px; right: 24px;
+      background: #1a1f37;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 300;
+      white-space: nowrap;
+    }
+    .ai-bubble:hover + .ai-bubble-tooltip { opacity: 1; }
+    @media (max-width: 768px) {
+      .ai-bubble { bottom: 80px; right: 16px; width: 46px; height: 46px; font-size: 1.1rem; }
+    }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -810,6 +848,12 @@
     </a>
     <a href="{{ url_for('loan_list') }}" class="nav-link {% if request.endpoint == 'loan_list' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-hand-holding-dollar"></i></span> Loans
+    </a>
+
+    <a href="{{ url_for('advisor_page') }}" class="nav-link {% if request.endpoint == 'advisor_page' %}active{% endif %}" style="{% if request.endpoint != 'advisor_page' %}background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));border:1px solid rgba(99,102,241,0.15);{% endif %}">
+      <span class="nav-icon" style="color:#a5b4fc;"><i class="fas fa-robot"></i></span>
+      <span style="{% if request.endpoint != 'advisor_page' %}color:rgba(255,255,255,0.7);{% endif %}">AI Advisor</span>
+      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:1px 6px;border-radius:999px;font-size:0.58rem;font-weight:700;margin-left:auto;">AI</span>
     </a>
 
     <div class="nav-section-label nav-tools-mobile">Tools</div>
@@ -961,6 +1005,12 @@ function toggleDarkMode() {
     });
 }
 </script>
+  <!-- AI Chat Bubble -->
+  {% if request.endpoint != 'advisor_page' %}
+  <a href="{{ url_for('advisor_page') }}" class="ai-bubble" title="AI Financial Advisor">🧠</a>
+  <div class="ai-bubble-tooltip">AI Financial Advisor</div>
+  {% endif %}
+
   <!-- Bottom mobile navigation -->
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
