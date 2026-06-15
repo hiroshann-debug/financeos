@@ -13,28 +13,52 @@
 
     /* ── LIGHT MODE ── */
     :root {
-      --bg:         #f7f7f4;
-      --bg2:        #f0f0ec;
+      /* ── Main palette — ZP Articles inspired ── */
+      --bg:         #f0ebe3;
+      --bg2:        #e8e2d8;
       --bg3:        #ffffff;
       --surface:    #ffffff;
-      --surface2:   #f7f7f4;
-      --border:     rgba(0,0,0,0.08);
-      --border2:    rgba(0,0,0,0.13);
-      --text:       #1c1c1a;
-      --text2:      #6b6b63;
-      --text3:      #a0a098;
-      --accent:     #2563eb;
-      --accent2:    #1d4ed8;
-      --accent-glow:rgba(37,99,235,0.1);
-      --green:      #16a34a;
-      --green-soft: rgba(22,163,74,0.09);
-      --red:        #dc2626;
-      --red-soft:   rgba(220,38,38,0.09);
-      --orange:     #d97706;
-      --orange-soft:rgba(217,119,6,0.09);
-      --yellow:     #ca8a04;
-      --blue:       #2563eb;
+      --surface2:   #f8f6f2;
+      --border:     rgba(0,0,0,0.07);
+      --border2:    rgba(0,0,0,0.11);
+      --text:       #1a1f37;
+      --text2:      #6b7280;
+      --text3:      #9ca3af;
+
+      /* Accent — indigo/purple */
+      --accent:     #6366f1;
+      --accent2:    #4f46e5;
+      --accent-glow:rgba(99,102,241,0.12);
+
+      /* Semantic */
+      --green:      #10b981;
+      --green-soft: rgba(16,185,129,0.1);
+      --red:        #ef4444;
+      --red-soft:   rgba(239,68,68,0.1);
+      --orange:     #f59e0b;
+      --orange-soft:rgba(245,158,11,0.1);
+      --yellow:     #f59e0b;
+      --blue:       #3b82f6;
+
+      /* Stat card colors */
+      --card-teal:  #e0f7f7;
+      --card-purple:#ede9fe;
+      --card-pink:  #fce7f3;
+      --card-amber: #fef3c7;
+
+      /* Sidebar — dark navy */
       --sidebar-w:  220px;
+      --sidebar-bg: #1a1f37;
+      --sidebar-border: rgba(255,255,255,0.06);
+      --sidebar-text: rgba(255,255,255,0.45);
+      --sidebar-text-active: #1a1f37;
+      --sidebar-active-bg: #f9a8c9;
+      --sidebar-hover-bg: rgba(255,255,255,0.06);
+      --sidebar-label: rgba(255,255,255,0.2);
+      --sidebar-footer-bg: rgba(255,255,255,0.04);
+      --indigo: #6366f1;
+      --indigo-light: #a5b4fc;
+      --purple: #8b5cf6;
       --radius:     8px;
       --radius-lg:  10px;
       --shadow:     0 0 0 0.5px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
@@ -67,6 +91,9 @@
       --orange-soft:rgba(251,191,36,0.1);
       --shadow:     0 0 0 0.5px rgba(255,255,255,0.06), 0 1px 4px rgba(0,0,0,0.3);
       --shadow-sm:  0 0 0 0.5px rgba(255,255,255,0.05);
+      --indigo: #818cf8;
+      --indigo-light: #c7d2fe;
+      --purple: #a78bfa;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,8 +112,8 @@
     /* ── SIDEBAR ── */
     .sidebar {
       width: var(--sidebar-w);
-      background: var(--surface);
-      border-right: 0.5px solid var(--border2);
+      background: var(--sidebar-bg);
+      border-right: none;
       display: flex;
       flex-direction: column;
       position: fixed;
@@ -94,7 +121,7 @@
       z-index: 100;
     }
     .sidebar-logo {
-      padding: 18px 16px 16px;
+      padding: 20px 16px 16px;
       border-bottom: 0.5px solid var(--border);
     }
     .logo-mark {
@@ -102,6 +129,7 @@
       text-decoration: none;
     }
     .logo-icon {
+      background: linear-gradient(135deg,#6366f1,#8b5cf6) !important;
       width: 30px; height: 30px; border-radius: 7px;
       background: var(--accent);
       display: grid; place-items: center;
@@ -110,27 +138,38 @@
     .logo-text { font-size: 1rem; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
     .logo-sub { font-size: 0.65rem; color: var(--text3); margin-top: 1px; }
 
-    .sidebar-nav { flex: 1; overflow-y: auto; padding: 10px 8px; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 8px; scrollbar-width: none; }
+    .sidebar-nav::-webkit-scrollbar { display: none; }
     .nav-section-label {
-      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.07em;
-      text-transform: uppercase; color: var(--text2);
-      padding: 10px 8px 4px;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--sidebar-label);
+      padding: 12px 10px 4px;
     }
     .nav-link {
-      display: flex; align-items: center; gap: 8px;
-      padding: 7px 8px; border-radius: 6px;
-      color: var(--text2); text-decoration: none;
-      font-size: 0.875rem; font-weight: 500;
-      transition: all var(--transition); margin-bottom: 2px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 8px;
+      color: var(--sidebar-text); text-decoration: none;
+      font-size: 0.82rem; font-weight: 500;
+      transition: all 0.15s; margin-bottom: 1px;
     }
-    .nav-link:hover { background: var(--surface2); color: var(--text); }
+    .nav-link:hover { background: var(--sidebar-hover-bg); color: rgba(255,255,255,0.9); }
     .nav-link.active {
-      background: var(--accent-glow);
-      color: var(--accent);
-      font-weight: 500;
+      background: var(--sidebar-active-bg);
+      color: var(--sidebar-text-active);
+      font-weight: 700;
+      border: none;
     }
-    .nav-link .nav-icon { width: 18px; text-align: center; font-size: 0.875rem; opacity: 0.85; }
+    .nav-link .nav-icon { width: 16px; text-align: center; font-size: 0.82rem; opacity: 0.9; }
     .nav-badge {
+      margin-left: auto;
+      background: #ef4444;
+      color: white;
+      border-radius: 999px;
+      padding: 1px 6px;
+      font-size: 0.6rem;
+      font-weight: 700;
+    }
+    .nav-badge-old {
       margin-left: auto;
       background: var(--red); color: white;
       font-size: 0.62rem; font-weight: 500;
@@ -508,6 +547,182 @@
     .sub-nav-link.active { color: var(--accent2); border-bottom-color: var(--accent2); }
     .sub-nav-link i { font-size: 0.78rem; opacity: 0.7; }
 
+    /* ── FINANCEOS HERO ── */
+    .financeos-hero {
+      background: linear-gradient(135deg, var(--sidebar-bg) 0%, #1e293b 50%, var(--sidebar-bg) 100%);
+      border-radius: 24px;
+      padding: 32px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      margin-bottom: 24px;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .financeos-hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 220px; height: 220px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.12);
+      pointer-events: none;
+    }
+    .financeos-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: 30%;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(139,92,246,0.08);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      background: rgba(99,102,241,0.25);
+      border: 1px solid rgba(99,102,241,0.4);
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      color: #a5b4fc;
+      margin-bottom: 10px;
+    }
+    .hero-left { flex: 1; min-width: 200px; position: relative; z-index: 1; }
+    .hero-right {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-stat {
+      padding: 16px 20px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      min-width: 130px;
+      transition: background 0.2s;
+    }
+    .hero-stat:hover { background: rgba(255,255,255,0.1); }
+    .hero-stat span {
+      display: block;
+      font-size: 0.68rem;
+      color: rgba(255,255,255,0.5);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .hero-stat strong {
+      display: block;
+      font-family: var(--mono);
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    /* ── AI ADVISOR ── */
+    .ai-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .ai-header {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 14px;
+      letter-spacing: 0.01em;
+    }
+    .ai-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .ai-item {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .ai-item.success { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .ai-item.warning { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+    .ai-item.danger  { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+    .ai-item.info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+
+    /* ── STAT GRID PRIMARY/SECONDARY ── */
+    @media (max-width: 900px) {
+      .stat-grid-primary, .stat-grid-secondary { grid-template-columns: 1fr 1fr !important; }
+      .ai-grid { grid-template-columns: 1fr 1fr !important; }
+      .financeos-hero { flex-direction: column; padding: 24px; }
+      .hero-right { width: 100%; }
+      .hero-stat { flex: 1; min-width: 100px; }
+    }
+    @media (max-width: 480px) {
+      .stat-grid-primary, .stat-grid-secondary { grid-template-columns: 1fr !important; }
+      .ai-grid { grid-template-columns: 1fr !important; }
+      .hero-right { flex-direction: column; }
+    }
+
+    /* ── BOTTOM MOBILE NAV ── */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 200;
+      background: var(--sidebar-bg);
+      border-top: 1px solid var(--sidebar-border);
+      padding: 8px 0 env(safe-area-inset-bottom, 8px);
+    }
+    .bottom-nav-inner {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 4px 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--sidebar-text);
+      font-size: 0.6rem;
+      font-weight: 600;
+      transition: all 0.15s;
+      min-width: 52px;
+      text-align: center;
+    }
+    .bottom-nav-item i { font-size: 1.1rem; }
+    .bottom-nav-item:hover { color: rgba(255,255,255,0.8); }
+    .bottom-nav-item.active { color: #f9a8c9; }
+    .bottom-nav-add {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 1.2rem;
+      box-shadow: 0 4px 15px rgba(99,102,241,0.5);
+      border: none; cursor: pointer;
+      text-decoration: none;
+    }
+    @media (max-width: 768px) {
+      .bottom-nav { display: block; }
+      .content { padding-bottom: 80px; }
+    }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -537,8 +752,8 @@
     <a href="/" class="logo-mark">
       <div class="logo-icon">💰</div>
       <div>
-        <div class="logo-text">FinanceOS</div>
-        <div class="logo-sub">Personal Finance</div>
+        <div class="logo-text" style="color:white;font-weight:800;font-size:1.05rem;letter-spacing:-0.02em;">FinanceOS</div>
+        <div class="logo-sub" style="color:rgba(255,255,255,0.35);font-size:0.65rem;letter-spacing:0.04em;text-transform:uppercase;margin-top:1px;">Smart Money. Smarter Life.</div>
       </div>
     </a>
   </div>
@@ -632,28 +847,26 @@
     </button>
   </nav>
 
-  <div class="sidebar-footer">
+  <div class="sidebar-footer" style="border-top:1px solid rgba(255,255,255,0.07);padding:12px 8px;">
     {% if current_user %}
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;">
+    <a href="{{ url_for('settings') }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.05);text-decoration:none;margin-bottom:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
       {% if current_user.picture %}
-      <img src="{{ current_user.picture }}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
+      <img src="{{ current_user.picture }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid rgba(99,102,241,0.4);" onerror="this.style.display='none'">
       {% else %}
-      <div style="width:30px;height:30px;border-radius:50%;background:var(--accent-glow);display:grid;place-items:center;color:var(--accent2);font-size:0.8rem;flex-shrink:0;">
-        <i class="fas fa-user"></i>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;color:white;font-size:0.85rem;flex-shrink:0;font-weight:700;">
+        {{ current_user.name[0].upper() if current_user.name else '?' }}
       </div>
       {% endif %}
-      <div style="min-width:0;">
-        <div style="font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ current_user.name.split()[0] }}</div>
-        <div style="font-size:0.68rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ current_user.email }}</div>
+      <div style="min-width:0;flex:1;">
+        <div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ current_user.name.split()[0] }}</div>
+        <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ current_user.email }}</div>
       </div>
-    </div>
-    {% endif %}
-
-    {% if current_user %}
-    <a href="{{ url_for('logout') }}" class="nav-link" style="color:var(--red-soft);color:var(--red);">
-      <span class="nav-icon"><i class="fas fa-right-from-bracket"></i></span> Sign Out
+      <i class="fas fa-gear" style="color:rgba(255,255,255,0.25);font-size:0.75rem;flex-shrink:0;"></i>
     </a>
     {% endif %}
+    <a href="{{ url_for('logout') }}" class="nav-link" style="color:rgba(239,68,68,0.7);">
+      <span class="nav-icon"><i class="fas fa-right-from-bracket"></i></span> Sign Out
+    </a>
   </div>
 </aside>
 
@@ -748,5 +961,30 @@ function toggleDarkMode() {
     });
 }
 </script>
+  <!-- Bottom mobile navigation -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a href="{{ url_for('dashboard') }}" class="bottom-nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        <i class="fas fa-house"></i>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('transactions') }}" class="bottom-nav-item {% if request.endpoint == 'transactions' %}active{% endif %}">
+        <i class="fas fa-list-ul"></i>
+        <span>Txns</span>
+      </a>
+      <a href="#" class="bottom-nav-add" onclick="document.getElementById('addExpenseModal').classList.add('open');return false;" title="Add Expense">
+        <i class="fas fa-plus"></i>
+      </a>
+      <a href="{{ url_for('analytics') }}" class="bottom-nav-item {% if request.endpoint == 'analytics' %}active{% endif %}">
+        <i class="fas fa-chart-line"></i>
+        <span>Analytics</span>
+      </a>
+      <a href="{{ url_for('settings') }}" class="bottom-nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+        <i class="fas fa-gear"></i>
+        <span>Profile</span>
+      </a>
+    </div>
+  </nav>
+
 </body>
 </html>
