@@ -2840,10 +2840,8 @@ WALLETS (actual cash):
 """
         for w in wallets:
             ctx += f"• {w.name} ({w.wallet_type}): {currency} {w.balance:,.0f}\n"
-        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}
-"
-        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}
-"
+        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}"
+        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}"
 
         ctx += f"""
 UPCOMING PAYMENTS (this period):
@@ -2853,47 +2851,33 @@ UPCOMING PAYMENTS (this period):
 TOP SPENDING CATEGORIES:
 """
         for cat, amt in top_cats:
-            ctx += f"• {cat}: {currency} {amt:,.0f}
-"
+            ctx += f"• {cat}: {currency} {amt:,.0f}"
 
         if cards:
-            ctx += f"
-CREDIT CARDS:
-"
+            ctx += f"CREDIT CARDS:"
             for c in cards:
                 used = c.credit_limit - c.available_balance
                 util = round(used / c.credit_limit * 100) if c.credit_limit > 0 else 0
-                ctx += f"• {c.bank_name}: {currency} {used:,.0f} used of {currency} {c.credit_limit:,.0f} ({util}% utilization), min payment {currency} {c.minimum_payment:,.0f}, due {c.due_date.strftime('%d %b') if c.due_date else 'N/A'}
-"
+                ctx += f"• {c.bank_name}: {currency} {used:,.0f} used of {currency} {c.credit_limit:,.0f} ({util}% utilization), min payment {currency} {c.minimum_payment:,.0f}, due {c.due_date.strftime('%d %b') if c.due_date else 'N/A'}"
 
         if loans:
-            ctx += f"
-ACTIVE LOANS:
-"
-            for l in loans:
-                ctx += f"• {l.loan_name}: {currency} {l.outstanding_balance:,.0f} outstanding, monthly payment {currency} {l.monthly_payment:,.0f}
-"
+            ctx += f"ACTIVE LOANS:"
+        for l in loans:  ctx += f"• {l.loan_name}: {currency} {l.outstanding_balance:,.0f} outstanding, monthly payment {currency} {l.monthly_payment:,.0f}"
 
         if goals:
-            ctx += f"
-SAVINGS GOALS:
-"
+            ctx += f"SAVINGS GOALS:\n"
             for g in goals:
                 pct = round(g.current_amount / g.target_amount * 100) if g.target_amount > 0 else 0
                 needed = g.target_amount - g.current_amount
-                ctx += f"• {g.name}: {currency} {g.current_amount:,.0f} of {currency} {g.target_amount:,.0f} ({pct}%), need {currency} {needed:,.0f} more
-"
+                ctx += f"• {g.name}: {currency} {g.current_amount:,.0f} of {currency} {g.target_amount:,.0f} ({pct}%), need {currency} {needed:,.0f} more\n"
 
         if investments:
-            ctx += f"
-INVESTMENTS:
-"
+            ctx += f"INVESTMENTS:\n"
             for inv in investments:
-                ctx += f"• {inv.name} ({inv.asset_type}): current value {currency} {inv.current_value:,.0f}, gain/loss {currency} {inv.gain_loss:,.0f} ({inv.gain_loss_pct:+.1f}%)
-"
+                ctx += f"• {inv.name} ({inv.asset_type}): current value {currency} {inv.current_value:,.0f}, gain/loss {currency} {inv.gain_loss:,.0f} ({inv.gain_loss_pct:+.1f}%)\n"
 
-        ctx += f"""
-NET WORTH SUMMARY:
+        ctx += f""" 
+        NET WORTH SUMMARY:
 • Cash in wallets: {currency} {total_wallet:,.0f}
 • Investments: {currency} {total_investments:,.0f}
 • Outstanding loans: {currency} {total_loan_balance:,.0f}
