@@ -7,44 +7,47 @@
 
 <form method="POST" action="{{ url_for('settings') }}">
 
-  <!-- Profile -->
+  <!-- ── PROFILE ── -->
   <div class="card mb-4">
     <div class="card-title">👤 Profile</div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
       {% if user.picture %}
       <img src="{{ user.picture }}" alt="Profile" style="width:56px;height:56px;border-radius:50%;border:2px solid var(--border2);">
       {% else %}
-      <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-glow);color:var(--accent2);display:grid;place-items:center;font-size:1.4rem;font-weight:700;">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;color:white;font-size:1.4rem;font-weight:700;">
         {{ user.name[0].upper() if user.name else '?' }}
       </div>
       {% endif %}
       <div>
-        <div style="font-weight:600;">{{ user.name or 'User' }}</div>
+        <div style="font-weight:600;font-size:0.95rem;">{{ user.name or 'User' }}</div>
         <div style="font-size:0.82rem;color:var(--text2);">{{ user.email or '' }}</div>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;"><i class="fas fa-lock" style="font-size:0.65rem;"></i> Managed by Auth0</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">
+          <i class="fas fa-lock" style="font-size:0.65rem;"></i> Managed by Auth0 — password changes via Google
+        </div>
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Preferred Name <span style="color:var(--text3);font-weight:400;">— shown in dashboard greeting</span></label>
-      <input type="text" name="preferred_name" class="form-control" style="max-width:320px;"
+    <div class="form-group" style="max-width:360px;">
+      <label class="form-label">Preferred Name <span style="color:var(--text3);font-weight:400;">— shown in greetings</span></label>
+      <input type="text" name="preferred_name" class="form-control"
         value="{{ preferred_name }}" placeholder="e.g. Hiroshan">
     </div>
   </div>
 
-  <!-- Finance -->
+  <!-- ── FINANCE PREFERENCES ── -->
   <div class="card mb-4">
     <div class="card-title">💰 Finance Preferences</div>
     <div class="grid-2">
       <div class="form-group">
-        <label class="form-label">Currency</label>
+        <label class="form-label">Currency Symbol</label>
         <select name="currency_symbol" class="form-control">
           {% for sym in ['LKR','USD','EUR','GBP','AUD','SGD','INR','CAD','AED','JPY'] %}
           <option value="{{ sym }}" {% if currency_symbol == sym %}selected{% endif %}>{{ sym }}</option>
           {% endfor %}
         </select>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Used across dashboard, wallets and reports</div>
       </div>
       <div class="form-group">
-        <label class="form-label">Income / Salary Day</label>
+        <label class="form-label">Salary / Income Day</label>
         <select name="salary_cycle_day" class="form-control">
           {% for d in range(1, 32) %}
           <option value="{{ d }}" {% if salary_cycle_day|int == d %}selected{% endif %}>
@@ -52,12 +55,12 @@
           </option>
           {% endfor %}
         </select>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Used to calculate the salary cycle bar on dashboard</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Used to calculate salary cycle bar and daily budget</div>
       </div>
     </div>
   </div>
 
-  <!-- Appearance -->
+  <!-- ── APPEARANCE ── -->
   <div class="card mb-4">
     <div class="card-title">🎨 Appearance</div>
     <label class="form-label">Theme</label>
@@ -73,7 +76,53 @@
     </div>
   </div>
 
-  <!-- Save -->
+  <!-- ── NOTIFICATIONS & POPUPS ── -->
+  <div class="card mb-4">
+    <div class="card-title">🔔 Notifications & Popups</div>
+
+    <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- Daily popup toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--text);">Daily Budget Popup</div>
+          <div style="font-size:0.78rem;color:var(--text2);margin-top:2px;">Show financial snapshot when you open the dashboard</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+          <input type="checkbox" name="show_daily_popup" value="on" {% if show_daily_popup %}checked{% endif %}
+            style="opacity:0;width:0;height:0;" onchange="this.parentElement.querySelector('span').style.transform=this.checked?'translateX(20px)':'translateX(0)';this.parentElement.querySelector('div').style.background=this.checked?'var(--accent)':'var(--border2)'">
+          <div style="position:absolute;inset:0;border-radius:999px;background:{% if show_daily_popup %}var(--accent){% else %}var(--border2){% endif %};transition:0.2s;"></div>
+          <span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:white;transition:0.2s;transform:{% if show_daily_popup %}translateX(20px){% else %}translateX(0){% endif %};"></span>
+        </label>
+      </div>
+
+      <!-- Monthly email toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--text);">Monthly Summary Email</div>
+          <div style="font-size:0.78rem;color:var(--text2);margin-top:2px;">Receive a financial summary email on the 1st of each month</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+          <input type="checkbox" name="monthly_email" value="on" {% if monthly_email %}checked{% endif %}
+            style="opacity:0;width:0;height:0;" onchange="this.parentElement.querySelector('span').style.transform=this.checked?'translateX(20px)':'translateX(0)';this.parentElement.querySelector('div').style.background=this.checked?'var(--accent)':'var(--border2)'">
+          <div style="position:absolute;inset:0;border-radius:999px;background:{% if monthly_email %}var(--accent){% else %}var(--border2){% endif %};transition:0.2s;"></div>
+          <span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:white;transition:0.2s;transform:{% if monthly_email %}translateX(20px){% else %}translateX(0){% endif %};"></span>
+        </label>
+      </div>
+
+      <!-- Test email button -->
+      <div style="padding:14px 0;">
+        <div style="font-size:0.875rem;font-weight:600;color:var(--text);margin-bottom:4px;">Test Monthly Summary</div>
+        <div style="font-size:0.78rem;color:var(--text2);margin-bottom:10px;">Send yourself a sample monthly summary right now</div>
+        <a href="{{ url_for('trigger_monthly_summary') }}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-paper-plane"></i> Send Test Email
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Save button -->
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:24px;">
     <button type="submit" class="btn btn-primary">
       <i class="fas fa-save"></i> Save Settings
@@ -83,37 +132,73 @@
 
 </form>
 
-<!-- Data -->
+<!-- ── DATA & EXPORT ── -->
 <div class="card mb-4">
   <div class="card-title">📦 Data & Export</div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:14px;">Export your data or generate reports</p>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <a href="{{ url_for('export_transactions') }}" class="btn btn-ghost btn-sm">
-      <i class="fas fa-download"></i> Export CSV
+      <i class="fas fa-download"></i> Export Transactions (CSV)
     </a>
     <a href="{{ url_for('reports') }}" class="btn btn-ghost btn-sm">
-      <i class="fas fa-file-pdf"></i> PDF Report
+      <i class="fas fa-file-pdf"></i> Generate PDF Report
     </a>
   </div>
 </div>
 
-<!-- Security -->
+<!-- ── SECURITY ── -->
 <div class="card mb-4">
   <div class="card-title">🔐 Security</div>
-  <div style="background:var(--surface2);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <div>
-      <div style="font-size:0.875rem;font-weight:600;">Authentication</div>
-      <div style="font-size:0.78rem;color:var(--text2);">{{ user.email or 'Auth0' }}</div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;">Authentication Provider</div>
+        <div style="font-size:0.78rem;color:var(--text2);">Auth0 via Google OAuth</div>
+      </div>
+      <span class="badge-pill badge-green">Active</span>
     </div>
-    <span class="badge-pill badge-green">Active</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;">Account Email</div>
+        <div style="font-size:0.78rem;color:var(--text2);">{{ user.email or 'Not available' }}</div>
+      </div>
+      <span class="badge-pill badge-accent">Verified</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;">
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;">Data Privacy</div>
+        <div style="font-size:0.78rem;color:var(--text2);">Your data is encrypted and never shared</div>
+      </div>
+      <a href="{{ url_for('privacy') }}" style="font-size:0.78rem;color:var(--accent);text-decoration:none;font-weight:600;">View Policy →</a>
+    </div>
   </div>
 </div>
 
-<!-- Danger -->
-<div class="card" style="border-color:#fed7d7;">
-  <div class="card-title" style="color:#e53e3e;">⚠️ Danger Zone</div>
-  <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">
-    <i class="fas fa-right-from-bracket"></i> Sign Out
-  </a>
+<!-- ── DANGER ZONE ── -->
+<div class="card" style="border-color:rgba(239,68,68,0.3);">
+  <div class="card-title" style="color:var(--red);">⚠️ Danger Zone</div>
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--red-soft);border-radius:8px;">
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--red);">Sign Out</div>
+        <div style="font-size:0.78rem;color:var(--text2);">Sign out of your FinanceOS account</div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">
+        <i class="fas fa-right-from-bracket"></i> Sign Out
+      </a>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--red-soft);border-radius:8px;">
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--red);">Delete All Data</div>
+        <div style="font-size:0.78rem;color:var(--text2);">Permanently delete all your transactions, wallets and settings. This cannot be undone.</div>
+      </div>
+      <form method="POST" action="{{ url_for('delete_account') }}" onsubmit="return confirm('Are you absolutely sure? This will permanently delete ALL your data and cannot be undone.')">
+        <button type="submit" class="btn btn-danger btn-sm">
+          <i class="fas fa-trash"></i> Delete All Data
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 
 </div>

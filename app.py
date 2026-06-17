@@ -2040,23 +2040,32 @@ def toggle_dark_mode():
 @login_required
 def settings():
     if request.method == "POST":
-        set_setting("salary_cycle_day", request.form.get("salary_cycle_day", "25"), user_id=uid())
-        set_setting("currency_symbol", request.form.get("currency_symbol", "LKR"), user_id=uid())
+        u = uid()
+        set_setting("salary_cycle_day", request.form.get("salary_cycle_day", "25"), user_id=u)
+        set_setting("currency_symbol", request.form.get("currency_symbol", "LKR"), user_id=u)
         dark_mode_val = request.form.get("dark_mode", "off")
-        set_setting("dark_mode", "true" if dark_mode_val == "on" else "false", user_id=uid())
-        # Save preferred name
+        set_setting("dark_mode", "true" if dark_mode_val == "on" else "false", user_id=u)
         preferred_name = request.form.get("preferred_name", "").strip()
         if preferred_name:
-            set_setting("preferred_name", preferred_name, user_id=uid())
+            set_setting("preferred_name", preferred_name, user_id=u)
+        # Daily popup preference
+        show_popup = request.form.get("show_daily_popup", "off")
+        set_setting("show_daily_popup", "true" if show_popup == "on" else "false", user_id=u)
+        # Monthly email preference
+        monthly_email = request.form.get("monthly_email", "off")
+        set_setting("monthly_email", "true" if monthly_email == "on" else "false", user_id=u)
         flash("Settings saved!", "success")
         return redirect(url_for("settings"))
 
     user = session.get("user", {})
+    user_id = uid()
     return render_template("settings.html",
-                           salary_cycle_day=get_setting("salary_cycle_day", "25"),
-                           currency_symbol=get_setting("currency_symbol", "LKR"),
-                           dark_mode=get_setting("dark_mode", "false") == "true",
-                           preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else ""),
+                           salary_cycle_day=get_setting("salary_cycle_day", "25", user_id=user_id),
+                           currency_symbol=get_setting("currency_symbol", "LKR", user_id=user_id),
+                           dark_mode=get_setting("dark_mode", "false", user_id=user_id) == "true",
+                           preferred_name=get_setting("preferred_name", user.get("name","").split()[0] if user.get("name") else "", user_id=user_id),
+                           show_daily_popup=get_setting("show_daily_popup", "true", user_id=user_id) == "true",
+                           monthly_email=get_setting("monthly_email", "true", user_id=user_id) == "true",
                            user=user)
 
 
@@ -2263,17 +2272,7 @@ def investments():
 @app.route("/investments/add", methods=["POST"])
 @login_required
 def add_investment():
-    # For FD, name may come from bank+reference; fall back to institution
-    raw_name = request.form.get('name', '').strip()
-    if not raw_name:
-        # FD: use institution as name fallback
-        institution = request.form.get('institution', '').strip()
-        asset_type = request.form.get('asset_type', 'Other')
-        if institution:
-            raw_name = f"{institution} {asset_type}"
-        else:
-            raw_name = asset_type
-    name, err = validate_text(raw_name, "Investment name")
+    name, err = validate_text(request.form.get('name'), "Investment name")
     if err: flash(err, "danger"); return redirect(url_for('investments'))
 
     units = float(request.form.get('units') or 0)
@@ -3504,8 +3503,8 @@ def send_monthly_summary_email(user_id, user_email, user_name):
     </tr>""" for r in loan_rows) if loan_rows else ""
 
     savings_bar_w = min(savings_rate, 100)
-    score_bar_w = min(health.score, 100)
-    score_color = health.color
+    score_bar_w = min(health.get('score', 0), 100)
+    score_color = health.get('color', '#6366f1')
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -3622,9 +3621,9 @@ tr+tr td{{border-top:1px solid #f8fafc;}}
   </div>
   <div style="background:#f8fafc;border-radius:12px;padding:14px;border:1px solid #f1f5f9;">
     <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Freedom Score</div>
-    <div style="font-size:22px;font-weight:800;color:{score_color};">{health.score}/100</div>
+    <div style="font-size:22px;font-weight:800;color:{score_color};">{health.get('score', 0)}/100</div>
     <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;overflow:hidden;"><div style="width:{score_bar_w}%;height:100%;background:{score_color};border-radius:2px;"></div></div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:5px;">{health.label}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:5px;">{health.get('label', 'Unknown')}</div>
   </div>
 </div>
 
@@ -3697,7 +3696,13 @@ def send_all_monthly_summaries():
                         user_id=user_id, key="email"
                     ).first()
 
-                    if email_setting and email_setting.value:
+                    # Check if user opted out of monthly email
+                    opt_out = AppSettings.query.filter_by(
+                        user_id=user_id, key="monthly_email"
+                    ).first()
+                    opted_in = not opt_out or opt_out.value != "false"
+
+                    if email_setting and email_setting.value and opted_in:
                         send_monthly_summary_email(
                             user_id=user_id,
                             user_email=email_setting.value,
@@ -3779,48 +3784,53 @@ def reverse_loan_payment(loan_id):
 
 
 
-# ─────────────────────────────────────────
-#  Crypto Page
-# ─────────────────────────────────────────
+@app.route("/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    """Permanently delete all user data."""
+    user_id = uid()
+    try:
+        # Delete all user data
+        for model in [Transaction, FixedExpense, CreditCard, Loan, Wallet,
+                      WalletTransfer, NetWorthHistory, BudgetPlanner, Goal,
+                      Notification, RecurringPayment, AppSettings, Investment,
+                      InvestmentIncome, Debt, FavouriteStock]:
+            model.query.filter_by(user_id=user_id).delete()
+        db.session.commit()
+        session.clear()
+        flash("All your data has been permanently deleted.", "success")
+        return redirect(url_for("landing"))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting data: {str(e)}", "danger")
+        return redirect(url_for("settings"))
 @app.route("/crypto")
 @login_required
 def crypto_page():
     import requests as http
-
     top_coins = []
     error = None
-
     try:
         r = http.get(
             "https://api.coingecko.com/api/v3/coins/markets",
-            params={
-                "vs_currency": "lkr",
-                "order": "market_cap_desc",
-                "per_page": 20,
-                "page": 1,
-                "price_change_percentage": "24h",
-            },
-            headers={"User-Agent": "FinanceOS/1.0"},
-            timeout=10,
+            params={"vs_currency":"usd","order":"market_cap_desc","per_page":20,"page":1,"price_change_percentage":"24h"},
+            headers={"User-Agent":"FinanceOS/1.0"}, timeout=10,
         )
         if r.status_code == 200:
             top_coins = r.json()
         else:
             error = "api_down"
-    except Exception as e:
+    except Exception:
         error = "api_down"
-
-    crypto_investments = Investment.query.filter_by(
-        user_id=uid(), asset_type="Crypto", status="active"
-    ).all()
-
+    wallets_list = Wallet.query.filter_by(user_id=uid()).all()
+    crypto_investments = Investment.query.filter_by(user_id=uid(), asset_type="Crypto", status="active").all()
     currency = get_setting("currency_symbol", "LKR", user_id=uid())
-
     return render_template("crypto.html",
         top_coins=top_coins,
         crypto_investments=crypto_investments,
         error=error,
         currency_symbol=currency,
+        wallets=wallets_list,
     )
 
 
@@ -3835,13 +3845,8 @@ def crypto_prices():
     try:
         r = http.get(
             "https://api.coingecko.com/api/v3/simple/price",
-            params={
-                "ids": ",".join(coin_ids),
-                "vs_currencies": "lkr",
-                "include_24hr_change": "true",
-            },
-            headers={"User-Agent": "FinanceOS/1.0"},
-            timeout=10,
+            params={"ids":",".join(coin_ids),"vs_currencies":"usd","include_24hr_change":"true"},
+            headers={"User-Agent":"FinanceOS/1.0"}, timeout=10,
         )
         if r.status_code == 200:
             return jsonify(r.json())
@@ -3849,6 +3854,50 @@ def crypto_prices():
         pass
     return jsonify({})
 
+
+@app.route("/crypto/update-portfolio-prices", methods=["POST"])
+@login_required
+def crypto_update_portfolio_prices():
+    import requests as http
+    SYMBOL_TO_ID = {
+        'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin',
+        'XRP':'ripple','ADA':'cardano','DOGE':'dogecoin','DOT':'polkadot',
+        'MATIC':'matic-network','LINK':'chainlink','LTC':'litecoin',
+        'AVAX':'avalanche-2','ATOM':'cosmos','TRX':'tron','SHIB':'shiba-inu',
+    }
+    investments = Investment.query.filter_by(user_id=uid(), asset_type='Crypto', status='active').all()
+    if not investments:
+        return jsonify({'updated': 0})
+    id_to_inv = {}
+    for inv in investments:
+        sym = (inv.symbol or '').upper()
+        coin_id = SYMBOL_TO_ID.get(sym) or inv.name.lower().replace(' ', '-')
+        id_to_inv[coin_id] = inv
+    try:
+        r = http.get(
+            'https://api.coingecko.com/api/v3/simple/price',
+            params={'ids':','.join(id_to_inv.keys()),'vs_currencies':'usd','include_24hr_change':'true'},
+            headers={'User-Agent':'FinanceOS/1.0'}, timeout=12,
+        )
+        if r.status_code != 200:
+            return jsonify({'error':'API unavailable','updated':0})
+        prices = r.json()
+        updated = 0
+        result = {}
+        for coin_id, inv in id_to_inv.items():
+            info = prices.get(coin_id, {})
+            price = info.get('usd', 0)
+            chg = info.get('usd_24h_change', 0)
+            if price and price > 0:
+                inv.current_price = price
+                updated += 1
+                result[inv.id] = {'price':price,'change':round(chg,2) if chg else 0,'value':round(inv.current_value,0)}
+        if updated > 0:
+            db.session.commit()
+            update_networth_snapshot(user_id=uid())
+        return jsonify({'updated':updated,'prices':result})
+    except Exception as e:
+        return jsonify({'error':str(e),'updated':0})
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

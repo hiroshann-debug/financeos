@@ -3,29 +3,45 @@
 {% block page_title %}Investments{% endblock %}
 
 {% block extra_style %}
-.inv-section { margin-bottom:16px; }
-.inv-section-head { display:flex; align-items:center; gap:6px; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); padding-bottom:8px; border-bottom:1px solid var(--border); margin-bottom:10px; }
-.inv-section-head span { font-size:0.9rem; }
-.inv-type-btn { padding:10px 4px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); cursor:pointer; text-align:center; transition:all 0.15s; }
-.inv-type-btn:hover { border-color:var(--accent); }
-.inv-type-btn.active { border-color:#3b82f6; background:#eff6ff; }
-.inv-type-label { font-size:0.6rem; font-weight:600; color:var(--text3); }
-.inv-type-btn.active .inv-type-label { color:#3b82f6; font-weight:700; }
-.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-.live-price-badge { display:inline-flex; align-items:center; gap:5px; background:#f0fdf4; border:1px solid #86efac; color:#15803d; padding:3px 10px; border-radius:6px; font-size:0.75rem; font-weight:700; font-family:var(--mono); cursor:pointer; transition:all 0.15s; }
-.live-price-badge:hover { background:#dcfce7; }
-.live-price-badge .dot { width:5px; height:5px; border-radius:50%; background:#16a34a; animation:pulse 2s infinite; }
+.inv-tabs { display:flex; gap:0; border-bottom:1px solid var(--border2); margin-bottom:20px; overflow-x:auto; scrollbar-width:none; }
+.inv-tabs::-webkit-scrollbar { display:none; }
+.inv-tab { display:inline-flex; align-items:center; gap:7px; padding:10px 18px; font-size:0.82rem; font-weight:600; color:var(--text2); text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none; font-family:var(--font); transition:all 0.15s; }
+.inv-tab:hover { color:var(--text); }
+.inv-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.inv-tab .tab-count { background:var(--surface2); color:var(--text2); padding:1px 7px; border-radius:999px; font-size:0.65rem; }
+.inv-tab.active .tab-count { background:var(--accent-glow); color:var(--accent); }
+.inv-pane { display:none; }
+.inv-pane.active { display:block; }
+.pane-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border2); flex-wrap:wrap; gap:10px; }
+.pane-title { font-size:0.875rem; font-weight:600; color:var(--text); }
+.pane-meta { font-size:0.75rem; color:var(--text2); }
+.live-badge { display:inline-flex; align-items:center; gap:4px; background:#f0fdf4; border:1px solid #86efac; color:#15803d; padding:3px 10px; border-radius:6px; font-size:0.72rem; font-weight:700; font-family:var(--mono); }
+.live-badge .dot { width:5px; height:5px; border-radius:50%; background:#16a34a; animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+.fd-card { background:var(--surface); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:10px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; }
+.fd-card:hover { border-color:var(--accent); box-shadow:0 2px 12px rgba(99,102,241,0.08); }
+.fd-bank { font-size:0.875rem; font-weight:700; color:var(--text); margin-bottom:2px; }
+.fd-ref { font-size:0.72rem; color:var(--text3); margin-bottom:8px; }
+.fd-stats { display:flex; gap:20px; flex-wrap:wrap; }
+.fd-stat label { font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text3); display:block; margin-bottom:2px; }
+.fd-stat span { font-size:0.82rem; font-weight:600; color:var(--text); font-family:var(--mono); }
+.progress-track { height:5px; background:var(--surface2); border-radius:999px; overflow:hidden; margin-top:6px; max-width:200px; }
+.progress-fill { height:100%; border-radius:999px; background:var(--accent); }
+.days-left-badge { font-size:0.72rem; padding:4px 10px; border-radius:8px; font-weight:700; }
+.empty-type { text-align:center; padding:48px 20px; color:var(--text2); }
+.empty-type i { font-size:2.5rem; display:block; margin-bottom:12px; opacity:0.3; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+@media (max-width:768px) { .grid-3 { grid-template-columns:1fr 1fr; } .fd-stats { gap:12px; } }
 {% endblock %}
 
 {% block content %}
 
-<!-- Summary stat cards -->
+<!-- Summary -->
 <div class="stat-grid mb-6">
   <div class="stat-card">
-    <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-coins"></i></div>
+    <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent)"><i class="fas fa-coins"></i></div>
     <div class="stat-label">Total Invested</div>
-    <div class="stat-value" style="color:var(--accent2)">{{ "{:,.0f}".format(total_invested) }}</div>
+    <div class="stat-value">{{ "{:,.0f}".format(total_invested) }}</div>
     <div class="stat-change">{{ currency_symbol }}</div>
   </div>
   <div class="stat-card">
@@ -48,121 +64,356 @@
   </div>
 </div>
 
-<!-- Action buttons -->
-<div class="flex gap-2 mb-6">
-  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addInvModal').classList.add('open')">
-    <i class="fas fa-plus"></i> Add Investment
+<!-- Tabs -->
+<div class="inv-tabs">
+  {% for type_key, icon, label in [
+    ('Stock','📈','CSE Stocks'),
+    ('FD','💰','Fixed Deposits'),
+    ('Unit Trust','🏦','Unit Trusts'),
+    ('Crypto','₿','Crypto'),
+    ('Gold','🪙','Gold'),
+    ('Other','📊','Other'),
+  ] %}
+  <button class="inv-tab {% if loop.first %}active{% endif %}" onclick="switchInvTab('{{ type_key }}', this)">
+    {{ icon }} {{ label }}
+    {% if by_type.get(type_key) %}
+    <span class="tab-count">{{ by_type[type_key]['items']|length }}</span>
+    {% endif %}
   </button>
+  {% endfor %}
 </div>
 
-<!-- By asset type -->
-{% if by_type %}
-{% for type_name, type_data in by_type.items() %}
-<div class="card mb-4">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <div class="card-title" style="margin-bottom:0;">
-      {% if type_name == 'Stock' %}📈
-      {% elif type_name == 'Unit Trust' %}🏦
-      {% elif type_name == 'FD' %}💰
-      {% elif type_name == 'Crypto' %}₿
-      {% elif type_name == 'Gold' %}🪙
-      {% else %}📊{% endif %}
-      {{ type_name }}s
+<!-- ══ STOCKS PANE ══ -->
+<div class="inv-pane active" id="pane-Stock">
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="pane-header">
+      <div>
+        <div class="pane-title">📈 CSE Stock Portfolio</div>
+        {% if by_type.get('Stock') %}
+        <div class="pane-meta">
+          Invested: {{ currency_symbol }} {{ "{:,.0f}".format(by_type['Stock']['invested']) }} ·
+          Value: <span style="color:{% if by_type['Stock']['value'] >= by_type['Stock']['invested'] %}var(--green){% else %}var(--red){% endif %}">{{ currency_symbol }} {{ "{:,.0f}".format(by_type['Stock']['value']) }}</span>
+        </div>
+        {% endif %}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div id="lastUpdated" style="font-size:0.72rem;color:var(--text3);display:none;">
+          Updated <span id="updateTime">—</span>
+        </div>
+        {% if by_type.get('Stock') %}
+        <button class="btn btn-ghost btn-sm" id="refreshBtn" onclick="refreshAllPrices()">
+          <i class="fas fa-rotate" id="refreshIcon"></i> Refresh Prices
+        </button>
+        {% endif %}
+        <button class="btn btn-primary btn-sm" onclick="openModal('addStockModal')">
+          <i class="fas fa-plus"></i> Add Stock
+        </button>
+      </div>
     </div>
-    <div style="font-size:0.78rem;color:var(--text2);">
-      Invested: <strong class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(type_data['invested']) }}</strong>
-      &nbsp;·&nbsp;
-      Value: <strong class="font-mono" style="color:{% if type_data['value'] >= type_data['invested'] %}var(--green){% else %}var(--red){% endif %}">{{ currency_symbol }} {{ "{:,.0f}".format(type_data['value']) }}</strong>
-    </div>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Units</th>
-          <th>Buy Price</th>
-          <th>Current Price</th>
-          <th>Total Invested</th>
-          <th>Current Value</th>
-          <th>Gain / Loss</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for inv in type_data['items'] %}
-        {% set gl_color = 'var(--green)' if inv.gain_loss >= 0 else 'var(--red)' %}
-        <tr>
-          <td>
-            <div style="font-weight:500;">{{ inv.name }}</div>
-            {% if inv.symbol %}<div style="font-size:0.7rem;color:var(--text3);">{{ inv.symbol }}</div>{% endif %}
-            {% if inv.institution %}<div style="font-size:0.7rem;color:var(--text2);">{{ inv.institution }}</div>{% endif %}
-          </td>
-          <td class="font-mono">{{ "{:,.4f}".format(inv.units) if inv.units % 1 != 0 else "{:,.0f}".format(inv.units) }}</td>
-          <td class="font-mono">{{ "{:,.2f}".format(inv.purchase_price) }}</td>
-          <td>
-            {% if inv.asset_type == 'Stock' and inv.symbol %}
-            <!-- Stock: show live price badge + hidden update form -->
-            <div style="display:flex;align-items:center;gap:6px;">
-              <span class="live-price-badge" id="livebadge-{{ inv.id }}"
-                onclick="fetchAndUpdatePrice({{ inv.id }}, '{{ inv.symbol }}')">
+
+    {% if by_type.get('Stock') %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th style="text-align:right;">Shares</th>
+            <th style="text-align:right;">Buy Price</th>
+            <th style="text-align:right;">Live Price</th>
+            <th style="text-align:right;">Invested</th>
+            <th style="text-align:right;">Value</th>
+            <th style="text-align:right;">Gain / Loss</th>
+            <th style="text-align:center;width:80px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in by_type['Stock']['items'] %}
+          {% set gl = inv.gain_loss %}
+          {% set gl_color = 'var(--green)' if gl >= 0 else 'var(--red)' %}
+          <tr id="row-{{ inv.id }}">
+            <td>
+              <div style="font-weight:600;">{{ inv.name }}</div>
+              {% if inv.symbol %}<div style="font-size:0.72rem;color:var(--text3);">{{ inv.symbol }}</div>{% endif %}
+              {% if inv.institution %}<div style="font-size:0.72rem;color:var(--text2);">{{ inv.institution }}</div>{% endif %}
+            </td>
+            <td style="text-align:right;font-family:var(--mono);">{{ "{:,.0f}".format(inv.units) }}</td>
+            <td style="text-align:right;font-family:var(--mono);color:var(--text2);">{{ "{:,.2f}".format(inv.purchase_price) }}</td>
+            <td style="text-align:right;">
+              <span class="live-badge" id="price-{{ inv.id }}">
                 <span class="dot"></span>
-                <span id="liveprice-{{ inv.id }}">{{ "{:,.2f}".format(inv.current_price) }}</span>
+                {{ "{:,.2f}".format(inv.current_price) }}
               </span>
               <form method="POST" action="{{ url_for('update_investment_price', inv_id=inv.id) }}" id="priceform-{{ inv.id }}" style="display:none;">
                 <input type="hidden" name="current_price" id="priceinput-{{ inv.id }}" value="{{ inv.current_price }}">
               </form>
-            </div>
-            {% else %}
-            <!-- Non-stock: manual price update -->
-            <form method="POST" action="{{ url_for('update_investment_price', inv_id=inv.id) }}" style="display:flex;gap:4px;align-items:center;">
-              <input type="number" step="0.01" name="current_price" value="{{ inv.current_price }}"
-                class="form-control font-mono" style="width:100px;padding:4px 8px;font-size:0.78rem;">
-              <button class="btn btn-sm btn-ghost" title="Update"><i class="fas fa-check"></i></button>
-            </form>
-            {% endif %}
-          </td>
-          <td class="font-mono">{{ currency_symbol }} {{ "{:,.0f}".format(inv.total_invested) }}</td>
-          <td class="font-mono" style="color:var(--green);" id="curval-{{ inv.id }}">{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_value) }}</td>
-          <td>
-            <div class="font-mono" style="color:{{ gl_color }};font-weight:600;" id="gainloss-{{ inv.id }}">
-              {{ '+' if inv.gain_loss >= 0 else '' }}{{ "{:,.0f}".format(inv.gain_loss) }}
-            </div>
-            <div style="font-size:0.7rem;color:{{ gl_color }};" id="gainpct-{{ inv.id }}">{{ "{:+.1f}".format(inv.gain_loss_pct) }}%</div>
-          </td>
-          <td>
-            <div style="display:flex;gap:4px;">
-              <button class="btn btn-sm btn-ghost" onclick="openIncomeModal({{ inv.id }}, '{{ inv.name|e }}')" title="Record income">
-                <i class="fas fa-hand-holding-dollar"></i>
-              </button>
-              <button class="btn btn-sm btn-ghost" onclick="openSellModal({{ inv.id }}, '{{ inv.name|e }}', {{ inv.units }}, {{ inv.current_price }})" title="Sell">
-                <i class="fas fa-arrow-right-from-bracket"></i>
-              </button>
-              <form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete {{ inv.name|e }}?')">
-                <button class="btn btn-sm btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+            <td style="text-align:right;font-family:var(--mono);color:var(--text2);">{{ currency_symbol }} {{ "{:,.0f}".format(inv.total_invested) }}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:600;" id="val-{{ inv.id }}">{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_value) }}</td>
+            <td style="text-align:right;">
+              <div style="font-family:var(--mono);font-weight:600;color:{{ gl_color }};" id="gl-{{ inv.id }}">
+                {{ '+' if gl >= 0 else '' }}{{ "{:,.0f}".format(gl) }}
+              </div>
+              <div style="font-size:0.7rem;color:{{ gl_color }};" id="glpct-{{ inv.id }}">{{ "{:+.1f}".format(inv.gain_loss_pct) }}%</div>
+            </td>
+            <td style="text-align:center;">
+              <div style="display:flex;gap:4px;justify-content:center;">
+                <button class="btn btn-sm btn-ghost" onclick="openEditModal({{ inv.id }},'{{ inv.name|e }}','{{ inv.symbol or '' }}','{{ inv.institution or '' }}',{{ inv.units }},{{ inv.purchase_price }},{{ inv.current_price }},'{{ inv.purchase_date }}','Stock')" title="Edit"><i class="fas fa-pen"></i></button>
+                <button class="btn btn-sm btn-ghost" onclick="openIncomeModal({{ inv.id }}, '{{ inv.name|e }}')" title="Record income"><i class="fas fa-hand-holding-dollar"></i></button>
+                <button class="btn btn-sm btn-ghost" onclick="openSellModal({{ inv.id }}, '{{ inv.name|e }}', {{ inv.units }}, {{ inv.current_price }})" title="Sell"><i class="fas fa-arrow-right-from-bracket"></i></button>
+                <form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete {{ inv.name|e }}?')">
+                  <button class="btn btn-sm btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--surface2);">
+            <td colspan="4" style="padding:10px 12px;font-size:0.78rem;font-weight:600;color:var(--text2);">Total</td>
+            <td style="padding:10px 12px;text-align:right;font-family:var(--mono);font-weight:600;">{{ currency_symbol }} {{ "{:,.0f}".format(by_type['Stock']['invested']) }}</td>
+            <td style="padding:10px 12px;text-align:right;font-family:var(--mono);font-weight:600;color:{% if by_type['Stock']['value'] >= by_type['Stock']['invested'] %}var(--green){% else %}var(--red){% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(by_type['Stock']['value']) }}</td>
+            <td colspan="2" style="padding:10px 12px;text-align:right;font-family:var(--mono);font-weight:600;color:{% if by_type['Stock']['value'] >= by_type['Stock']['invested'] %}var(--green){% else %}var(--red){% endif %};">{{ '+' if by_type['Stock']['value'] >= by_type['Stock']['invested'] else '' }}{{ "{:,.0f}".format(by_type['Stock']['value'] - by_type['Stock']['invested']) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-type">
+      <i class="fas fa-chart-column"></i>
+      <div style="font-weight:600;margin-bottom:6px;">No stocks yet</div>
+      <div style="font-size:0.82rem;">Track your CSE investments with live prices</div>
+      <button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="openModal('addStockModal')"><i class="fas fa-plus"></i> Add Stock</button>
+    </div>
+    {% endif %}
   </div>
 </div>
-{% endfor %}
 
-{% else %}
-<div class="card" style="text-align:center;padding:60px;">
-  <div style="font-size:3rem;margin-bottom:16px;">📈</div>
-  <h3 style="font-weight:500;margin-bottom:8px;">No investments yet</h3>
-  <p style="color:var(--text2);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;">
-    Track your stocks, unit trusts, fixed deposits, crypto and gold all in one place.
-  </p>
-  <button class="btn btn-primary" onclick="document.getElementById('addInvModal').classList.add('open')">
-    <i class="fas fa-plus"></i> Add First Investment
-  </button>
+<!-- ══ FIXED DEPOSITS PANE ══ -->
+<div class="inv-pane" id="pane-FD">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div class="pane-title">💰 Fixed Deposits</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addFDModal')"><i class="fas fa-plus"></i> Add FD</button>
+  </div>
+  {% if by_type.get('FD') %}
+  {% for inv in by_type['FD']['items'] %}
+  {% set progress = [(inv.units / 12 * 100)|int, 100]|min if inv.units else 0 %}
+  {% set days_left = (inv.maturity_date - today).days if inv.maturity_date else 0 %}
+  <div class="fd-card">
+    <div>
+      <div class="fd-bank">{{ inv.institution or 'Bank FD' }}</div>
+      <div class="fd-ref">{{ inv.name }}{% if inv.maturity_date %} · Matures {{ inv.maturity_date.strftime('%d %b %Y') }}{% endif %}</div>
+      <div class="fd-stats">
+        <div class="fd-stat"><label>Principal</label><span>{{ currency_symbol }} {{ "{:,.0f}".format(inv.purchase_price) }}</span></div>
+        <div class="fd-stat"><label>Rate</label><span>{{ "{:.1f}".format(inv.interest_rate) }}% p.a.</span></div>
+        <div class="fd-stat"><label>Maturity Value</label><span style="color:var(--green);">{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_price) }}</span></div>
+        <div class="fd-stat"><label>Interest Earned</label><span style="color:var(--green);">+{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_price - inv.purchase_price) }}</span></div>
+      </div>
+      {% if inv.purchase_date and inv.maturity_date %}
+      {% set total_days = (inv.maturity_date - inv.purchase_date).days %}
+      {% set elapsed_days = (today - inv.purchase_date).days %}
+      {% set pct = [(elapsed_days / total_days * 100)|int, 100]|min if total_days > 0 else 0 %}
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+        <div class="progress-track" style="max-width:150px;flex:1;"><div class="progress-fill" style="width:{{ pct }}%;"></div></div>
+        <span style="font-size:0.68rem;color:var(--text3);">{{ pct }}% elapsed</span>
+      </div>
+      {% endif %}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+      {% if days_left > 0 %}
+      <span class="days-left-badge" style="background:#eff6ff;color:#2563eb;">{{ days_left }} days left</span>
+      {% elif inv.maturity_date %}
+      <span class="days-left-badge" style="background:#f0fdf4;color:#15803d;">Matured</span>
+      {% endif %}
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-sm btn-ghost" onclick="openIncomeModal({{ inv.id }}, '{{ inv.name|e }}')" title="Record income"><i class="fas fa-hand-holding-dollar"></i></button>
+        <form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete this FD?')">
+          <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="card empty-type">
+    <i class="fas fa-building-columns"></i>
+    <div style="font-weight:600;margin-bottom:6px;">No fixed deposits yet</div>
+    <div style="font-size:0.82rem;">Track your bank FDs with maturity calculations</div>
+    <button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="openModal('addFDModal')"><i class="fas fa-plus"></i> Add FD</button>
+  </div>
+  {% endif %}
 </div>
-{% endif %}
+
+<!-- ══ UNIT TRUSTS PANE ══ -->
+<div class="inv-pane" id="pane-Unit Trust">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div class="pane-title">🏦 Unit Trusts</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addUTModal')"><i class="fas fa-plus"></i> Add Unit Trust</button>
+  </div>
+  {% if by_type.get('Unit Trust') %}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fund</th><th style="text-align:right;">Units</th><th style="text-align:right;">NAV Buy</th><th style="text-align:right;">Current NAV</th><th style="text-align:right;">Invested</th><th style="text-align:right;">Value</th><th style="text-align:right;">Gain</th><th></th></tr></thead>
+        <tbody>
+          {% for inv in by_type['Unit Trust']['items'] %}
+          {% set gl_color = 'var(--green)' if inv.gain_loss >= 0 else 'var(--red)' %}
+          <tr>
+            <td><div style="font-weight:600;">{{ inv.name }}</div>{% if inv.institution %}<div style="font-size:0.72rem;color:var(--text3);">{{ inv.institution }}</div>{% endif %}</td>
+            <td style="text-align:right;font-family:var(--mono);">{{ "{:,.4f}".format(inv.units) }}</td>
+            <td style="text-align:right;font-family:var(--mono);color:var(--text2);">{{ "{:,.2f}".format(inv.purchase_price) }}</td>
+            <td style="text-align:right;">
+              <form method="POST" action="{{ url_for('update_investment_price', inv_id=inv.id) }}" style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
+                <input type="number" step="0.01" name="current_price" value="{{ inv.current_price }}" class="form-control font-mono" style="width:90px;padding:4px 8px;font-size:0.75rem;">
+                <button class="btn btn-sm btn-ghost"><i class="fas fa-check"></i></button>
+              </form>
+            </td>
+            <td style="text-align:right;font-family:var(--mono);">{{ currency_symbol }} {{ "{:,.0f}".format(inv.total_invested) }}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:600;">{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_value) }}</td>
+            <td style="text-align:right;font-family:var(--mono);color:{{ gl_color }};font-weight:600;">{{ "{:+.1f}".format(inv.gain_loss_pct) }}%</td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="btn btn-sm btn-ghost" onclick="openIncomeModal({{ inv.id }}, '{{ inv.name|e }}')"><i class="fas fa-hand-holding-dollar"></i></button>
+                <form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete?')"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card empty-type"><i class="fas fa-building-columns"></i><div style="font-weight:600;margin-bottom:6px;">No unit trusts yet</div><button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="openModal('addUTModal')"><i class="fas fa-plus"></i> Add Unit Trust</button></div>
+  {% endif %}
+</div>
+
+<!-- ══ CRYPTO PANE ══ -->
+<div class="inv-pane" id="pane-Crypto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div class="pane-title">₿ Crypto Holdings</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div id="cryptoRefreshTime" style="font-size:0.72rem;color:var(--text3);display:none;">Updated <span id="cryptoUpdateTime">—</span></div>
+      {% if by_type.get('Crypto') %}
+      <button class="btn btn-ghost btn-sm" id="cryptoRefreshBtn" onclick="refreshCryptoPrices()">
+        <i class="fas fa-rotate" id="cryptoRefreshIcon"></i> Refresh Prices
+      </button>
+      {% endif %}
+      <button class="btn btn-primary btn-sm" onclick="openModal('addCryptoModal')"><i class="fas fa-plus"></i> Add Crypto</button>
+    </div>
+  </div>
+  {% if by_type.get('Crypto') %}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Coin</th><th style="text-align:right;">Units</th><th style="text-align:right;">Buy (USD)</th><th style="text-align:right;">Live (USD)</th><th style="text-align:right;">Invested</th><th style="text-align:right;">Value</th><th style="text-align:right;">Gain</th><th></th></tr></thead>
+        <tbody>
+          {% for inv in by_type['Crypto']['items'] %}
+          {% set gl_color = 'var(--green)' if inv.gain_loss >= 0 else 'var(--red)' %}
+          <tr id="crypto-row-{{ inv.id }}">
+            <td><div style="font-weight:600;">{{ inv.name }}</div>{% if inv.symbol %}<div style="font-size:0.72rem;color:var(--text3);">{{ inv.symbol }}</div>{% endif %}</td>
+            <td style="text-align:right;font-family:var(--mono);">{{ "{:,.6f}".format(inv.units) }}</td>
+            <td style="text-align:right;font-family:var(--mono);color:var(--text2);">{{ "{:,.2f}".format(inv.purchase_price) }}</td>
+            <td style="text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;color:#15803d;padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:700;font-family:var(--mono);" id="cprice-inv-{{ inv.id }}">
+                <span style="width:5px;height:5px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite;display:inline-block;"></span>
+                $ {{ "{:,.4f}".format(inv.current_price) if inv.current_price < 1 else "{:,.2f}".format(inv.current_price) if inv.current_price < 1000 else "{:,.0f}".format(inv.current_price) }}
+              </span>
+            </td>
+            <td style="text-align:right;font-family:var(--mono);">$ {{ "{:,.2f}".format(inv.total_invested) }}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:600;" id="cval-inv-{{ inv.id }}">$ {{ "{:,.2f}".format(inv.current_value) }}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:600;" id="cgain-inv-{{ inv.id }}"><span style="color:{{ gl_color }};">{{ "{:+.1f}".format(inv.gain_loss_pct) }}%</span></td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="btn btn-sm btn-ghost" onclick="openSellModal({{ inv.id }}, '{{ inv.name|e }}', {{ inv.units }}, {{ inv.current_price }})"><i class="fas fa-arrow-right-from-bracket"></i></button>
+                <form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete?')"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card empty-type"><i class="fab fa-bitcoin"></i><div style="font-weight:600;margin-bottom:6px;">No crypto yet</div><button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="openModal('addCryptoModal')"><i class="fas fa-plus"></i> Add Crypto</button></div>
+  {% endif %}
+</div>
+
+<!-- ══ GOLD PANE ══ -->
+<div class="inv-pane" id="pane-Gold">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div class="pane-title">🪙 Gold</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addGoldModal')"><i class="fas fa-plus"></i> Add Gold</button>
+  </div>
+  {% if by_type.get('Gold') %}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Type</th><th style="text-align:right;">Weight (g)</th><th style="text-align:right;">Buy/g</th><th style="text-align:right;">Current/g</th><th style="text-align:right;">Invested</th><th style="text-align:right;">Value</th><th style="text-align:right;">Gain</th><th></th></tr></thead>
+        <tbody>
+          {% for inv in by_type['Gold']['items'] %}
+          {% set gl_color = 'var(--green)' if inv.gain_loss >= 0 else 'var(--red)' %}
+          <tr>
+            <td><div style="font-weight:600;">{{ inv.name }}</div>{% if inv.institution %}<div style="font-size:0.72rem;color:var(--text3);">{{ inv.institution }}</div>{% endif %}</td>
+            <td style="text-align:right;font-family:var(--mono);">{{ "{:,.2f}".format(inv.units) }}g</td>
+            <td style="text-align:right;font-family:var(--mono);color:var(--text2);">{{ "{:,.0f}".format(inv.purchase_price) }}</td>
+            <td style="text-align:right;">
+              <form method="POST" action="{{ url_for('update_investment_price', inv_id=inv.id) }}" style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
+                <input type="number" step="0.01" name="current_price" value="{{ inv.current_price }}" class="form-control font-mono" style="width:90px;padding:4px 8px;font-size:0.75rem;">
+                <button class="btn btn-sm btn-ghost"><i class="fas fa-check"></i></button>
+              </form>
+            </td>
+            <td style="text-align:right;font-family:var(--mono);">{{ currency_symbol }} {{ "{:,.0f}".format(inv.total_invested) }}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:600;">{{ currency_symbol }} {{ "{:,.0f}".format(inv.current_value) }}</td>
+            <td style="text-align:right;font-family:var(--mono);color:{{ gl_color }};font-weight:600;">{{ "{:+.1f}".format(inv.gain_loss_pct) }}%</td>
+            <td><form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete?')"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card empty-type"><i class="fas fa-coins"></i><div style="font-weight:600;margin-bottom:6px;">No gold yet</div><button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="openModal('addGoldModal')"><i class="fas fa-plus"></i> Add Gold</button></div>
+  {% endif %}
+</div>
+
+<!-- ══ OTHER PANE ══ -->
+<div class="inv-pane" id="pane-Other">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div class="pane-title">📊 Other Investments</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addOtherModal')"><i class="fas fa-plus"></i> Add Investment</button>
+  </div>
+  {% if by_type.get('Other') %}
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th style="text-align:right;">Invested</th><th style="text-align:right;">Current Value</th><th style="text-align:right;">Gain</th><th></th></tr></thead>
+        <tbody>
+          {% for inv in by_type['Other']['items'] %}
+          {% set gl_color = 'var(--green)' if inv.gain_loss >= 0 else 'var(--red)' %}
+          <tr>
+            <td><div style="font-weight:600;">{{ inv.name }}</div>{% if inv.institution %}<div style="font-size:0.72rem;color:var(--text3);">{{ inv.institution }}</div>{% endif %}</td>
+            <td style="text-align:right;font-family:var(--mono);">{{ currency_symbol }} {{ "{:,.0f}".format(inv.total_invested) }}</td>
+            <td style="text-align:right;">
+              <form method="POST" action="{{ url_for('update_investment_price', inv_id=inv.id) }}" style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
+                <input type="number" step="0.01" name="current_price" value="{{ inv.current_price }}" class="form-control font-mono" style="width:100px;padding:4px 8px;font-size:0.75rem;">
+                <button class="btn btn-sm btn-ghost"><i class="fas fa-check"></i></button>
+              </form>
+            </td>
+            <td style="text-align:right;font-family:var(--mono);color:{{ gl_color }};font-weight:600;">{{ "{:+,.0f}".format(inv.gain_loss) }} ({{ "{:+.1f}".format(inv.gain_loss_pct) }}%)</td>
+            <td><form method="POST" action="{{ url_for('delete_investment', inv_id=inv.id) }}" style="display:inline;" onsubmit="return confirm('Delete?')"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card empty-type"><i class="fas fa-chart-pie"></i><div style="font-weight:600;margin-bottom:6px;">No other investments</div><button class="btn btn-primary btn-sm" style="margin-top:14px;" onclick="openModal('addOtherModal')"><i class="fas fa-plus"></i> Add Investment</button></div>
+  {% endif %}
+</div>
 
 <!-- Recent income -->
 {% if income_records %}
@@ -174,15 +425,11 @@
       <tbody>
         {% for rec in income_records %}
         <tr>
-          <td class="font-mono" style="font-size:0.78rem;color:var(--text2);">{{ rec.date.strftime('%d %b %Y') }}</td>
+          <td style="font-size:0.78rem;color:var(--text2);">{{ rec.date.strftime('%d %b %Y') }}</td>
           <td>{{ rec.investment.name if rec.investment else '—' }}</td>
           <td><span class="badge-pill badge-green">{{ rec.income_type }}</span></td>
-          <td class="font-mono text-green" style="font-weight:700;">{{ currency_symbol }} {{ "{:,.0f}".format(rec.amount) }}</td>
-          <td style="font-size:0.78rem;color:var(--text2);">
-            {% if rec.action == 'add_to_wallet' %}→ Wallet
-            {% elif rec.action == 'reinvest' %}↺ Reinvested
-            {% else %}📝 Recorded{% endif %}
-          </td>
+          <td class="font-mono text-green" style="font-weight:600;">{{ currency_symbol }} {{ "{:,.0f}".format(rec.amount) }}</td>
+          <td style="font-size:0.78rem;color:var(--text2);">{% if rec.action == 'add_to_wallet' %}→ Wallet{% elif rec.action == 'reinvest' %}↺ Reinvested{% else %}📝 Recorded{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -191,477 +438,293 @@
 </div>
 {% endif %}
 
-<!-- ══════════════════════════════════════
-     ADD INVESTMENT MODAL
-════════════════════════════════════════ -->
-<div class="modal-overlay" id="addInvModal" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="modal" style="max-width:600px;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;max-height:90vh;">
+<!-- ══════════════ MODALS ══════════════ -->
 
-    <!-- Header -->
-    <div style="background:#0f172a;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:4px;">FINANCEOS · INVESTMENTS</div>
-        <div style="font-size:1.1rem;font-weight:800;color:white;letter-spacing:-0.02em;">Add New Investment</div>
+<!-- ADD STOCK -->
+<div class="modal-overlay" id="addStockModal" onclick="if(event.target===this)closeModal('addStockModal')">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">📈 Add CSE Stock</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="Stock">
+      <input type="hidden" name="current_price" id="stockCurrentPrice" value="0">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Company Name</label>
+          <input type="text" name="name" id="stockName" class="form-control" required placeholder="e.g. John Keells Holdings">
+        </div>
+        <div class="form-group">
+          <label class="form-label">CSE Symbol</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" name="symbol" id="stockSymbol" class="form-control" placeholder="JKH" oninput="showLiveBtn()" style="flex:1;min-width:0;">
+            <button type="button" id="livePriceBtn" style="display:none;padding:7px 12px;border-radius:6px;background:#eff6ff;color:#3b82f6;border:1.5px solid #bfdbfe;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font);" onclick="fetchLivePrice()">⚡ Live</button>
+          </div>
+          <div id="liveStatus" style="font-size:0.7rem;margin-top:4px;"></div>
+        </div>
       </div>
-      <button type="button" onclick="document.getElementById('addInvModal').classList.remove('open')"
-        style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);font-size:1rem;cursor:pointer;">✕</button>
-    </div>
-
-    <!-- Type selector -->
-    <div style="padding:16px 24px;border-bottom:1px solid var(--border2);background:var(--surface2);">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:10px;">Select Investment Type</div>
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
-        {% for val, icon, label in [('Stock','📈','CSE Stock'),('FD','💰','Fixed Deposit'),('Unit Trust','🏦','Unit Trust'),('Crypto','₿','Crypto'),('Gold','🪙','Gold'),('Other','📊','Other')] %}
-        <div class="inv-type-btn {% if val == 'Stock' %}active{% endif %}" data-type="{{ val }}" onclick="switchInvType('{{ val }}')">
-          <div style="font-size:1.2rem;margin-bottom:3px;">{{ icon }}</div>
-          <div class="inv-type-label">{{ label }}</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Shares</label>
+          <input type="number" step="1" name="units" id="stockShares" class="form-control" required placeholder="500" oninput="calcStockPreview()">
         </div>
-        {% endfor %}
+        <div class="form-group">
+          <label class="form-label">Buy Price (LKR)</label>
+          <input type="number" step="0.01" name="purchase_price" id="stockBuyPrice" class="form-control" required placeholder="162.00" oninput="calcStockPreview()">
+        </div>
       </div>
-    </div>
-
-    <!-- Form -->
-    <form method="POST" action="{{ url_for('add_investment') }}" id="addInvForm" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
-      <input type="hidden" name="asset_type" id="invAssetType" value="Stock">
-      <div style="padding:20px 24px;flex:1;overflow-y:auto;">
-
-        <!-- ── CSE STOCK ── -->
-        <div id="form-Stock">
-          <div class="inv-section">
-            <div class="inv-section-head"><span>🏢</span> Company Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Company Name</label>
-                <input type="text" name="name" id="stockName" class="form-control" placeholder="e.g. John Keells Holdings">
-              </div>
-              <div class="form-group">
-                <label class="form-label">CSE Symbol</label>
-                <div style="display:flex;gap:6px;">
-                  <input type="text" name="symbol" id="invSymbol" class="form-control" placeholder="JKH"
-                    oninput="showFetchBtn()" style="flex:1;min-width:0;">
-                  <button type="button" id="fetchPriceBtn" onclick="fetchLivePrice()"
-                    style="display:none;padding:8px 12px;border-radius:8px;background:#eff6ff;color:#3b82f6;border:1.5px solid #bfdbfe;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font);">
-                    ⚡ Live
-                  </button>
-                </div>
-                <div id="fetchStatus" style="font-size:0.7rem;margin-top:4px;"></div>
-              </div>
-            </div>
-          </div>
-          <div class="inv-section">
-            <div class="inv-section-head"><span>📊</span> Trade Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Shares</label>
-                <input type="number" step="1" name="units" id="stockUnits" class="form-control" placeholder="500" oninput="calcStock()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Buy Price (LKR)</label>
-                <input type="number" step="0.01" name="purchase_price" id="stockBuyPrice" class="form-control" placeholder="162.00" oninput="calcStock()">
-              </div>
-            </div>
-            <input type="hidden" name="current_price" id="invCurrentPrice" value="0">
-            <div id="stockLiveNotice" style="display:none;margin-top:8px;padding:8px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:0.75rem;color:#15803d;">
-              <i class="fas fa-check"></i> Current price: <strong id="stockLivePriceDisplay">—</strong> (auto-fetched from CSE)
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">
-              <div style="padding:8px;background:var(--surface2);border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Invested</div>
-                <div style="font-size:0.85rem;font-weight:700;color:var(--text);" id="calcInvested">—</div>
-              </div>
-              <div style="padding:8px;background:var(--surface2);border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Current Value</div>
-                <div style="font-size:0.85rem;font-weight:700;color:#15803d;" id="calcValue">—</div>
-              </div>
-              <div style="padding:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:center;" id="calcGainCard">
-                <div style="font-size:0.58rem;color:#15803d;margin-bottom:2px;text-transform:uppercase;">Gain / Loss</div>
-                <div style="font-size:0.85rem;font-weight:700;color:#15803d;" id="calcGain">—</div>
-              </div>
-            </div>
-          </div>
-          <div class="inv-section">
-            <div class="inv-section-head"><span>📅</span> Purchase Info</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Purchase Date</label>
-                <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Broker</label>
-                <select name="institution" class="form-control">
-                  <option value="">Select broker...</option>
-                  <option>CSE Direct</option>
-                  <option>Softlogic Stockbrokers</option>
-                  <option>First Capital</option>
-                  <option>NDB Securities</option>
-                  <option>Candor Invest</option>
-                  <option>Other</option>
-                </select>
-              </div>
-            </div>
-          </div>
+      <div id="stockCalcRow" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="padding:8px;background:var(--surface2);border-radius:8px;text-align:center;"><div style="font-size:0.6rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Invested</div><div style="font-size:0.85rem;font-weight:600;color:var(--text);" id="previewInvested">—</div></div>
+        <div style="padding:8px;background:var(--surface2);border-radius:8px;text-align:center;"><div style="font-size:0.6rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Live Value</div><div style="font-size:0.85rem;font-weight:600;color:var(--green);" id="previewValue">—</div></div>
+        <div style="padding:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:center;" id="previewGainCard"><div style="font-size:0.6rem;color:#15803d;margin-bottom:2px;text-transform:uppercase;">Gain/Loss</div><div style="font-size:0.85rem;font-weight:600;color:#15803d;" id="previewGain">—</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Purchase Date</label>
+          <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
         </div>
-
-        <!-- ── FIXED DEPOSIT ── -->
-        <div id="form-FD" style="display:none;">
-          <div class="inv-section">
-            <div class="inv-section-head"><span>🏦</span> Bank Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Bank Name</label>
-                <select name="institution" class="form-control">
-                  <option value="">Select bank...</option>
-                  <option>BOC</option><option>People's Bank</option>
-                  <option>Commercial Bank</option><option>Sampath Bank</option>
-                  <option>HNB</option><option>NDB</option>
-                  <option>Seylan Bank</option><option>Nations Trust</option>
-                  <option>DFCC</option><option>Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">FD Name / Reference</label>
-                <input type="text" name="name" class="form-control" placeholder="e.g. BOC FD Jan 2026">
-              </div>
-            </div>
-          </div>
-          <div class="inv-section">
-            <div class="inv-section-head"><span>💰</span> Deposit Details</div>
-            <div class="grid-3">
-              <div class="form-group">
-                <label class="form-label">Principal (LKR)</label>
-                <input type="number" step="0.01" name="purchase_price" id="fdPrincipal" class="form-control" placeholder="500,000" oninput="calcFD()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Interest Rate (% p.a.)</label>
-                <input type="number" step="0.01" name="interest_rate" id="fdRate" class="form-control" placeholder="12.5" oninput="calcFD()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Term (months)</label>
-                <input type="number" step="1" name="units" id="fdTerm" class="form-control" placeholder="12" oninput="calcFD()">
-              </div>
-            </div>
-            <div class="grid-2" style="margin-top:10px;">
-              <div class="form-group">
-                <label class="form-label">Start Date</label>
-                <input type="date" name="purchase_date" id="fdStart" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" oninput="calcFDMaturity()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Maturity Date</label>
-                <input type="date" name="maturity_date" id="fdMaturity" class="form-control">
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-              <div style="padding:10px;background:var(--surface2);border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Interest Earned</div>
-                <div style="font-size:0.9rem;font-weight:700;color:#15803d;" id="fdInterest">—</div>
-              </div>
-              <div style="padding:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:#15803d;margin-bottom:2px;text-transform:uppercase;">Maturity Value</div>
-                <div style="font-size:0.9rem;font-weight:700;color:#15803d;" id="fdMaturityVal">—</div>
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="current_price" id="fdCurrentPrice" value="0">
-          <input type="hidden" name="symbol" value="">
-        </div>
-
-        <!-- ── UNIT TRUST ── -->
-        <div id="form-Unit Trust" style="display:none;">
-          <div class="inv-section">
-            <div class="inv-section-head"><span>🏦</span> Fund Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Fund Name</label>
-                <input type="text" name="name" class="form-control" placeholder="e.g. Namal Growth Fund">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Fund Manager</label>
-                <select name="institution" class="form-control">
-                  <option value="">Select manager...</option>
-                  <option>Namal Investments</option>
-                  <option>BOC Asset Management</option>
-                  <option>NDB Wealth</option>
-                  <option>Ceybank Asset Management</option>
-                  <option>Softlogic Asset Management</option>
-                  <option>Other</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="inv-section">
-            <div class="inv-section-head"><span>📊</span> Investment Details</div>
-            <div class="grid-3">
-              <div class="form-group">
-                <label class="form-label">Units</label>
-                <input type="number" step="0.0001" name="units" id="utUnits" class="form-control" placeholder="1,250.00" oninput="calcUT()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">NAV at Purchase</label>
-                <input type="number" step="0.01" name="purchase_price" id="utNavBuy" class="form-control" placeholder="80.00" oninput="calcUT()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Current NAV</label>
-                <input type="number" step="0.01" name="current_price" id="utNavNow" class="form-control" placeholder="94.50" oninput="calcUT()" style="border-color:#86efac;background:#f0fdf4;">
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">
-              <div style="padding:8px;background:var(--surface2);border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Invested</div>
-                <div style="font-size:0.85rem;font-weight:700;color:var(--text);" id="utInvested">—</div>
-              </div>
-              <div style="padding:8px;background:var(--surface2);border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Current Value</div>
-                <div style="font-size:0.85rem;font-weight:700;color:#15803d;" id="utValue">—</div>
-              </div>
-              <div style="padding:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:center;">
-                <div style="font-size:0.58rem;color:#15803d;margin-bottom:2px;text-transform:uppercase;">Gain</div>
-                <div style="font-size:0.85rem;font-weight:700;color:#15803d;" id="utGain">—</div>
-              </div>
-            </div>
-            <div class="form-group" style="margin-top:10px;">
-              <label class="form-label">Purchase Date</label>
-              <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
-            </div>
-          </div>
-          <input type="hidden" name="symbol" value="">
-          <input type="hidden" name="interest_rate" value="0">
-        </div>
-
-        <!-- ── CRYPTO ── -->
-        <div id="form-Crypto" style="display:none;">
-          <div class="inv-section">
-            <div class="inv-section-head"><span>₿</span> Crypto Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Coin Name</label>
-                <input type="text" name="name" class="form-control" placeholder="e.g. Bitcoin">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Symbol</label>
-                <input type="text" name="symbol" class="form-control" placeholder="BTC, ETH, SOL...">
-              </div>
-            </div>
-            <div class="grid-3">
-              <div class="form-group">
-                <label class="form-label">Units / Coins</label>
-                <input type="number" step="0.00000001" name="units" class="form-control" placeholder="0.5">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Buy Price (LKR)</label>
-                <input type="number" step="0.01" name="purchase_price" class="form-control" placeholder="0.00">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Current Price (LKR)</label>
-                <input type="number" step="0.01" name="current_price" class="form-control" placeholder="0.00" style="border-color:#86efac;background:#f0fdf4;">
-              </div>
-            </div>
-            <div class="grid-2" style="margin-top:10px;">
-              <div class="form-group">
-                <label class="form-label">Exchange</label>
-                <select name="institution" class="form-control">
-                  <option value="">Select exchange...</option>
-                  <option>Binance</option><option>Coinbase</option>
-                  <option>Kraken</option><option>OKX</option><option>Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Purchase Date</label>
-                <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="interest_rate" value="0">
-        </div>
-
-        <!-- ── GOLD ── -->
-        <div id="form-Gold" style="display:none;">
-          <div class="inv-section">
-            <div class="inv-section-head"><span>🪙</span> Gold Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Type</label>
-                <select name="name" class="form-control">
-                  <option>Sovereign Gold</option>
-                  <option>Gold Jewellery</option>
-                  <option>Gold ETF</option>
-                  <option>Gold Bar</option>
-                  <option>Gold Coins</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Weight (grams)</label>
-                <input type="number" step="0.01" name="units" class="form-control" placeholder="10">
-              </div>
-            </div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Buy Price per gram (LKR)</label>
-                <input type="number" step="0.01" name="purchase_price" class="form-control" placeholder="12,000">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Current Price per gram (LKR)</label>
-                <input type="number" step="0.01" name="current_price" class="form-control" placeholder="14,500" style="border-color:#86efac;background:#f0fdf4;">
-              </div>
-            </div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Purchase Date</label>
-                <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Stored At</label>
-                <input type="text" name="institution" class="form-control" placeholder="Home / Bank locker">
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="symbol" value="GOLD">
-          <input type="hidden" name="interest_rate" value="0">
-        </div>
-
-        <!-- ── OTHER ── -->
-        <div id="form-Other" style="display:none;">
-          <div class="inv-section">
-            <div class="inv-section-head"><span>📊</span> Investment Details</div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Investment Name</label>
-                <input type="text" name="name" class="form-control" placeholder="e.g. Business Investment">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Institution / Partner</label>
-                <input type="text" name="institution" class="form-control" placeholder="e.g. ABC Company">
-              </div>
-            </div>
-            <div class="grid-3">
-              <div class="form-group">
-                <label class="form-label">Amount Invested (LKR)</label>
-                <input type="number" step="0.01" name="purchase_price" class="form-control" placeholder="0.00">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Current Value (LKR)</label>
-                <input type="number" step="0.01" name="current_price" class="form-control" placeholder="0.00" style="border-color:#86efac;background:#f0fdf4;">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Units</label>
-                <input type="number" step="0.0001" name="units" class="form-control" placeholder="1" value="1">
-              </div>
-            </div>
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Date</label>
-                <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Notes</label>
-                <input type="text" name="notes" class="form-control" placeholder="Optional notes">
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="symbol" value="">
-          <input type="hidden" name="interest_rate" value="0">
-        </div>
-
-        <!-- Common: Funded from wallet -->
-        <div class="inv-section" style="margin-top:4px;">
-          <div class="inv-section-head"><span>💼</span> Funded From Wallet <span style="font-weight:400;color:var(--text3);font-size:0.68rem;">(optional)</span></div>
-          <select name="wallet_id" class="form-control">
-            <option value="">None — record only</option>
-            {% for w in wallets %}
-            <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
-            {% endfor %}
+        <div class="form-group">
+          <label class="form-label">Broker</label>
+          <select name="institution" class="form-control">
+            <option value="">Select broker...</option>
+            <option>CSE Direct</option><option>Softlogic Stockbrokers</option>
+            <option>First Capital</option><option>NDB Securities</option>
+            <option>Candor Invest</option><option>Other</option>
           </select>
-          <div style="font-size:0.68rem;color:var(--text3);margin-top:4px;">Amount will be deducted from selected wallet</div>
         </div>
-
       </div>
-
-      <!-- Footer -->
-      <div style="padding:16px 24px;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addInvModal').classList.remove('open')">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="addInvBtn">📈 Add CSE Stock</button>
+      <div class="form-group">
+        <label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None — record only</option>
+          {% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('addStockModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">📈 Add Stock</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- RECORD INCOME MODAL -->
-<div class="modal-overlay" id="incomeModal" onclick="if(event.target===this)this.classList.remove('open')">
+<!-- ADD FD -->
+<div class="modal-overlay" id="addFDModal" onclick="if(event.target===this)closeModal('addFDModal')">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">💰 Add Fixed Deposit</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="FD">
+      <input type="hidden" name="symbol" value="">
+      <input type="hidden" name="units" value="1">
+      <input type="hidden" name="current_price" id="fdCurrentPrice" value="0">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Bank</label>
+          <select name="institution" class="form-control" required>
+            <option value="">Select bank...</option>
+            <option>BOC</option><option>People's Bank</option><option>Commercial Bank</option>
+            <option>Sampath Bank</option><option>HNB</option><option>NDB</option>
+            <option>Seylan Bank</option><option>Nations Trust</option><option>DFCC</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">FD Name / Reference</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. BOC FD Jan 2026">
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="form-group">
+          <label class="form-label">Principal (LKR)</label>
+          <input type="number" step="0.01" name="purchase_price" id="fdPrincipal" class="form-control" required placeholder="500,000" oninput="calcFDPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Interest Rate (% p.a.)</label>
+          <input type="number" step="0.01" name="interest_rate" id="fdRate" class="form-control" required placeholder="12.5" oninput="calcFDPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Term (months)</label>
+          <input type="number" step="1" id="fdTerm" class="form-control" required placeholder="12" oninput="calcFDPreview()">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input type="date" name="purchase_date" id="fdStart" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" oninput="calcFDMaturity()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Maturity Date</label>
+          <input type="date" name="maturity_date" id="fdMaturityDate" class="form-control" style="background:var(--surface2);" readonly>
+        </div>
+      </div>
+      <div id="fdCalcRow" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="padding:10px;background:var(--surface2);border-radius:8px;text-align:center;"><div style="font-size:0.6rem;color:var(--text3);margin-bottom:2px;text-transform:uppercase;">Interest Earned</div><div style="font-size:0.9rem;font-weight:600;color:var(--green);" id="fdInterest">—</div></div>
+        <div style="padding:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:center;"><div style="font-size:0.6rem;color:#15803d;margin-bottom:2px;text-transform:uppercase;">Maturity Value</div><div style="font-size:0.9rem;font-weight:600;color:#15803d;" id="fdMaturityVal">—</div></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None — record only</option>
+          {% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('addFDModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">💰 Add FD</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD UNIT TRUST -->
+<div class="modal-overlay" id="addUTModal" onclick="if(event.target===this)closeModal('addUTModal')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">🏦 Add Unit Trust</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="Unit Trust">
+      <input type="hidden" name="symbol" value=""><input type="hidden" name="interest_rate" value="0">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Fund Name</label><input type="text" name="name" class="form-control" required placeholder="e.g. Namal Growth Fund"></div>
+        <div class="form-group"><label class="form-label">Fund Manager</label><select name="institution" class="form-control"><option value="">Select...</option><option>Namal Investments</option><option>BOC Asset Management</option><option>NDB Wealth</option><option>Ceybank Asset Management</option><option>Softlogic Asset Management</option><option>Other</option></select></div>
+      </div>
+      <div class="grid-3">
+        <div class="form-group"><label class="form-label">Units</label><input type="number" step="0.0001" name="units" class="form-control" required placeholder="1,250"></div>
+        <div class="form-group"><label class="form-label">NAV at Purchase</label><input type="number" step="0.01" name="purchase_price" class="form-control" required placeholder="80.00"></div>
+        <div class="form-group"><label class="form-label">Current NAV</label><input type="number" step="0.01" name="current_price" class="form-control" required placeholder="94.50" style="border-color:#86efac;background:#f0fdf4;"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Purchase Date</label><input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+      <div class="form-group"><label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label><select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('addUTModal')">Cancel</button><button type="submit" class="btn btn-primary">🏦 Add Unit Trust</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD CRYPTO -->
+<div class="modal-overlay" id="addCryptoModal" onclick="if(event.target===this)closeModal('addCryptoModal')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">₿ Add Crypto</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="Crypto"><input type="hidden" name="interest_rate" value="0">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Coin Name</label><input type="text" name="name" class="form-control" required placeholder="e.g. Bitcoin"></div>
+        <div class="form-group"><label class="form-label">Symbol</label><input type="text" name="symbol" class="form-control" placeholder="BTC, ETH, SOL..."></div>
+      </div>
+      <div class="grid-3">
+        <div class="form-group"><label class="form-label">Units</label><input type="number" step="0.00000001" name="units" class="form-control" required placeholder="0.5"></div>
+        <div class="form-group"><label class="form-label">Buy Price (LKR)</label><input type="number" step="0.01" name="purchase_price" class="form-control" required placeholder="0.00"></div>
+        <div class="form-group"><label class="form-label">Current Price (LKR)</label><input type="number" step="0.01" name="current_price" class="form-control" required placeholder="0.00" style="border-color:#86efac;background:#f0fdf4;"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Exchange</label><select name="institution" class="form-control"><option value="">Select...</option><option>Binance</option><option>Coinbase</option><option>Kraken</option><option>OKX</option><option>Other</option></select></div>
+        <div class="form-group"><label class="form-label">Purchase Date</label><input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label><select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('addCryptoModal')">Cancel</button><button type="submit" class="btn btn-primary">₿ Add Crypto</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD GOLD -->
+<div class="modal-overlay" id="addGoldModal" onclick="if(event.target===this)closeModal('addGoldModal')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">🪙 Add Gold</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="Gold"><input type="hidden" name="symbol" value="GOLD"><input type="hidden" name="interest_rate" value="0">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Type</label><select name="name" class="form-control"><option>Sovereign Gold</option><option>Gold Jewellery</option><option>Gold ETF</option><option>Gold Bar</option><option>Gold Coins</option></select></div>
+        <div class="form-group"><label class="form-label">Weight (grams)</label><input type="number" step="0.01" name="units" class="form-control" required placeholder="10"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Buy Price per gram (LKR)</label><input type="number" step="0.01" name="purchase_price" class="form-control" required placeholder="12,000"></div>
+        <div class="form-group"><label class="form-label">Current Price per gram (LKR)</label><input type="number" step="0.01" name="current_price" class="form-control" required placeholder="14,500" style="border-color:#86efac;background:#f0fdf4;"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Purchase Date</label><input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+        <div class="form-group"><label class="form-label">Stored At</label><input type="text" name="institution" class="form-control" placeholder="Home / Bank locker"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label><select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('addGoldModal')">Cancel</button><button type="submit" class="btn btn-primary">🪙 Add Gold</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD OTHER -->
+<div class="modal-overlay" id="addOtherModal" onclick="if(event.target===this)closeModal('addOtherModal')">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">📊 Add Investment</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="Other"><input type="hidden" name="symbol" value=""><input type="hidden" name="interest_rate" value="0">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Investment Name</label><input type="text" name="name" class="form-control" required placeholder="e.g. Business Investment"></div>
+        <div class="form-group"><label class="form-label">Institution / Partner</label><input type="text" name="institution" class="form-control" placeholder="e.g. ABC Company"></div>
+      </div>
+      <div class="grid-3">
+        <div class="form-group"><label class="form-label">Amount Invested (LKR)</label><input type="number" step="0.01" name="purchase_price" class="form-control" required placeholder="0.00"></div>
+        <div class="form-group"><label class="form-label">Current Value (LKR)</label><input type="number" step="0.01" name="current_price" class="form-control" required placeholder="0.00" style="border-color:#86efac;background:#f0fdf4;"></div>
+        <div class="form-group"><label class="form-label">Units</label><input type="number" step="0.0001" name="units" class="form-control" value="1" placeholder="1"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Date</label><input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+        <div class="form-group"><label class="form-label">Notes</label><input type="text" name="notes" class="form-control" placeholder="Optional notes"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label><select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('addOtherModal')">Cancel</button><button type="submit" class="btn btn-primary">📊 Add Investment</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT INVESTMENT MODAL -->
+<div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeModal('editModal')">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-title" id="editModalTitle">Edit Investment</div>
+    <form method="POST" id="editForm">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" id="editName" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Symbol / Code</label><input type="text" name="symbol" id="editSymbol" class="form-control" placeholder="Optional"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Institution / Broker</label><input type="text" name="institution" id="editInstitution" class="form-control" placeholder="Optional"></div>
+        <div class="form-group"><label class="form-label">Purchase Date</label><input type="date" name="purchase_date" id="editPurchaseDate" class="form-control"></div>
+      </div>
+      <div class="grid-3">
+        <div class="form-group"><label class="form-label">Units / Shares</label><input type="number" step="0.0001" name="units" id="editUnits" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Buy Price</label><input type="number" step="0.01" name="purchase_price" id="editBuyPrice" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Current Price</label><input type="number" step="0.01" name="current_price" id="editCurrentPrice" class="form-control" required></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><input type="text" name="notes" id="editNotes" class="form-control" placeholder="Optional"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('editModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- INCOME MODAL -->
+<div class="modal-overlay" id="incomeModal" onclick="if(event.target===this)closeModal('incomeModal')">
   <div class="modal">
     <div class="modal-title" id="incomeModalTitle">Record Investment Income</div>
     <form method="POST" id="incomeForm">
       <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Income Type</label>
-          <select name="income_type" class="form-control">
-            <option value="Dividend">Dividend</option>
-            <option value="Interest">Interest</option>
-            <option value="Maturity">Maturity Payout</option>
-            <option value="Capital Gain">Capital Gain</option>
-            <option value="Bonus">Bonus Share</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Amount</label>
-          <input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00">
-        </div>
+        <div class="form-group"><label class="form-label">Income Type</label><select name="income_type" class="form-control"><option value="Dividend">Dividend</option><option value="Interest">Interest</option><option value="Maturity">Maturity Payout</option><option value="Capital Gain">Capital Gain</option><option value="Bonus">Bonus Share</option></select></div>
+        <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00"></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">What to do with this income?</label>
-        <select name="action" class="form-control" id="incomeAction" onchange="toggleIncomeWallet()">
-          <option value="add_to_wallet">💼 Add to Wallet</option>
-          <option value="reinvest">↺ Reinvest</option>
-          <option value="record_only">📝 Record Only</option>
-        </select>
-      </div>
-      <div class="form-group" id="incomeWalletGroup">
-        <label class="form-label">Select Wallet</label>
-        <select name="wallet_id" class="form-control">
-          <option value="">None</option>
-          {% for w in wallets %}
-          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Notes (optional)</label>
-        <input type="text" name="notes" class="form-control" placeholder="e.g. Q3 dividend">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('incomeModal').classList.remove('open')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Record Income</button>
-      </div>
+      <div class="form-group"><label class="form-label">What to do?</label><select name="action" class="form-control" id="incomeAction" onchange="toggleIncomeWallet()"><option value="add_to_wallet">💼 Add to Wallet</option><option value="reinvest">↺ Reinvest</option><option value="record_only">📝 Record Only</option></select></div>
+      <div class="form-group" id="incomeWalletGroup"><label class="form-label">Wallet</label><select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label class="form-label">Notes</label><input type="text" name="notes" class="form-control" placeholder="e.g. Q3 dividend"></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('incomeModal')">Cancel</button><button type="submit" class="btn btn-primary">Record Income</button></div>
     </form>
   </div>
 </div>
 
 <!-- SELL MODAL -->
-<div class="modal-overlay" id="sellModal" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="modal-overlay" id="sellModal" onclick="if(event.target===this)closeModal('sellModal')">
   <div class="modal">
     <div class="modal-title" id="sellModalTitle">Sell Investment</div>
     <form method="POST" id="sellForm">
       <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Units to Sell</label>
-          <input type="number" step="0.0001" name="units_sold" id="sellUnits" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Sale Price per Unit</label>
-          <input type="number" step="0.01" name="sale_price" id="sellPrice" class="form-control" required>
-        </div>
+        <div class="form-group"><label class="form-label">Units to Sell</label><input type="number" step="0.0001" name="units_sold" id="sellUnits" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Sale Price per Unit</label><input type="number" step="0.01" name="sale_price" id="sellPrice" class="form-control" required></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Add Proceeds to Wallet</label>
-        <select name="wallet_id" class="form-control">
-          <option value="">None (record only)</option>
-          {% for w in wallets %}
-          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('sellModal').classList.remove('open')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Confirm Sale</button>
-      </div>
+      <div class="form-group"><label class="form-label">Add Proceeds to Wallet</label><select name="wallet_id" class="form-control"><option value="">None (record only)</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('sellModal')">Cancel</button><button type="submit" class="btn btn-primary">Confirm Sale</button></div>
     </form>
   </div>
 </div>
@@ -670,113 +733,133 @@
 
 {% block scripts %}
 <script>
-// ── Type switcher ──
-const TYPE_LABELS = {
-  'Stock':'📈 Add CSE Stock','FD':'💰 Add Fixed Deposit',
-  'Unit Trust':'🏦 Add Unit Trust','Crypto':'₿ Add Crypto',
-  'Gold':'🪙 Add Gold','Other':'📊 Add Investment'
-};
-const ALL_TYPES = ['Stock','FD','Unit Trust','Crypto','Gold','Other'];
+// ── Crypto investment data for live price update ──
+const cryptoInvIds = {{ (by_type.get('Crypto', {}).get('items', []) | map(attribute='id') | list) | tojson }};
+const cryptoInvUnits = {{ (by_type.get('Crypto', {}).get('items', []) | map(attribute='units') | list) | tojson }};
+const cryptoInvBuy = {{ (by_type.get('Crypto', {}).get('items', []) | map(attribute='purchase_price') | list) | tojson }};
 
-function switchInvType(type) {
-  ALL_TYPES.forEach(t => {
-    const el = document.getElementById('form-'+t);
-    if (!el) return;
-    const isActive = t === type;
-    el.style.display = isActive ? 'block' : 'none';
-    // Disable all inputs/selects in hidden forms so they don't submit
-    el.querySelectorAll('input, select, textarea').forEach(inp => {
-      if (inp.type === 'hidden' && inp.closest('[id^="form-"]') === el) return; // keep type-specific hidden fields
-      inp.disabled = !isActive;
+async function refreshCryptoPrices() {
+  if (!cryptoInvIds.length) return;
+  const btn = document.getElementById('cryptoRefreshBtn');
+  const icon = document.getElementById('cryptoRefreshIcon');
+  if (btn) btn.disabled = true;
+  if (icon) icon.className = 'fas fa-spinner fa-spin';
+
+  try {
+    const res = await fetch('/crypto/update-portfolio-prices', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
     });
-  });
-  document.getElementById('invAssetType').value = type;
-  document.getElementById('addInvBtn').textContent = TYPE_LABELS[type] || 'Add Investment';
-  document.querySelectorAll('.inv-type-btn').forEach(btn => {
-    const active = btn.dataset.type === type;
-    btn.classList.toggle('active', active);
-    const lbl = btn.querySelector('.inv-type-label');
-    if (lbl) { lbl.style.color = active ? '#3b82f6' : ''; lbl.style.fontWeight = active ? '700' : '600'; }
-  });
-}
+    const data = await res.json();
 
-// Run on page load to disable inactive forms
-window.addEventListener('DOMContentLoaded', () => switchInvType('Stock'));
+    if (data.prices) {
+      Object.entries(data.prices).forEach(([id, info]) => {
+        const priceEl = document.getElementById('cprice-inv-'+id);
+        const valEl = document.getElementById('cval-inv-'+id);
+        const gainEl = document.getElementById('cgain-inv-'+id);
 
-// ── Stock calc ──
-function calcStock() {
-  const units = parseFloat(document.getElementById('stockUnits')?.value) || 0;
-  const buy = parseFloat(document.getElementById('stockBuyPrice')?.value) || 0;
-  const cur = parseFloat(document.getElementById('invCurrentPrice')?.value) || 0;
-  const invested = units * buy;
-  const value = units * cur;
-  const gain = value - invested;
-  const gainPct = invested > 0 ? (gain/invested*100) : 0;
-  document.getElementById('calcInvested').textContent = invested > 0 ? 'LKR '+Math.round(invested).toLocaleString() : '—';
-  document.getElementById('calcValue').textContent = value > 0 ? 'LKR '+Math.round(value).toLocaleString() : '—';
-  const gainEl = document.getElementById('calcGain');
-  const gainCard = document.getElementById('calcGainCard');
-  if (invested > 0 && cur > 0) {
-    gainEl.textContent = (gain >= 0?'+':'')+'LKR '+Math.round(gain).toLocaleString()+' ('+gainPct.toFixed(1)+'%)';
-    gainEl.style.color = gain >= 0 ? '#15803d' : '#dc2626';
-    gainCard.style.background = gain >= 0 ? '#f0fdf4' : '#fef2f2';
-    gainCard.style.borderColor = gain >= 0 ? '#86efac' : '#fca5a5';
-  } else { gainEl.textContent = '—'; }
-}
+        if (priceEl) {
+          const p = info.price;
+          const dot = priceEl.querySelector('span');
+          if (dot) dot.nextSibling && (dot.nextSibling.textContent = '');
+          priceEl.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite;display:inline-block;"></span> ${p < 1000 ? p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : Math.round(p).toLocaleString()}`;
+        }
+        if (valEl) valEl.textContent = '$ '+(info.value < 1000 ? info.value.toFixed(2) : Math.round(info.value).toLocaleString());
 
-// ── FD calc ──
-function calcFD() {
-  const principal = parseFloat(document.getElementById('fdPrincipal')?.value) || 0;
-  const rate = parseFloat(document.getElementById('fdRate')?.value) || 0;
-  const term = parseFloat(document.getElementById('fdTerm')?.value) || 0;
-  const interest = principal * (rate/100) * (term/12);
-  const maturity = principal + interest;
-  document.getElementById('fdInterest').textContent = interest > 0 ? 'LKR '+Math.round(interest).toLocaleString() : '—';
-  document.getElementById('fdMaturityVal').textContent = maturity > 0 ? 'LKR '+Math.round(maturity).toLocaleString() : '—';
-  const cp = document.getElementById('fdCurrentPrice');
-  if (cp && maturity > 0) cp.value = maturity.toFixed(2);
-  calcFDMaturity();
-}
+        // Recalculate gain% from stored data
+        const idx = cryptoInvIds.indexOf(parseInt(id));
+        if (gainEl && idx >= 0) {
+          const invested = cryptoInvUnits[idx] * cryptoInvBuy[idx];
+          const gainPct = invested > 0 ? ((info.value - invested) / invested * 100) : 0;
+          const up = gainPct >= 0;
+          gainEl.innerHTML = `<span style="color:${up ? 'var(--green)':'var(--red)'};">${up?'+':''}${gainPct.toFixed(1)}%</span>`;
+        }
+      });
+    }
 
-function calcFDMaturity() {
-  const start = document.getElementById('fdStart')?.value;
-  const term = parseInt(document.getElementById('fdTerm')?.value) || 0;
-  if (start && term > 0) {
-    const d = new Date(start);
-    d.setMonth(d.getMonth() + term);
-    document.getElementById('fdMaturity').value = d.toISOString().split('T')[0];
+    const ts = document.getElementById('cryptoRefreshTime');
+    const tm = document.getElementById('cryptoUpdateTime');
+    if (ts) ts.style.display = 'block';
+    if (tm) tm.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    if (data.updated > 0) {
+      showToast(`✅ Updated ${data.updated} crypto price${data.updated>1?'s':''}`);
+    }
+  } catch(e) {
+    showToast('Could not fetch crypto prices');
   }
+
+  if (btn) btn.disabled = false;
+  if (icon) icon.className = 'fas fa-rotate';
 }
 
-// ── Unit Trust calc ──
-function calcUT() {
-  const units = parseFloat(document.getElementById('utUnits')?.value) || 0;
-  const navBuy = parseFloat(document.getElementById('utNavBuy')?.value) || 0;
-  const navNow = parseFloat(document.getElementById('utNavNow')?.value) || 0;
-  const invested = units * navBuy;
-  const value = units * navNow;
-  const gain = value - invested;
-  const gainPct = invested > 0 ? (gain/invested*100) : 0;
-  document.getElementById('utInvested').textContent = invested > 0 ? 'LKR '+Math.round(invested).toLocaleString() : '—';
-  document.getElementById('utValue').textContent = value > 0 ? 'LKR '+Math.round(value).toLocaleString() : '—';
-  const gainEl = document.getElementById('utGain');
-  if (invested > 0) { gainEl.textContent = (gain>=0?'+':'')+gainPct.toFixed(1)+'%'; gainEl.style.color = gain>=0?'#15803d':'#dc2626'; }
-  else gainEl.textContent = '—';
+function showToast(msg) {
+  let t = document.getElementById('inv-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'inv-toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1f37;color:white;padding:10px 20px;border-radius:10px;font-size:0.82rem;font-weight:600;z-index:999;transition:opacity 0.3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2500);
+}
+
+// ── Tab switching ──
+function switchInvTab(type, btn) {
+  document.querySelectorAll('.inv-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.inv-tab').forEach(t => t.classList.remove('active'));
+  const pane = document.getElementById('pane-'+type);
+  if (pane) pane.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ── Modal helpers ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openEditModal(id, name, symbol, institution, units, buyPrice, currentPrice, purchaseDate, type) {
+  document.getElementById('editModalTitle').textContent = 'Edit: '+name;
+  document.getElementById('editForm').action = '/investments/edit/'+id;
+  document.getElementById('editName').value = name;
+  document.getElementById('editSymbol').value = symbol;
+  document.getElementById('editInstitution').value = institution;
+  document.getElementById('editUnits').value = units;
+  document.getElementById('editBuyPrice').value = buyPrice;
+  document.getElementById('editCurrentPrice').value = currentPrice;
+  document.getElementById('editPurchaseDate').value = purchaseDate;
+  openModal('editModal');
+}
+function openIncomeModal(id, name) {
+  document.getElementById('incomeModalTitle').textContent = 'Income: '+name;
+  document.getElementById('incomeForm').action = '/investments/income/'+id;
+  openModal('incomeModal');
+}
+function openSellModal(id, name, units, price) {
+  document.getElementById('sellModalTitle').textContent = 'Sell: '+name;
+  document.getElementById('sellForm').action = '/investments/sell/'+id;
+  document.getElementById('sellUnits').value = units;
+  document.getElementById('sellPrice').value = price;
+  openModal('sellModal');
+}
+function toggleIncomeWallet() {
+  document.getElementById('incomeWalletGroup').style.display =
+    document.getElementById('incomeAction').value === 'add_to_wallet' ? 'block' : 'none';
 }
 
 // ── CSE Live Price ──
-function showFetchBtn() {
-  const sym = document.getElementById('invSymbol')?.value.trim();
-  const btn = document.getElementById('fetchPriceBtn');
-  if (btn) btn.style.display = sym && sym.length >= 2 ? 'block' : 'none';
+function showLiveBtn() {
+  const sym = document.getElementById('stockSymbol')?.value.trim();
+  const btn = document.getElementById('livePriceBtn');
+  if (btn) btn.style.display = sym && sym.length >= 2 ? 'inline-block' : 'none';
 }
 
 async function fetchLivePrice() {
-  const sym = document.getElementById('invSymbol')?.value.trim().toUpperCase();
-  const btn = document.getElementById('fetchPriceBtn');
-  const status = document.getElementById('fetchStatus');
-  if (!sym || !btn) return;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  const sym = document.getElementById('stockSymbol')?.value.trim().toUpperCase();
+  const btn = document.getElementById('livePriceBtn');
+  const status = document.getElementById('liveStatus');
+  if (!sym) return;
+  btn.textContent = '⏳';
   btn.disabled = true;
   try {
     const res = await fetch('/cse/search', {
@@ -787,93 +870,141 @@ async function fetchLivePrice() {
     const info = data.data || data;
     const price = info.price || info.lastTradedPrice || info.closingPrice;
     if (price) {
-      // Set hidden current_price field
-      const cp = document.getElementById('invCurrentPrice');
-      if (cp) cp.value = price;
-      // Show notice
-      const notice = document.getElementById('stockLiveNotice');
-      const display = document.getElementById('stockLivePriceDisplay');
-      if (notice) notice.style.display = 'block';
-      if (display) display.textContent = 'LKR '+Number(price).toLocaleString('en-US',{minimumFractionDigits:2});
-      // Auto fill name
-      const nameField = document.getElementById('stockName');
-      if (nameField && !nameField.value && info.name) nameField.value = info.name;
-      if (status) status.innerHTML = '<span style="color:#15803d;"><i class="fas fa-check"></i> Price fetched — will auto-save</span>';
-      calcStock();
+      document.getElementById('stockCurrentPrice').value = price;
+      const nameEl = document.getElementById('stockName');
+      if (nameEl && !nameEl.value && info.name) nameEl.value = info.name;
+      status.innerHTML = `<span style="color:#15803d;">✓ LKR ${Number(price).toLocaleString('en-US',{minimumFractionDigits:2})} — live from CSE</span>`;
+      calcStockPreview();
     } else {
-      if (status) status.innerHTML = '<span style="color:#d97706;">Not found or market closed. Price set to 0.</span>';
+      status.innerHTML = '<span style="color:#d97706;">Not found or market closed — enter price manually</span>';
     }
   } catch(e) {
-    if (status) status.innerHTML = '<span style="color:#ef4444;">CSE unavailable</span>';
+    status.innerHTML = '<span style="color:#ef4444;">CSE unavailable</span>';
   }
-  btn.innerHTML = '⚡ Live'; btn.disabled = false;
+  btn.textContent = '⚡ Live'; btn.disabled = false;
 }
 
-// ── Inline live price update for stock rows ──
-async function fetchAndUpdatePrice(invId, symbol) {
-  const badge = document.getElementById('livebadge-'+invId);
-  const priceEl = document.getElementById('liveprice-'+invId);
-  if (badge) badge.style.opacity = '0.5';
-  try {
-    const res = await fetch('/cse/search', {
-      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'symbol='+encodeURIComponent(symbol)
-    });
-    const data = await res.json();
-    const info = data.data || data;
-    const price = info.price || info.lastTradedPrice || info.closingPrice;
-    if (price) {
-      priceEl.textContent = Number(price).toLocaleString('en-US',{minimumFractionDigits:2});
-      // Submit the hidden form to save
-      const input = document.getElementById('priceinput-'+invId);
-      if (input) input.value = price;
-      const form = document.getElementById('priceform-'+invId);
-      if (form) form.submit();
-    }
-  } catch(e) {}
-  if (badge) badge.style.opacity = '1';
-}
-
-// ── Modal helpers ──
-function openIncomeModal(id, name) {
-  document.getElementById('incomeModalTitle').textContent = 'Income: '+name;
-  document.getElementById('incomeForm').action = '/investments/income/'+id;
-  document.getElementById('incomeModal').classList.add('open');
-}
-function openSellModal(id, name, units, price) {
-  document.getElementById('sellModalTitle').textContent = 'Sell: '+name;
-  document.getElementById('sellForm').action = '/investments/sell/'+id;
-  document.getElementById('sellUnits').value = units;
-  document.getElementById('sellPrice').value = price;
-  document.getElementById('sellModal').classList.add('open');
-}
-function toggleIncomeWallet() {
-  const action = document.getElementById('incomeAction').value;
-  document.getElementById('incomeWalletGroup').style.display = action === 'add_to_wallet' ? 'block' : 'none';
-}
-
-// ── Auto-refresh stock prices on page load ──
-async function refreshAllStockPrices() {
-  const badges = document.querySelectorAll('[id^="livebadge-"]');
-  for (const badge of badges) {
-    const invId = badge.id.replace('livebadge-','');
-    const tr = badge.closest('tr');
-    const symEl = tr?.querySelector('td:first-child div:nth-child(2)');
-    const sym = symEl?.textContent?.trim();
-    if (sym) await fetchAndUpdatePrice(invId, sym);
+// ── Stock preview calc ──
+function calcStockPreview() {
+  const units = parseFloat(document.getElementById('stockShares')?.value) || 0;
+  const buy = parseFloat(document.getElementById('stockBuyPrice')?.value) || 0;
+  const cur = parseFloat(document.getElementById('stockCurrentPrice')?.value) || 0;
+  const row = document.getElementById('stockCalcRow');
+  if (!units || !buy) { if (row) row.style.display = 'none'; return; }
+  if (row) row.style.display = 'grid';
+  const invested = units * buy;
+  const value = units * cur;
+  const gain = value - invested;
+  const gainPct = invested > 0 ? (gain/invested*100).toFixed(1) : 0;
+  document.getElementById('previewInvested').textContent = 'LKR '+Math.round(invested).toLocaleString();
+  document.getElementById('previewValue').textContent = cur > 0 ? 'LKR '+Math.round(value).toLocaleString() : '—';
+  const gainEl = document.getElementById('previewGain');
+  const gainCard = document.getElementById('previewGainCard');
+  if (cur > 0) {
+    gainEl.textContent = (gain>=0?'+':'')+'LKR '+Math.round(Math.abs(gain)).toLocaleString()+' ('+gainPct+'%)';
+    gainEl.style.color = gain>=0?'#15803d':'#dc2626';
+    gainCard.style.background = gain>=0?'#f0fdf4':'#fef2f2';
+    gainCard.style.borderColor = gain>=0?'#86efac':'#fca5a5';
+    document.getElementById('previewGainCard').querySelector('div').style.color = gain>=0?'#15803d':'#dc2626';
+  } else {
+    gainEl.textContent = '—';
   }
 }
 
-// Auto-refresh during market hours (9:30am-2:30pm Mon-Fri Colombo)
-const now = new Date();
-const colomboOffset = 5.5 * 60;
-const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-const colomboMinutes = (utcMinutes + colomboOffset) % 1440;
-const day = now.getUTCDay();
-const isWeekday = day >= 1 && day <= 5;
-const isMarketHours = colomboMinutes >= 570 && colomboMinutes <= 870; // 9:30-14:30
-if (isWeekday && isMarketHours) {
-  refreshAllStockPrices();
+// ── FD preview calc ──
+function calcFDPreview() {
+  const principal = parseFloat(document.getElementById('fdPrincipal')?.value) || 0;
+  const rate = parseFloat(document.getElementById('fdRate')?.value) || 0;
+  const term = parseFloat(document.getElementById('fdTerm')?.value) || 0;
+  const row = document.getElementById('fdCalcRow');
+  if (!principal || !rate || !term) { if (row) row.style.display = 'none'; return; }
+  if (row) row.style.display = 'grid';
+  const interest = principal * (rate/100) * (term/12);
+  const maturity = principal + interest;
+  document.getElementById('fdInterest').textContent = 'LKR '+Math.round(interest).toLocaleString();
+  document.getElementById('fdMaturityVal').textContent = 'LKR '+Math.round(maturity).toLocaleString();
+  // units=1, purchase_price=principal, current_price=maturity_value
+  // So: total_invested = 1 * principal = principal ✓
+  // current_value = 1 * maturity = maturity ✓
+  // gain_loss = maturity - principal = interest ✓
+  document.getElementById('fdCurrentPrice').value = maturity.toFixed(2);
+  calcFDMaturity();
+}
+
+function calcFDMaturity() {
+  const start = document.getElementById('fdStart')?.value;
+  const term = parseInt(document.getElementById('fdTerm')?.value) || 0;
+  if (start && term > 0) {
+    const d = new Date(start);
+    d.setMonth(d.getMonth() + term);
+    document.getElementById('fdMaturityDate').value = d.toISOString().split('T')[0];
+  }
+}
+
+// ── Refresh ALL stock prices ──
+const stockData = {{ (by_type.get('Stock', {}).get('items', []) | map(attribute='symbol') | list) | tojson }};
+const stockIds = {{ (by_type.get('Stock', {}).get('items', []) | map(attribute='id') | list) | tojson }};
+const stockUnits = {{ (by_type.get('Stock', {}).get('items', []) | map(attribute='units') | list) | tojson }};
+const stockBuyPrices = {{ (by_type.get('Stock', {}).get('items', []) | map(attribute='purchase_price') | list) | tojson }};
+
+async function refreshAllPrices() {
+  if (!stockData.length) return;
+  const btn = document.getElementById('refreshBtn');
+  const icon = document.getElementById('refreshIcon');
+  if (btn) btn.disabled = true;
+  if (icon) icon.className = 'fas fa-spinner fa-spin';
+
+  let updated = 0;
+  for (let i = 0; i < stockData.length; i++) {
+    const sym = stockData[i];
+    const id = stockIds[i];
+    const units = stockUnits[i];
+    const buyPrice = stockBuyPrices[i];
+    if (!sym) continue;
+    try {
+      const res = await fetch('/cse/search', {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'symbol='+encodeURIComponent(sym)
+      });
+      const data = await res.json();
+      const info = data.data || data;
+      const price = info.price || info.lastTradedPrice || info.closingPrice;
+      if (price) {
+        // Update price badge display
+        const badge = document.getElementById('price-'+id);
+        if (badge) {
+          badge.querySelector('span:last-child').textContent = Number(price).toLocaleString('en-US',{minimumFractionDigits:2});
+        }
+        // Update value and gain/loss
+        const value = units * price;
+        const gain = value - (units * buyPrice);
+        const gainPct = buyPrice > 0 ? (gain / (units * buyPrice) * 100) : 0;
+        const valEl = document.getElementById('val-'+id);
+        const glEl = document.getElementById('gl-'+id);
+        const glPctEl = document.getElementById('glpct-'+id);
+        if (valEl) valEl.textContent = 'LKR '+Math.round(value).toLocaleString();
+        if (glEl) { glEl.textContent = (gain>=0?'+':'')+Math.round(gain).toLocaleString(); glEl.style.color = gain>=0?'var(--green)':'var(--red)'; }
+        if (glPctEl) { glPctEl.textContent = (gainPct>=0?'+':'')+gainPct.toFixed(1)+'%'; glPctEl.style.color = gain>=0?'var(--green)':'var(--red)'; }
+        // Save via hidden form
+        const input = document.getElementById('priceinput-'+id);
+        if (input) input.value = price;
+        updated++;
+      }
+    } catch(e) {}
+  }
+
+  // Save all updated prices
+  if (updated > 0) {
+    document.querySelectorAll('[id^="priceform-"]').forEach(f => f.submit());
+  }
+
+  // Update UI
+  if (icon) icon.className = 'fas fa-rotate';
+  if (btn) btn.disabled = false;
+  const ts = document.getElementById('lastUpdated');
+  const tm = document.getElementById('updateTime');
+  if (ts) ts.style.display = 'block';
+  if (tm) tm.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
 }
 </script>
 {% endblock %}

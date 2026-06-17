@@ -193,6 +193,9 @@
               <button class="add-fav-btn" onclick="event.stopPropagation();addFav('{{ sym }}','{{ s.name or sym }}')" title="Add to favourites">
                 <i class="fas fa-star"></i>
               </button>
+              <button class="add-fav-btn" onclick="event.stopPropagation();openBuyModal('{{ sym }}','{{ s.name or sym }}',{{ price }})" title="Add to Portfolio" style="background:#f0fdf4;color:#15803d;border-color:#86efac;">
+                <i class="fas fa-plus"></i>
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -234,6 +237,9 @@
               <button class="add-fav-btn" onclick="event.stopPropagation();addFav('{{ sym }}','{{ s.name or sym }}')" title="Add to favourites">
                 <i class="fas fa-star"></i>
               </button>
+              <button class="add-fav-btn" onclick="event.stopPropagation();openBuyModal('{{ sym }}','{{ s.name or sym }}',{{ price }})" title="Add to Portfolio" style="background:#f0fdf4;color:#15803d;border-color:#86efac;">
+                <i class="fas fa-plus"></i>
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -252,7 +258,7 @@
       </div>
       {% if most_active %}
       <table class="stock-table">
-        <thead><tr><th>Symbol</th><th class="hide-mobile">Turnover</th><th>Vol (M)</th><th></th></tr></thead>
+        <thead><tr><th>Symbol</th><th>Price</th><th class="hide-mobile">Volume</th><th></th></tr></thead>
         <tbody>
           {% for s in most_active %}
           {% set sym = s.symbol.replace('.N0000','').replace('.X0000','').replace('.B0000','') %}
@@ -263,11 +269,14 @@
               <div class="stock-sym">{{ sym }}</div>
               <div class="stock-name">{{ (s.name or '')[:22] }}</div>
             </td>
-            <td class="hide-mobile"><div class="vol-text">{{ "{:,.0f}".format(s.turnover or 0) }}</div></td>
-            <td><div class="vol-text">{{ "{:,.1f}".format((s.shareVolume or 0) / 1000000) }}M</div></td>
+            <td><div class="stock-price">{{ "{:,.2f}".format(price) }}</div></td>
+            <td class="hide-mobile"><div class="vol-text">{{ "{:,.0f}".format(vol) }}</div></td>
             <td>
               <button class="add-fav-btn" onclick="event.stopPropagation();addFav('{{ sym }}','{{ s.name or sym }}')" title="Add to favourites">
                 <i class="fas fa-star"></i>
+              </button>
+              <button class="add-fav-btn" onclick="event.stopPropagation();openBuyModal('{{ sym }}','{{ s.name or sym }}',{{ price }})" title="Add to Portfolio" style="background:#f0fdf4;color:#15803d;border-color:#86efac;">
+                <i class="fas fa-plus"></i>
               </button>
             </td>
           </tr>
@@ -354,11 +363,99 @@
 </div>
 
 </div><!-- cse-wrap -->
+
+<!-- BUY STOCK MODAL -->
+<div class="modal-overlay" id="buyStockModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title">📈 Add to Portfolio</div>
+    <form method="POST" action="{{ url_for('add_investment') }}">
+      <input type="hidden" name="asset_type" value="Stock">
+      <div class="grid-2" style="margin-bottom:14px;">
+        <div>
+          <label class="form-label">Symbol</label>
+          <input type="text" name="symbol" id="buySymbol" class="form-control" readonly style="background:var(--surface2);font-weight:700;">
+        </div>
+        <div>
+          <label class="form-label">Company</label>
+          <input type="text" name="name" id="buyName" class="form-control" readonly style="background:var(--surface2);">
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:14px;">
+        <div>
+          <label class="form-label">Shares</label>
+          <input type="number" step="1" name="units" id="buyUnits" class="form-control" required placeholder="100" oninput="calcBuyPreview()">
+        </div>
+        <div>
+          <label class="form-label">Buy Price (LKR)</label>
+          <input type="number" step="0.01" name="purchase_price" id="buyPrice" class="form-control" required oninput="calcBuyPreview()">
+        </div>
+      </div>
+      <input type="hidden" name="current_price" id="buyCurrentPrice" value="0">
+      <div id="buyCalcRow" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="padding:10px;background:var(--surface2);border-radius:8px;text-align:center;">
+          <div style="font-size:0.6rem;color:var(--text3);text-transform:uppercase;margin-bottom:2px;">Total Investment</div>
+          <div style="font-size:0.9rem;font-weight:700;color:var(--text);" id="buyTotal">—</div>
+        </div>
+        <div style="padding:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:center;">
+          <div style="font-size:0.6rem;color:#15803d;text-transform:uppercase;margin-bottom:2px;">Live Value</div>
+          <div style="font-size:0.9rem;font-weight:700;color:#15803d;" id="buyLiveVal">—</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Broker</label>
+        <select name="institution" class="form-control">
+          <option value="">Select broker...</option>
+          <option>CSE Direct</option><option>Softlogic Stockbrokers</option>
+          <option>First Capital</option><option>NDB Securities</option>
+          <option>Candor Invest</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Purchase Date</label>
+        <input type="date" name="purchase_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') if today else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Funded From Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None — record only</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — LKR {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('buyStockModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">📈 Add to Portfolio</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
 const favSymbols = {{ favourites | map(attribute='symbol') | list | tojson }};
+
+function openBuyModal(sym, name, livePrice) {
+  document.getElementById('buySymbol').value = sym;
+  document.getElementById('buyName').value = name;
+  document.getElementById('buyPrice').value = livePrice;
+  document.getElementById('buyCurrentPrice').value = livePrice;
+  document.getElementById('buyStockModal').classList.add('open');
+  calcBuyPreview();
+}
+
+function calcBuyPreview() {
+  const units = parseFloat(document.getElementById('buyUnits')?.value) || 0;
+  const price = parseFloat(document.getElementById('buyPrice')?.value) || 0;
+  const livePrice = parseFloat(document.getElementById('buyCurrentPrice')?.value) || 0;
+  const row = document.getElementById('buyCalcRow');
+  if (!units || !price) { if(row) row.style.display='none'; return; }
+  if(row) row.style.display='grid';
+  document.getElementById('buyTotal').textContent = 'LKR '+Math.round(units*price).toLocaleString();
+  document.getElementById('buyLiveVal').textContent = livePrice > 0 ? 'LKR '+Math.round(units*livePrice).toLocaleString() : '—';
+}
 
 function switchTab(tab) {
   ['market','search','favourites'].forEach(t => {
@@ -435,6 +532,10 @@ async function doSearch() {
             <button onclick="${isFav ? `removeFav('${shortSym}')` : `addFav('${shortSym}','${info.name||shortSym}')`}"
               class="btn btn-sm ${isFav ? 'btn-ghost' : 'btn-primary'}" style="font-size:0.78rem;">
               <i class="fas fa-star"></i> ${isFav ? 'Remove from Favourites' : 'Add to Favourites'}
+            </button>
+            <button onclick="openBuyModal('${shortSym}', '${info.name||shortSym}', ${price})"
+              class="btn btn-sm" style="font-size:0.78rem;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;">
+              <i class="fas fa-cart-plus"></i> Add to Portfolio
             </button>
           </div>
         </div>
