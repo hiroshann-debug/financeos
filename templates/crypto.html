@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Crypto Live Prices{% endblock %}
+{% block page_title %}Crypto{% endblock %}
+
+{% block extra_style %}
+.crypto-wrap { background:var(--bg); padding:24px; }
+.crypto-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px; }
+.crypto-title { font-size:1.5rem;font-weight:800;letter-spacing:-0.03em;color:var(--text); }
+.crypto-title-sub { font-size:0.75rem;color:var(--text3);margin-top:2px; }
+
+/* Tabs */
+.crypto-tabs { display:flex;gap:4px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:4px;margin-bottom:20px;width:fit-content; }
+.crypto-tab { padding:8px 20px;border-radius:9px;font-size:0.82rem;font-weight:700;border:none;background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);transition:all 0.15s; }
+.crypto-tab.active { background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#78350f;box-shadow:0 2px 8px rgba(245,158,11,0.3); }
+
+/* Coin table */
+.crypto-card { background:var(--surface);border:1px solid var(--border2);border-radius:16px;overflow:hidden; }
+.crypto-table { width:100%;border-collapse:collapse; }
+.crypto-table th { font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);padding:10px 14px;border-bottom:2px solid var(--border2);text-align:left; }
+.crypto-table td { padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle; }
+.crypto-table tr:last-child td { border:none; }
+.crypto-table tr:hover td { background:var(--surface2); }
+
+.coin-rank { font-size:0.72rem;color:var(--text3);font-weight:600;width:28px; }
+.coin-icon { width:32px;height:32px;border-radius:50%;object-fit:cover; }
+.coin-name { font-size:0.875rem;font-weight:700;color:var(--text); }
+.coin-sym { font-size:0.7rem;color:var(--text3);text-transform:uppercase;margin-top:1px; }
+.coin-price { font-family:var(--mono);font-size:0.875rem;font-weight:700;color:var(--text); }
+.badge-up { display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:3px 8px;border-radius:6px;font-size:0.72rem;font-weight:700; }
+.badge-down { display:inline-flex;align-items:center;gap:3px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;padding:3px 8px;border-radius:6px;font-size:0.72rem;font-weight:700; }
+.mktcap { font-size:0.75rem;color:var(--text2);font-family:var(--mono); }
+
+/* Portfolio cards */
+.port-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px; }
+.port-card { background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:16px;transition:all 0.2s; }
+.port-card:hover { border-color:rgba(245,158,11,0.3);box-shadow:0 4px 16px rgba(245,158,11,0.08);transform:translateY(-2px); }
+.port-coin { font-size:1rem;font-weight:800;color:var(--text);margin-bottom:2px; }
+.port-units { font-size:0.72rem;color:var(--text3);margin-bottom:10px; }
+.port-price { font-family:var(--mono);font-size:1.2rem;font-weight:800;color:var(--text); }
+.port-change { font-size:0.75rem;font-weight:700;margin-top:4px; }
+.port-value { font-size:0.72rem;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between; }
+  .gain-pos { color:#15803d; font-weight:700; }
+  .gain-neg { color:#dc2626; font-weight:700; }
+.live-dot { width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:pulse 2s infinite;display:inline-block;margin-right:4px; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+/* Error banner */
+.error-banner { border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;background:#fef2f2;border:1px solid #fca5a5; }
+
+@media (max-width:768px) {
+  .crypto-wrap { padding:14px; }
+  .crypto-table .hide-mobile { display:none; }
+  .port-grid { grid-template-columns:1fr 1fr; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="crypto-wrap">
+
+  <!-- Header -->
+  <div class="crypto-header">
+    <div>
+      <div class="crypto-title">₿ Crypto Live Prices</div>
+      <div class="crypto-title-sub">Powered by CoinGecko · Prices in LKR · Updates every 60s</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div style="display:inline-flex;align-items:center;gap:6px;background:#fffbeb;border:1px solid #fcd34d;color:#d97706;padding:5px 12px;border-radius:999px;font-size:0.72rem;font-weight:700;">
+        <span class="live-dot"></span> LIVE
+      </div>
+      <a href="{{ url_for('crypto_page') }}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-rotate"></i> Refresh
+      </a>
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  {% if error == 'api_down' %}
+  <div class="error-banner">
+    <i class="fas fa-triangle-exclamation" style="color:#ef4444;margin-top:2px;flex-shrink:0;"></i>
+    <div>
+      <div style="font-size:0.85rem;font-weight:700;color:#991b1b;">CoinGecko API temporarily unavailable</div>
+      <div style="font-size:0.78rem;color:#b91c1c;margin-top:2px;">Try refreshing in a moment. <a href="https://www.coingecko.com" target="_blank" style="color:#6366f1;">Visit CoinGecko →</a></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tabs -->
+  <div class="crypto-tabs">
+    <button class="crypto-tab active" id="tab-market" onclick="switchTab('market')">
+      <i class="fas fa-chart-line"></i> Market
+    </button>
+    <button class="crypto-tab" id="tab-portfolio" onclick="switchTab('portfolio')">
+      <i class="fas fa-wallet"></i> My Holdings
+      {% if crypto_investments %}
+      <span style="background:rgba(245,158,11,0.2);color:#d97706;padding:1px 7px;border-radius:999px;font-size:0.65rem;margin-left:4px;">{{ crypto_investments|length }}</span>
+      {% endif %}
+    </button>
+  </div>
+
+  <!-- ── MARKET TAB ── -->
+  <div id="pane-market">
+    {% if top_coins %}
+    <div class="crypto-card">
+      <table class="crypto-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Coin</th>
+            <th>Price (LKR)</th>
+            <th>24h Change</th>
+            <th class="hide-mobile">Market Cap</th>
+            <th class="hide-mobile">24h Volume</th>
+            <th class="hide-mobile">7d High</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for coin in top_coins %}
+          {% set chg = coin.price_change_percentage_24h or 0 %}
+          <tr>
+            <td class="coin-rank">{{ coin.market_cap_rank }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <img src="{{ coin.image }}" class="coin-icon" alt="{{ coin.name }}">
+                <div>
+                  <div class="coin-name">{{ coin.name }}</div>
+                  <div class="coin-sym">{{ coin.symbol }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="coin-price" id="price-{{ coin.id }}">
+                {{ currency_symbol }} {{ "{:,.2f}".format(coin.current_price) if coin.current_price < 1000 else "{:,.0f}".format(coin.current_price) }}
+              </div>
+            </td>
+            <td>
+              {% if chg >= 0 %}
+              <span class="badge-up"><i class="fas fa-arrow-up" style="font-size:0.55rem;"></i> {{ "{:.2f}".format(chg) }}%</span>
+              {% else %}
+              <span class="badge-down"><i class="fas fa-arrow-down" style="font-size:0.55rem;"></i> {{ "{:.2f}".format(chg|abs) }}%</span>
+              {% endif %}
+            </td>
+            <td class="hide-mobile">
+              <div class="mktcap">{{ currency_symbol }} {{ "{:,.0f}".format(coin.market_cap / 1000000) }}M</div>
+            </td>
+            <td class="hide-mobile">
+              <div class="mktcap">{{ currency_symbol }} {{ "{:,.0f}".format(coin.total_volume / 1000000) }}M</div>
+            </td>
+            <td class="hide-mobile">
+              <div class="mktcap">{{ currency_symbol }} {{ "{:,.0f}".format(coin.high_24h) if coin.high_24h else '—' }}</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="crypto-card" style="padding:48px;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:16px;">₿</div>
+      <div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:8px;">No market data available</div>
+      <div style="font-size:0.85rem;color:var(--text3);margin-bottom:20px;">CoinGecko API may be temporarily unavailable.</div>
+      <a href="{{ url_for('crypto_page') }}" class="btn btn-primary btn-sm"><i class="fas fa-rotate"></i> Try Again</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── PORTFOLIO TAB ── -->
+  <div id="pane-portfolio" style="display:none;">
+    {% if crypto_investments %}
+    <div class="port-grid" id="portfolioGrid">
+      {% for inv in crypto_investments %}
+      <div class="port-card" id="crypto-{{ inv.symbol or inv.name }}">
+        <div class="port-coin">{{ inv.name }}</div>
+        <div class="port-units">{{ "{:,.6f}".format(inv.units) }} {{ inv.symbol or '' }}</div>
+        <div class="port-price" id="cport-price-{{ loop.index }}">
+          {{ currency_symbol }} {{ "{:,.2f}".format(inv.current_price) if inv.current_price < 1000 else "{:,.0f}".format(inv.current_price) }}
+        </div>
+        <div class="port-change" id="cport-chg-{{ loop.index }}" style="color:var(--text3);">Loading...</div>
+        <div class="port-value">
+          <span style="color:var(--text3);">Value</span>
+          <span id="cport-val-{{ loop.index }}" style="font-weight:700;color:{% if inv.gain_loss >= 0 %}#15803d{% else %}#dc2626{% endif %};">
+            {{ currency_symbol }} {{ "{:,.0f}".format(inv.current_value) }}
+          </span>
+        </div>
+        <div class="port-value" style="margin-top:4px;">
+          <span style="color:var(--text3);">Gain/Loss</span>
+          <span style="font-weight:700;color:{% if inv.gain_loss >= 0 %}#15803d{% else %}#dc2626{% endif %};">
+            {{ '+' if inv.gain_loss >= 0 else '' }}{{ "{:,.0f}".format(inv.gain_loss) }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="crypto-card" style="padding:48px;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:16px;">₿</div>
+      <div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:8px;">No crypto holdings yet</div>
+      <div style="font-size:0.85rem;color:var(--text3);margin-bottom:20px;">Add crypto investments from the Investments page to track them here.</div>
+      <a href="{{ url_for('investments') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Crypto Investment</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tab) {
+  ['market','portfolio'].forEach(t => {
+    document.getElementById('pane-'+t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+}
+
+// Live price polling every 60s
+const coinIds = {{ top_coins | map(attribute='id') | list | tojson }};
+
+async function pollCryptoPrices() {
+  if (!coinIds.length) return;
+  try {
+    const res = await fetch('/crypto/prices', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ids: coinIds.slice(0,20)})
+    });
+    const data = await res.json();
+    Object.entries(data).forEach(([id, info]) => {
+      const priceEl = document.getElementById('price-'+id);
+      if (priceEl && info.lkr) {
+        const p = info.lkr;
+        priceEl.textContent = 'LKR ' + (p < 1000 ? p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : Math.round(p).toLocaleString());
+      }
+    });
+  } catch(e) {}
+}
+
+// Poll every 60s
+if (coinIds.length) {
+  setInterval(pollCryptoPrices, 60000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Calendar · {{ month_start.strftime('%B %Y') }}{% endblock %}
+{% block page_title %}Calendar{% endblock %}
+
+{% block extra_style %}
+.cal-wrap { background: var(--bg); padding: 24px; }
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.cal-nav { display: flex; align-items: center; gap: 12px; }
+.cal-nav a { width: 34px; height: 34px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border2); display: grid; place-items: center; color: var(--text2); text-decoration: none; font-size: 0.85rem; transition: all 0.15s; }
+.cal-nav a:hover { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.cal-month { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+.cal-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.cal-sum-card { background: var(--surface); border-radius: 14px; padding: 14px 16px; border: 1px solid var(--border2); }
+.cal-sum-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 5px; }
+.cal-sum-val { font-size: 1.1rem; font-weight: 800; font-family: var(--mono); }
+.cal-grid { background: var(--surface); border-radius: 16px; border: 1px solid var(--border2); overflow: hidden; }
+.cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--surface2); border-bottom: 1px solid var(--border2); }
+.cal-dow-cell { padding: 10px; text-align: center; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); }
+.cal-dow-cell.weekend { color: var(--accent); }
+.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-cell { min-height: 100px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 8px; position: relative; transition: background 0.15s; cursor: pointer; }
+.cal-cell:hover { background: var(--surface2); }
+.cal-cell.today { background: var(--accent-glow); }
+.cal-cell.today .cal-day-num { background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.cal-cell.other-month { opacity: 0.3; }
+.cal-cell.weekend-cell { background: rgba(0,0,0,0.01); }
+.cal-day-num { font-size: 0.78rem; font-weight: 700; color: var(--text2); margin-bottom: 4px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.cal-dot-income { width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block; }
+.cal-dot-expense { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; display: inline-block; }
+.cal-cell-amount { font-size: 0.6rem; font-family: var(--mono); font-weight: 700; margin-top: 2px; }
+.cal-cell-bar { height: 3px; border-radius: 2px; margin-top: 4px; }
+.cal-txn-list { font-size: 0.6rem; margin-top: 4px; overflow: hidden; }
+.cal-txn-item { display: flex; align-items: center; gap: 3px; padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-txn-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+/* Side panel */
+.cal-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; }
+.cal-side { display: flex; flex-direction: column; gap: 14px; }
+.side-card { background: var(--surface); border-radius: 14px; padding: 16px; border: 1px solid var(--border2); }
+.side-card-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 12px; }
+.txn-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.txn-row:last-child { border: none; }
+.txn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+@media (max-width: 900px) {
+  .cal-layout { grid-template-columns: 1fr; }
+  .cal-cell { min-height: 70px; }
+  .cal-txn-list { display: none; }
+  .cal-summary { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .cal-cell { min-height: 50px; padding: 4px; }
+  .cal-summary { grid-template-columns: 1fr 1fr; }
+  .cal-wrap { padding: 14px; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="cal-wrap">
+
+<!-- Header -->
+<div class="cal-header">
+  <div class="cal-nav">
+    <a href="?month={{ prev_month }}"><i class="fas fa-chevron-left"></i></a>
+    <div class="cal-month">{{ month_start.strftime('%B %Y') }}</div>
+    <a href="?month={{ next_month }}"><i class="fas fa-chevron-right"></i></a>
+    {% if month_str != today.strftime('%Y-%m') %}
+    <a href="?month={{ today.strftime('%Y-%m') }}" style="padding:0 12px;width:auto;font-size:0.75rem;font-weight:700;color:var(--accent);">Today</a>
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:8px;">
+    <input type="month" value="{{ month_str }}" class="form-control" style="width:160px;font-size:0.82rem;" onchange="location='?month='+this.value">
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('addExpenseModal').classList.add('open')">
+      <i class="fas fa-plus"></i> Add
+    </button>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="cal-summary">
+  <div class="cal-sum-card">
+    <div class="cal-sum-label">Income</div>
+    <div class="cal-sum-val" style="color:#10b981;">{{ currency_symbol }} {{ "{:,.0f}".format(total_income) }}</div>
+    <div style="font-size:0.68rem;color:var(--text3);margin-top:3px;">{{ month_start.strftime('%B') }}</div>
+  </div>
+  <div class="cal-sum-card">
+    <div class="cal-sum-label">Expenses</div>
+    <div class="cal-sum-val" style="color:#ef4444;">{{ currency_symbol }} {{ "{:,.0f}".format(total_expense) }}</div>
+    <div style="font-size:0.68rem;color:var(--text3);margin-top:3px;">{{ month_start.strftime('%B') }}</div>
+  </div>
+  <div class="cal-sum-card">
+    <div class="cal-sum-label">Net</div>
+    <div class="cal-sum-val" style="color:{% if total_income - total_expense >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+      {{ currency_symbol }} {{ "{:,.0f}".format(total_income - total_expense) }}
+    </div>
+    <div style="font-size:0.68rem;color:var(--text3);margin-top:3px;">income − expenses</div>
+  </div>
+  <div class="cal-sum-card">
+    <div class="cal-sum-label">Transactions</div>
+    <div class="cal-sum-val" style="color:var(--accent);">
+      {{ cal_data.values()|map('length')|sum }}
+    </div>
+    <div style="font-size:0.68rem;color:var(--text3);margin-top:3px;">this month</div>
+  </div>
+</div>
+
+<!-- Calendar + Side panel -->
+<div class="cal-layout">
+
+  <!-- Calendar grid -->
+  <div class="cal-grid">
+    <!-- Day of week headers -->
+    <div class="cal-dow">
+      {% for dow, weekend in [('Sun',True),('Mon',False),('Tue',False),('Wed',False),('Thu',False),('Fri',False),('Sat',True)] %}
+      <div class="cal-dow-cell {% if weekend %}weekend{% endif %}">{{ dow }}</div>
+      {% endfor %}
+    </div>
+
+    <!-- Days -->
+    <div class="cal-days">
+      <!-- Offset for first day (0=Mon → 1 offset for Sun-start grid) -->
+      {% set offset = (month_start.weekday() + 1) % 7 %}
+      {% for _ in range(offset) %}
+      <div class="cal-cell other-month"></div>
+      {% endfor %}
+
+      {% for day in range(1, days_in_month + 1) %}
+      {% set cell_date = month_start.replace(day=day) %}
+      {% set is_today = (cell_date == today) %}
+      {% set is_weekend = cell_date.weekday() in [5, 6] %}
+      {% set day_data = daily_totals.get(day, {}) %}
+      {% set has_txns = cal_data.get(day) %}
+      {% set max_expense = daily_totals.values()|map(attribute='expense')|max if daily_totals else 1 %}
+
+      <div class="cal-cell {% if is_today %}today{% endif %} {% if is_weekend %}weekend-cell{% endif %}"
+        onclick="showDayPanel({{ day }})"
+        id="cell-{{ day }}">
+        <div class="cal-day-num">{{ day }}</div>
+
+        {% if day_data %}
+          {% if day_data.income > 0 %}
+          <div class="cal-cell-amount" style="color:#10b981;">+{{ "{:,.0f}".format(day_data.income) }}</div>
+          {% endif %}
+          {% if day_data.expense > 0 %}
+          <div class="cal-cell-amount" style="color:#ef4444;">-{{ "{:,.0f}".format(day_data.expense) }}</div>
+          {% endif %}
+
+          <!-- Expense bar -->
+          {% if day_data.expense > 0 and max_expense > 0 %}
+          <div class="cal-cell-bar" style="width:{{ [(day_data.expense / max_expense * 100)|int, 100]|min }}%;background:{% if day_data.expense > max_expense * 0.7 %}#ef4444{% elif day_data.expense > max_expense * 0.4 %}#f59e0b{% else %}#10b981{% endif %};"></div>
+          {% endif %}
+
+          <!-- Transaction pills -->
+          <div class="cal-txn-list">
+            {% for t in cal_data[day][:3] %}
+            <div class="cal-txn-item">
+              <div class="cal-txn-dot" style="background:{% if t.trans_type=='income' %}#10b981{% else %}#ef4444{% endif %};"></div>
+              <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;">{{ t.description[:12] if t.description else t.category }}</span>
+            </div>
+            {% endfor %}
+            {% if cal_data[day]|length > 3 %}
+            <div style="color:var(--text3);font-size:0.55rem;margin-top:1px;">+{{ cal_data[day]|length - 3 }} more</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="cal-side">
+
+    <!-- Legend -->
+    <div class="side-card">
+      <div class="side-card-title">Legend</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--text2);">
+          <div style="width:12px;height:4px;border-radius:2px;background:#10b981;flex-shrink:0;"></div> Low spending day
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--text2);">
+          <div style="width:12px;height:4px;border-radius:2px;background:#f59e0b;flex-shrink:0;"></div> Moderate spending
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--text2);">
+          <div style="width:12px;height:4px;border-radius:2px;background:#ef4444;flex-shrink:0;"></div> High spending day
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--text2);">
+          <div style="width:12px;height:4px;border-radius:2px;background:var(--accent);flex-shrink:0;"></div> Today
+        </div>
+      </div>
+    </div>
+
+    <!-- Day detail panel -->
+    <div class="side-card" id="dayPanel">
+      <div class="side-card-title" id="dayPanelTitle">Click a day to see details</div>
+      <div id="dayPanelContent" style="color:var(--text3);font-size:0.82rem;text-align:center;padding:20px 0;">
+        <i class="fas fa-calendar-day" style="font-size:2rem;margin-bottom:8px;display:block;opacity:0.3;"></i>
+        Select a day
+      </div>
+    </div>
+
+    <!-- This month top days -->
+    {% if daily_totals %}
+    <div class="side-card">
+      <div class="side-card-title">Highest Spending Days</div>
+      {% set sorted_days = daily_totals.items()|sort(attribute='1.expense', reverse=True) %}
+      {% for day, data in sorted_days[:5] %}
+      {% if data.expense > 0 %}
+      <div class="txn-row">
+        <div class="txn-dot" style="background:#ef4444;"></div>
+        <div style="flex:1;">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--text);">{{ month_start.replace(day=day).strftime('%d %b') }}</div>
+          <div style="font-size:0.68rem;color:var(--text3);">{{ data.count }} transaction{{ 's' if data.count != 1 }}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:0.82rem;font-weight:700;color:#ef4444;">{{ "{:,.0f}".format(data.expense) }}</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Store txn data for JS -->
+<script id="calData" type="application/json">
+{{ cal_data_json | tojson }}
+</script>
+{% endblock %}
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-overlay" id="addExpenseModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">➕ Add Expense</div>
+    <form method="POST" action="{{ url_for('add') }}">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00" autofocus></div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" name="date" class="form-control" required value="{{ today.strftime('%Y-%m-%d') }}"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><input type="text" name="description" class="form-control" required placeholder="What's this for?"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Category</label><input type="text" name="category" class="form-control" placeholder="Food, Transport..." list="cat-l"><datalist id="cat-l"><option value="Food & Dining"><option value="Transport"><option value="Utilities"><option value="Entertainment"><option value="Shopping"><option value="Health"><option value="Education"><option value="Rent"></datalist></div>
+        <div class="form-group"><label class="form-label">Currency</label><select name="currency" class="form-control"><option value="LKR">LKR</option><option value="USD">USD</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Payment Source</label>
+        <select name="payment_method" class="form-control" required>
+          <option value="">— Select wallet or card —</option>
+          {% for w in wallets %}<option value="wallet_{{ w.id }}">💼 {{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}
+          {% for c in credit_cards %}<option value="credit_{{ c.id }}">💳 {{ c.bank_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addExpenseModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Expense</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+const calData = JSON.parse(document.getElementById('calData').textContent);
+const currency = '{{ currency_symbol }}';
+const monthName = '{{ month_start.strftime("%B %Y") }}';
+
+function showDayPanel(day) {
+  const panel = document.getElementById('dayPanel');
+  const title = document.getElementById('dayPanelTitle');
+  const content = document.getElementById('dayPanelContent');
+  const txns = calData[day] || [];
+
+  // Highlight selected cell
+  document.querySelectorAll('.cal-cell').forEach(c => c.style.outline = '');
+  const cell = document.getElementById('cell-' + day);
+  if (cell) cell.style.outline = '2px solid var(--accent)';
+
+  const date = new Date({{ year }}, {{ month - 1 }}, day);
+  title.textContent = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  if (txns.length === 0) {
+    content.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;"><i class="fas fa-check-circle" style="font-size:1.5rem;margin-bottom:8px;display:block;color:#10b981;"></i>No transactions</div>';
+    return;
+  }
+
+  let income = 0, expense = 0;
+  let html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+  txns.forEach(t => {
+    const isIncome = t.trans_type === 'income';
+    if (isIncome) income += t.amount; else expense += t.amount;
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:7px;background:var(--surface2);border-radius:8px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:${isIncome ? '#10b981' : '#ef4444'};flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.78rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.description || t.category || 'Transaction'}</div>
+        <div style="font-size:0.65rem;color:var(--text3);">${t.category || 'General'}</div>
+      </div>
+      <div style="font-family:monospace;font-size:0.78rem;font-weight:700;color:${isIncome ? '#10b981' : '#ef4444'};flex-shrink:0;">${isIncome ? '+' : '-'}${Math.round(t.amount).toLocaleString()}</div>
+    </div>`;
+  });
+
+  if (income > 0 || expense > 0) {
+    html += `<div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--border);margin-top:4px;font-size:0.72rem;">
+      <span style="color:var(--text3);">Net</span>
+      <span style="font-family:monospace;font-weight:700;color:${income - expense >= 0 ? '#10b981' : '#ef4444'};">${Math.round(income - expense).toLocaleString()}</span>
+    </div>`;
+  }
+
+  html += '</div>';
+  content.innerHTML = html;
+}
+</script>
+{% endblock %}

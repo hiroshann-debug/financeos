@@ -1,0 +1,195 @@
+{% extends "base_public.html" %}
+{% block title %}Terms of Service · සේවා කොන්දේසි — FinanceOS{% endblock %}
+
+{% block extra_style %}
+:root { --navy:#0f172a; --indigo:#6366f1; --text:#1a1f37; --muted:#64748b; --border:#e2e8f0; --font:'DM Sans',-apple-system,sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--font); color:var(--text); background:#f0ebe3; -webkit-font-smoothing:antialiased; }
+.lp-nav { position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 60px;height:64px;display:flex;align-items:center;justify-content:space-between; }
+.nav-logo { display:flex;align-items:center;gap:10px;text-decoration:none; }
+.nav-logo-icon { width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:grid;place-items:center;color:white;font-size:0.85rem;font-weight:800; }
+.nav-logo-text { font-size:1.05rem;font-weight:800;color:var(--navy);letter-spacing:-0.02em; }
+.wrap { max-width:760px;margin:0 auto;padding:60px 24px 100px; }
+.page-hero { background:linear-gradient(135deg,var(--navy),#1e293b);border-radius:20px;padding:48px;margin-bottom:40px;color:white; }
+.page-hero h1 { font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:6px; }
+.page-hero .si { font-size:0.95rem;color:rgba(255,255,255,0.45);margin-bottom:14px;display:block; }
+.page-hero .meta { font-size:0.78rem;color:rgba(255,255,255,0.35);display:flex;gap:20px;flex-wrap:wrap; }
+.page-hero .meta span { display:flex;align-items:center;gap:5px; }
+.toc { background:white;border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:32px; }
+.toc h3 { font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:14px; }
+.toc a { display:block;font-size:0.875rem;color:var(--indigo);text-decoration:none;padding:4px 0;border-bottom:1px solid #f1f5f9; }
+.toc a:last-child { border:none; }
+.toc a:hover { color:#4f46e5; }
+.section { background:white;border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px; }
+.section h2 { font-size:1.05rem;font-weight:800;color:var(--navy);margin-bottom:4px;display:flex;align-items:center;gap:8px; }
+.section h2 .si { font-size:0.72rem;font-weight:500;color:var(--muted); }
+.section p { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-top:12px; }
+.section ul { padding-left:20px;margin-top:10px; }
+.section li { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-bottom:6px; }
+.section li strong { color:var(--text); }
+.highlight { background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-top:12px; }
+.highlight p { color:#1e40af;margin:0; }
+.contact-box { background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;padding:28px;color:white;text-align:center; }
+.contact-box h3 { font-size:1rem;font-weight:800;margin-bottom:6px; }
+.contact-box p { font-size:0.82rem;color:rgba(255,255,255,0.75);margin-bottom:16px; }
+.contact-box a { display:inline-block;padding:10px 24px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:white;border-radius:8px;font-size:0.82rem;font-weight:700;text-decoration:none;transition:background 0.15s; }
+.contact-box a:hover { background:rgba(255,255,255,0.25); }
+.lp-footer-mini { background:var(--navy);padding:24px 60px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px; }
+.lp-footer-mini p { font-size:0.75rem;color:rgba(255,255,255,0.3); }
+.lp-footer-mini a { font-size:0.75rem;color:rgba(255,255,255,0.35);text-decoration:none;transition:color 0.15s; }
+.lp-footer-mini a:hover { color:#a5b4fc; }
+@media (max-width:768px) { .lp-nav { padding:0 16px; } .wrap { padding:32px 16px 80px; } .page-hero { padding:28px; } .lp-footer-mini { padding:20px 16px; } }
+{% endblock %}
+
+{% block content %}
+<nav class="lp-nav">
+  <a href="{{ url_for('landing') }}" class="nav-logo">
+    <div class="nav-logo-icon">F</div>
+    <span class="nav-logo-text">FinanceOS</span>
+  </a>
+  <div style="display:flex;gap:16px;">
+    <a href="{{ url_for('privacy') }}" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:600;">Privacy Policy</a>
+    <a href="{{ url_for('auth_login') }}" style="font-size:0.82rem;color:var(--indigo);text-decoration:none;font-weight:700;">Sign In →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-hero">
+    <h1>Terms of Service</h1>
+    <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">සේවා කොන්දේසි</span>
+    <div class="meta">
+      <span><i class="fas fa-calendar"></i> Effective: 15 June 2026</span>
+      <span><i class="fas fa-globe"></i> Jurisdiction: Sri Lanka</span>
+      <span><i class="fas fa-language"></i> English · සිංහල</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h3>Contents · අන්තර්ගතය</h3>
+    <a href="#acceptance">1. Acceptance of Terms</a>
+    <a href="#service">2. Description of Service</a>
+    <a href="#account">3. Your Account</a>
+    <a href="#data">4. Your Financial Data</a>
+    <a href="#ai">5. AI Advisor</a>
+    <a href="#prohibited">6. Prohibited Use</a>
+    <a href="#disclaimer">7. Disclaimer</a>
+    <a href="#liability">8. Limitation of Liability</a>
+    <a href="#changes">9. Changes to Terms</a>
+    <a href="#contact">10. Contact</a>
+  </div>
+
+  <div class="section" id="acceptance">
+    <h2>1. Acceptance of Terms <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· කොන්දේසි පිළිගැනීම</span></h2>
+    <p>By accessing or using FinanceOS ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
+    <p>FinanceOS is a personal finance management tool provided free of charge for personal, non-commercial use.</p>
+  </div>
+
+  <div class="section" id="service">
+    <h2>2. Description of Service <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· සේවාවේ විස්තරය</span></h2>
+    <p>FinanceOS provides the following features:</p>
+    <ul>
+      <li><strong>Expense & Income Tracking</strong> — manually log your financial transactions</li>
+      <li><strong>Wallet & Credit Card Management</strong> — track balances and payment due dates</li>
+      <li><strong>AI Financial Advisor</strong> — AI-powered chat using your financial data</li>
+      <li><strong>CSE Stock Prices</strong> — live data from the Colombo Stock Exchange</li>
+      <li><strong>Exchange Rates</strong> — live currency data from open.er-api.com</li>
+      <li><strong>Credit Card Offers</strong> — community-sourced Sri Lanka bank offers</li>
+      <li><strong>Financial Tools</strong> — calculators for loans, savings and investments</li>
+    </ul>
+    <div class="highlight">
+      <p><i class="fas fa-info-circle"></i> FinanceOS does <strong>not</strong> connect to your bank accounts directly. All financial data is entered manually by you.</p>
+    </div>
+  </div>
+
+  <div class="section" id="account">
+    <h2>3. Your Account <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· ඔබේ ගිණුම</span></h2>
+    <p>To use FinanceOS, you must sign in via Google through Auth0, our authentication provider. By signing in, you agree to:</p>
+    <ul>
+      <li>Provide accurate information and keep it updated</li>
+      <li>Maintain the security of your account</li>
+      <li>Not share your account with others</li>
+      <li>Notify us immediately if you suspect unauthorised access</li>
+    </ul>
+    <p>You must be at least 18 years old to use FinanceOS.</p>
+  </div>
+
+  <div class="section" id="data">
+    <h2>4. Your Financial Data <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· ඔබේ මූල්‍ය දත්ත</span></h2>
+    <p>All financial data you enter into FinanceOS (transactions, wallets, loans, goals etc.) belongs to you. We do not sell, share or monetise your financial data.</p>
+    <ul>
+      <li>Your data is stored securely in a PostgreSQL database (Supabase)</li>
+      <li>Data is isolated per user — other users cannot access your data</li>
+      <li>You can export your transaction history as CSV at any time</li>
+      <li>You can request deletion of your account and all data</li>
+    </ul>
+    <div class="highlight">
+      <p><i class="fas fa-shield-halved"></i> Your data is <strong>never used to train AI models</strong> and is never sold to third parties.</p>
+    </div>
+  </div>
+
+  <div class="section" id="ai">
+    <h2>5. AI Advisor <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· AI උපදේශක</span></h2>
+    <p>The FinanceOS AI Advisor is powered by Claude (Anthropic). By using the AI Advisor, you acknowledge:</p>
+    <ul>
+      <li>AI responses are <strong>for informational purposes only</strong> and do not constitute professional financial advice</li>
+      <li>FinanceOS is not a licensed financial advisor, broker or investment professional</li>
+      <li>Your conversation with the AI Advisor is sent to Anthropic's API for processing — Anthropic's <a href="https://www.anthropic.com/privacy" target="_blank" style="color:var(--indigo);">Privacy Policy</a> applies</li>
+      <li>Always consult a qualified financial professional for major financial decisions</li>
+      <li>AI responses may occasionally be inaccurate — verify important information independently</li>
+    </ul>
+  </div>
+
+  <div class="section" id="prohibited">
+    <h2>6. Prohibited Use <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· තහනම් භාවිතය</span></h2>
+    <p>You may not use FinanceOS to:</p>
+    <ul>
+      <li>Violate any applicable law or regulation</li>
+      <li>Submit false or misleading financial information</li>
+      <li>Attempt to access other users' data</li>
+      <li>Reverse engineer or scrape the application</li>
+      <li>Use the service for commercial purposes without permission</li>
+      <li>Abuse the AI Advisor for non-financial purposes at scale</li>
+    </ul>
+  </div>
+
+  <div class="section" id="disclaimer">
+    <h2>7. Disclaimer <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· වගකීම් ප්‍රතික්ෂේපය</span></h2>
+    <p>FinanceOS is provided "as is" without warranties of any kind. We do not guarantee:</p>
+    <ul>
+      <li>Accuracy of CSE stock prices or exchange rates (sourced from third-party APIs)</li>
+      <li>Uninterrupted availability of the service</li>
+      <li>Accuracy of AI Advisor responses</li>
+      <li>Completeness or accuracy of credit card offers (community-submitted)</li>
+    </ul>
+    <p>Financial decisions made based on FinanceOS data are entirely your responsibility.</p>
+  </div>
+
+  <div class="section" id="liability">
+    <h2>8. Limitation of Liability <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· වගකීම් සීමාව</span></h2>
+    <p>To the maximum extent permitted by law, FinanceOS and its creators shall not be liable for any indirect, incidental, special or consequential damages arising from your use of the Service, including but not limited to financial losses resulting from decisions made using FinanceOS.</p>
+  </div>
+
+  <div class="section" id="changes">
+    <h2>9. Changes to Terms <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">· කොන්දේසි වෙනස්කිරීම්</span></h2>
+    <p>We may update these Terms at any time. We will notify you of significant changes by updating the "Effective" date at the top of this page. Continued use of FinanceOS after changes constitutes acceptance of the new terms.</p>
+  </div>
+
+  <div class="section" id="contact" style="border:none;background:none;padding:0;">
+    <div class="contact-box">
+      <h3>Questions about these Terms? · ප්‍රශ්න තිබේද?</h3>
+      <p>If you have any questions about these Terms of Service, please contact us.</p>
+      <a href="mailto:hiroshann@gmail.com"><i class="fas fa-envelope"></i> hiroshann@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<footer class="lp-footer-mini">
+  <p>© 2026 FinanceOS · Built in Sri Lanka 🇱🇰</p>
+  <div style="display:flex;gap:20px;">
+    <a href="{{ url_for('terms') }}">Terms</a>
+    <a href="{{ url_for('privacy') }}">Privacy</a>
+    <a href="{{ url_for('landing') }}">Home</a>
+  </div>
+</footer>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600&display=swap" rel="stylesheet">
+{% endblock %}

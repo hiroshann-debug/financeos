@@ -100,22 +100,6 @@
 </head>
 <body>
 
-<!-- ── NAV ── -->
-<nav style="position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(14px);border-bottom:1px solid #E2E8F0;padding:0 60px;height:68px;display:flex;align-items:center;justify-content:space-between;">
-  <a href="{{ url_for('landing') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-    <div style="width:38px;height:38px;background:#00C853;border-radius:10px;display:grid;place-items:center;font-size:1.15rem;">💰</div>
-    <span style="font-size:1.1rem;font-weight:800;color:#0F172A;letter-spacing:-0.02em;font-family:'Plus Jakarta Sans',sans-serif;">FinanceOS</span>
-  </a>
-  <div style="display:flex;align-items:center;gap:32px;">
-    <a href="#how-it-works" style="font-size:0.975rem;font-weight:600;color:#64748B;text-decoration:none;">How it works</a>
-    <a href="#features" style="font-size:0.975rem;font-weight:600;color:#64748B;text-decoration:none;">Features</a>
-    <a href="#ecosystem" style="font-size:0.975rem;font-weight:600;color:#64748B;text-decoration:none;">Ecosystem</a>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <a href="{{ url_for('auth_login') }}" style="padding:8px 20px;border-radius:8px;font-size:0.875rem;font-weight:700;color:#0F172A;background:transparent;border:1.5px solid #E2E8F0;text-decoration:none;">Sign In</a>
-    <a href="{{ url_for('auth_signup') }}" style="padding:9px 22px;border-radius:8px;font-size:0.875rem;font-weight:700;color:#fff;background:#0F172A;text-decoration:none;">Get Started Free</a>
-  </div>
-</nav>
 
 <div class="pub-content" style="padding-top:0;margin-top:0;">
     {% with messages = get_flashed_messages(with_categories=true) %}

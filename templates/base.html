@@ -504,6 +504,8 @@
       white-space: nowrap;
     }
     .topbar-qlink:hover { background: var(--surface2); color: var(--text); }
+    .topbar-qlink.active { background: var(--accent-glow); color: var(--accent); }
+    @media (max-width: 768px) { .topbar-quicklinks { display: none; } }
     .topbar-qlink.active { background: var(--accent-glow); color: var(--accent2); }
     .topbar-qlink i { font-size: 0.72rem; }
     @media (max-width: 900px) { .topbar-quicklinks { display: none; } }
@@ -820,6 +822,9 @@
     </a>
 
     <div class="nav-section-label">Planning</div>
+    <a href="{{ url_for('calendar_view') }}" class="nav-link {% if request.endpoint == 'calendar_view' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-calendar-days"></i></span> Calendar
+    </a>
     <a href="{{ url_for('budget_planner') }}" class="nav-link {% if request.endpoint == 'budget_planner' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-sliders"></i></span> Budget
     </a>
@@ -850,11 +855,7 @@
       <span class="nav-icon"><i class="fas fa-hand-holding-dollar"></i></span> Loans
     </a>
 
-    <a href="{{ url_for('advisor_page') }}" class="nav-link {% if request.endpoint == 'advisor_page' %}active{% endif %}" style="{% if request.endpoint != 'advisor_page' %}background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));border:1px solid rgba(99,102,241,0.15);{% endif %}">
-      <span class="nav-icon" style="color:#a5b4fc;"><i class="fas fa-robot"></i></span>
-      <span style="{% if request.endpoint != 'advisor_page' %}color:rgba(255,255,255,0.7);{% endif %}">AI Advisor</span>
-      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:1px 6px;border-radius:999px;font-size:0.58rem;font-weight:700;margin-left:auto;">AI</span>
-    </a>
+
 
     <div class="nav-section-label nav-tools-mobile">Tools</div>
     <a href="{{ url_for('financial_tools') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'financial_tools' %}active{% endif %}">
@@ -863,16 +864,22 @@
     <a href="{{ url_for('cse_stocks') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'cse_stocks' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-chart-column"></i></span> CSE Stocks
     </a>
+    <a href="{{ url_for('crypto_page') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'crypto_page' %}active{% endif %}">
+      <span class="nav-icon"><i class="fab fa-bitcoin"></i></span> Crypto
+      <span style="background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#78350f;padding:1px 6px;border-radius:999px;font-size:0.58rem;font-weight:700;margin-left:auto;">LIVE</span>
+    </a>
+    <a href="{{ url_for('card_offers') }}" class="nav-link nav-tools-mobile {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-gift"></i></span> CC Offers
+    </a>
+    <a href="{{ url_for('advisor_page') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'advisor_page' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-robot"></i></span> AI Advisor
+      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:1px 6px;border-radius:999px;font-size:0.58rem;font-weight:700;margin-left:auto;">AI</span>
+    </a>
     <a href="{{ url_for('exchange_rates') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-money-bill-transfer"></i></span> Exchange Rates
     </a>
     <a href="{{ url_for('reports') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'reports' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
-    </a>
-
-    <a href="{{ url_for('card_offers') }}" class="nav-link {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
-      <span class="nav-icon"><i class="fas fa-gift"></i></span> CC Offers
-      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:1px 6px;border-radius:999px;font-size:0.6rem;font-weight:700;margin-left:auto;">NEW</span>
     </a>
 
     <div class="nav-section-label">System</div>
@@ -930,6 +937,15 @@
       <a href="{{ url_for('cse_stocks') }}" class="topbar-qlink {% if request.endpoint == 'cse_stocks' %}active{% endif %}">
         <i class="fas fa-chart-column"></i> CSE
       </a>
+      <a href="{{ url_for('crypto_page') }}" class="topbar-qlink {% if request.endpoint == 'crypto_page' %}active{% endif %}">
+        <i class="fab fa-bitcoin"></i> Crypto
+      </a>
+      <a href="{{ url_for('card_offers') }}" class="topbar-qlink {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
+        <i class="fas fa-gift"></i> CC Offers
+      </a>
+      <a href="{{ url_for('advisor_page') }}" class="topbar-qlink {% if request.endpoint == 'advisor_page' %}active{% endif %}" style="{% if request.endpoint != 'advisor_page' %}background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));border:1px solid rgba(99,102,241,0.2);{% else %}{% endif %}">
+        <i class="fas fa-robot"></i> AI Advisor
+      </a>
       <a href="{{ url_for('exchange_rates') }}" class="topbar-qlink {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
         <i class="fas fa-money-bill-transfer"></i> Rates
       </a>
@@ -944,7 +960,7 @@
         <span class="badge">{{ unread_notifications }}</span>
       {% endif %}
     </a>
-    <a href="{{ url_for('settings') }}" class="topbar-btn">
+<a href="{{ url_for('settings') }}" class="topbar-btn">
       <i class="fas fa-gear"></i>
     </a>
   </header>

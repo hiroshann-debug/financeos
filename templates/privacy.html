@@ -1,0 +1,245 @@
+{% extends "base_public.html" %}
+{% block title %}Privacy Policy · පෞද්ගලිකත්ව ප්‍රතිපත්තිය — FinanceOS{% endblock %}
+
+{% block extra_style %}
+:root { --navy:#0f172a; --indigo:#6366f1; --text:#1a1f37; --muted:#64748b; --border:#e2e8f0; --green:#10b981; --font:'DM Sans',-apple-system,sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--font); color:var(--text); background:#f0ebe3; -webkit-font-smoothing:antialiased; }
+.lp-nav { position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 60px;height:64px;display:flex;align-items:center;justify-content:space-between; }
+.nav-logo { display:flex;align-items:center;gap:10px;text-decoration:none; }
+.nav-logo-icon { width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:grid;place-items:center;color:white;font-size:0.85rem;font-weight:800; }
+.nav-logo-text { font-size:1.05rem;font-weight:800;color:var(--navy);letter-spacing:-0.02em; }
+.wrap { max-width:760px;margin:0 auto;padding:60px 24px 100px; }
+.page-hero { background:linear-gradient(135deg,#065f46,#059669);border-radius:20px;padding:48px;margin-bottom:40px;color:white; }
+.page-hero h1 { font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:6px; }
+.page-hero .si { font-size:0.95rem;color:rgba(255,255,255,0.5);margin-bottom:14px;display:block; }
+.page-hero .meta { font-size:0.78rem;color:rgba(255,255,255,0.4);display:flex;gap:20px;flex-wrap:wrap; }
+.page-hero .meta span { display:flex;align-items:center;gap:5px; }
+.promise-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px; }
+.promise-card { background:white;border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;align-items:flex-start;gap:12px; }
+.promise-icon { width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:0.9rem;flex-shrink:0; }
+.promise-card h3 { font-size:0.85rem;font-weight:700;color:var(--navy);margin-bottom:3px; }
+.promise-card p { font-size:0.75rem;color:var(--muted);line-height:1.5; }
+.toc { background:white;border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:32px; }
+.toc h3 { font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:14px; }
+.toc a { display:block;font-size:0.875rem;color:var(--indigo);text-decoration:none;padding:4px 0;border-bottom:1px solid #f1f5f9; }
+.toc a:last-child { border:none; }
+.section { background:white;border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px; }
+.section h2 { font-size:1.05rem;font-weight:800;color:var(--navy);margin-bottom:4px; }
+.section .si-sub { font-size:0.72rem;color:var(--muted);display:block;margin-bottom:12px; }
+.section p { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-top:10px; }
+.section ul { padding-left:20px;margin-top:10px; }
+.section li { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-bottom:6px; }
+.section li strong { color:var(--text); }
+.data-table { width:100%;border-collapse:collapse;margin-top:14px;font-size:0.82rem; }
+.data-table th { background:#f8fafc;font-weight:700;color:var(--text);padding:10px 12px;text-align:left;border-bottom:2px solid var(--border);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em; }
+.data-table td { padding:10px 12px;border-bottom:1px solid #f1f5f9;color:var(--muted);vertical-align:top; }
+.data-table tr:last-child td { border:none; }
+.green-box { background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-top:12px; }
+.green-box p { color:#15803d;margin:0; }
+.red-box { background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px 16px;margin-top:12px; }
+.red-box p { color:#dc2626;margin:0; }
+.rights-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px; }
+.right-card { background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px; }
+.right-card h4 { font-size:0.82rem;font-weight:700;color:var(--navy);margin-bottom:4px; }
+.right-card p { font-size:0.75rem;color:var(--muted);line-height:1.5;margin:0; }
+.contact-box { background:linear-gradient(135deg,#059669,#10b981);border-radius:14px;padding:28px;color:white;text-align:center; }
+.contact-box h3 { font-size:1rem;font-weight:800;margin-bottom:6px; }
+.contact-box p { font-size:0.82rem;color:rgba(255,255,255,0.8);margin-bottom:16px; }
+.contact-box a { display:inline-block;padding:10px 24px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:8px;font-size:0.82rem;font-weight:700;text-decoration:none; }
+.lp-footer-mini { background:var(--navy);padding:24px 60px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px; }
+.lp-footer-mini p { font-size:0.75rem;color:rgba(255,255,255,0.3); }
+.lp-footer-mini a { font-size:0.75rem;color:rgba(255,255,255,0.35);text-decoration:none; }
+.lp-footer-mini a:hover { color:#a5b4fc; }
+@media (max-width:768px) { .lp-nav { padding:0 16px; } .wrap { padding:32px 16px 80px; } .page-hero { padding:28px; } .promise-grid { grid-template-columns:1fr; } .rights-grid { grid-template-columns:1fr; } .lp-footer-mini { padding:20px 16px; } }
+{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600&display=swap" rel="stylesheet">
+
+<nav class="lp-nav">
+  <a href="{{ url_for('landing') }}" class="nav-logo">
+    <div class="nav-logo-icon">F</div>
+    <span class="nav-logo-text">FinanceOS</span>
+  </a>
+  <div style="display:flex;gap:16px;">
+    <a href="{{ url_for('terms') }}" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:600;">Terms of Service</a>
+    <a href="{{ url_for('auth_login') }}" style="font-size:0.82rem;color:var(--indigo);text-decoration:none;font-weight:700;">Sign In →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-hero">
+    <h1>Privacy Policy</h1>
+    <span class="si" style="font-family:'Noto Sans Sinhala',sans-serif;">පෞද්ගලිකත්ව ප්‍රතිපත්තිය</span>
+    <div class="meta">
+      <span><i class="fas fa-calendar"></i> Effective: 15 June 2026</span>
+      <span><i class="fas fa-globe"></i> Sri Lanka</span>
+      <span><i class="fas fa-shield-halved"></i> GDPR Aligned</span>
+    </div>
+  </div>
+
+  <!-- Privacy promises -->
+  <div class="promise-grid">
+    {% for icon, bg, color, title, desc in [
+      ('fas fa-ban','#fef2f2','#ef4444','We Never Sell Your Data','Your financial data is never sold or shared with advertisers. Ever.'),
+      ('fas fa-lock','#f0fdf4','#16a34a','Your Data is Encrypted','All data is stored securely with encryption at rest and in transit.'),
+      ('fas fa-robot','#eff6ff','#3b82f6','AI Doesn\'t Store Chats','AI conversations are not stored or used to train models.'),
+      ('fas fa-trash','#f5f3ff','#7c3aed','Delete Anytime','You can delete your account and all data at any time.'),
+    ] %}
+    <div class="promise-card">
+      <div class="promise-icon" style="background:{{ bg }};color:{{ color }};"><i class="{{ icon }}"></i></div>
+      <div><h3>{{ title }}</h3><p>{{ desc }}</p></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="toc">
+    <h3>Contents · අන්තර්ගතය</h3>
+    <a href="#collect">1. What We Collect</a>
+    <a href="#use">2. How We Use Your Data</a>
+    <a href="#store">3. How We Store Your Data</a>
+    <a href="#third">4. Third-Party Services</a>
+    <a href="#ai-privacy">5. AI Advisor & Privacy</a>
+    <a href="#rights">6. Your Rights</a>
+    <a href="#cookies">7. Cookies</a>
+    <a href="#children">8. Children's Privacy</a>
+    <a href="#contact-privacy">9. Contact Us</a>
+  </div>
+
+  <div class="section" id="collect">
+    <h2>1. What We Collect</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">1. අපි එකතු කරන දේ</span>
+    <p>We collect only what's necessary to provide the Service:</p>
+    <table class="data-table">
+      <thead><tr><th>Data Type</th><th>What</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Account Info</strong></td><td>Name, email, profile picture (from Google)</td><td>Identify your account</td></tr>
+        <tr><td><strong>Financial Data</strong></td><td>Transactions, wallets, loans, goals you enter</td><td>Provide the service</td></tr>
+        <tr><td><strong>Settings</strong></td><td>Currency, salary day, preferred name, theme</td><td>Personalise experience</td></tr>
+        <tr><td><strong>Usage</strong></td><td>Page visits, feature usage (Railway logs)</td><td>Fix bugs, improve service</td></tr>
+      </tbody>
+    </table>
+    <div class="green-box">
+      <p><i class="fas fa-check"></i> <strong>We do NOT collect:</strong> bank credentials, payment card details, government IDs, or biometric data.</p>
+    </div>
+  </div>
+
+  <div class="section" id="use">
+    <h2>2. How We Use Your Data</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">2. ඔබේ දත්ත භාවිතය</span>
+    <ul>
+      <li><strong>Provide the service</strong> — display your dashboard, calculate metrics, show AI advice</li>
+      <li><strong>Personalisation</strong> — remember your preferred name, currency, theme</li>
+      <li><strong>AI Advisor</strong> — send your financial summary to Claude API to generate responses</li>
+      <li><strong>Security</strong> — detect and prevent unauthorised access</li>
+      <li><strong>Improvements</strong> — fix bugs and improve features (aggregated, not individual)</li>
+    </ul>
+    <div class="red-box">
+      <p><i class="fas fa-times"></i> <strong>We do NOT use your data for:</strong> advertising, selling to third parties, profiling, or training AI models.</p>
+    </div>
+  </div>
+
+  <div class="section" id="store">
+    <h2>3. How We Store Your Data</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">3. දත්ත ගබඩා කිරීම</span>
+    <ul>
+      <li><strong>Database:</strong> PostgreSQL via Supabase — encrypted at rest, hosted on AWS</li>
+      <li><strong>Authentication:</strong> Auth0 — industry-standard OAuth 2.0, no passwords stored by us</li>
+      <li><strong>Hosting:</strong> Railway — encrypted in transit (HTTPS/TLS)</li>
+      <li><strong>Retention:</strong> Your data is kept until you delete your account</li>
+      <li><strong>Backups:</strong> Supabase maintains automated backups</li>
+    </ul>
+    <p>Each user's data is completely isolated — it is technically impossible for one user to access another user's data.</p>
+  </div>
+
+  <div class="section" id="third">
+    <h2>4. Third-Party Services</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">4. තෙවන පාර්ශ්ව සේවා</span>
+    <table class="data-table">
+      <thead><tr><th>Service</th><th>Purpose</th><th>Data Shared</th><th>Policy</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Auth0</strong></td><td>Authentication</td><td>Email, name</td><td><a href="https://auth0.com/privacy" target="_blank" style="color:var(--indigo);">auth0.com/privacy</a></td></tr>
+        <tr><td><strong>Anthropic (Claude)</strong></td><td>AI Advisor</td><td>Financial summary (anonymised)</td><td><a href="https://anthropic.com/privacy" target="_blank" style="color:var(--indigo);">anthropic.com/privacy</a></td></tr>
+        <tr><td><strong>Supabase</strong></td><td>Database</td><td>All app data</td><td><a href="https://supabase.com/privacy" target="_blank" style="color:var(--indigo);">supabase.com/privacy</a></td></tr>
+        <tr><td><strong>Railway</strong></td><td>Hosting</td><td>Server logs</td><td><a href="https://railway.app/legal/privacy" target="_blank" style="color:var(--indigo);">railway.app/legal</a></td></tr>
+        <tr><td><strong>open.er-api.com</strong></td><td>Exchange rates</td><td>None</td><td>Public API</td></tr>
+        <tr><td><strong>CSE (cse.lk)</strong></td><td>Stock prices</td><td>None</td><td>Public API</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="ai-privacy">
+    <h2>5. AI Advisor & Privacy</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">5. AI උපදේශකය සහ පෞද්ගලිකත්වය</span>
+    <p>When you use the AI Advisor, we send a summary of your financial data to Anthropic's Claude API. This summary includes:</p>
+    <ul>
+      <li>Wallet balances and total cash</li>
+      <li>Income and expense totals for the current period</li>
+      <li>Top spending categories</li>
+      <li>Credit card utilization and due dates</li>
+      <li>Loan outstanding balances</li>
+      <li>Savings goal progress</li>
+    </ul>
+    <div class="green-box">
+      <p><i class="fas fa-shield-halved"></i> <strong>Important:</strong> Anthropic does not store API conversations or use them to train models. See <a href="https://privacy.anthropic.com" target="_blank" style="color:#15803d;">Anthropic's Privacy Policy</a> for details. Your name and email are <strong>never sent</strong> to the AI.</p>
+    </div>
+  </div>
+
+  <div class="section" id="rights">
+    <h2>6. Your Rights</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">6. ඔබේ අයිතීන්</span>
+    <p>You have the following rights regarding your personal data:</p>
+    <div class="rights-grid">
+      {% for icon, title, desc in [
+        ('fas fa-eye','Access','View all data we hold about you via your dashboard and CSV export.'),
+        ('fas fa-pen','Correction','Update your preferred name and settings anytime in Settings.'),
+        ('fas fa-trash','Deletion','Delete your account and all data from Settings → Danger Zone.'),
+        ('fas fa-download','Portability','Export your transactions as CSV at any time.'),
+        ('fas fa-ban','Objection','Contact us to object to specific data processing.'),
+        ('fas fa-pause','Restriction','Contact us to restrict processing of your data.'),
+      ] %}
+      <div class="right-card">
+        <h4><i class="{{ icon }}" style="color:var(--indigo);margin-right:6px;"></i>{{ title }}</h4>
+        <p>{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section" id="cookies">
+    <h2>7. Cookies</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">7. කුකීස්</span>
+    <p>FinanceOS uses only essential cookies — no advertising or tracking cookies:</p>
+    <ul>
+      <li><strong>Session cookie</strong> — keeps you logged in during your browser session</li>
+      <li><strong>Auth0 cookie</strong> — manages authentication state</li>
+      <li><strong>Theme cookie</strong> — remembers your light/dark mode preference</li>
+    </ul>
+    <p>We do not use Google Analytics, Facebook Pixel, or any advertising trackers.</p>
+  </div>
+
+  <div class="section" id="children">
+    <h2>8. Children's Privacy</h2>
+    <span class="si-sub" style="font-family:'Noto Sans Sinhala',sans-serif;">8. ළමා පෞද්ගලිකත්වය</span>
+    <p>FinanceOS is not intended for use by persons under the age of 18. We do not knowingly collect personal data from children. If you believe a child has created an account, please contact us immediately and we will delete the account.</p>
+  </div>
+
+  <div class="section" id="contact-privacy" style="border:none;background:none;padding:0;">
+    <div class="contact-box">
+      <h3>Privacy Questions? · ප්‍රශ්න තිබේද?</h3>
+      <p>Contact us for any privacy concerns, data requests or to exercise your rights.</p>
+      <a href="mailto:hiroshann@gmail.com"><i class="fas fa-envelope"></i> hiroshann@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<footer class="lp-footer-mini">
+  <p>© 2026 FinanceOS · Built in Sri Lanka 🇱🇰 · ශ්‍රී ලංකාවේ නිර්මාණය</p>
+  <div style="display:flex;gap:20px;">
+    <a href="{{ url_for('terms') }}">Terms</a>
+    <a href="{{ url_for('privacy') }}">Privacy</a>
+    <a href="{{ url_for('landing') }}">Home</a>
+  </div>
+</footer>
+{% endblock %}

@@ -59,6 +59,12 @@
       <button class="btn btn-primary btn-sm" style="flex:1;" onclick="openPayLoan({{ l.id }},'{{ l.loan_name }}',{{ l.monthly_payment }},{{ l.wallet_id or 'null' }})">
         <i class="fas fa-money-bill-wave"></i> Make Payment
       </button>
+      <form method="POST" action="{{ url_for('reverse_loan_payment', loan_id=l.id) }}" style="display:inline;"
+        onsubmit="return confirm('Reverse last payment for {{ l.loan_name }}? This will restore your wallet and loan balance.')">
+        <button class="btn btn-ghost btn-sm" title="Reverse last payment" style="color:#d97706;border-color:#fcd34d;">
+          <i class="fas fa-rotate-left"></i>
+        </button>
+      </form>
       {% endif %}
       <a href="{{ url_for('edit_loan', loan_id=l.id) }}" class="btn btn-ghost btn-sm btn-icon"><i class="fas fa-pen"></i></a>
       <form method="POST" action="{{ url_for('delete_loan', loan_id=l.id) }}" onsubmit="return confirm('Delete loan?')">

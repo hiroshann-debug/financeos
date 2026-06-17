@@ -1,38 +1,146 @@
 {% extends "base.html" %}
-{% block title %}CSE Stock Prices{% endblock %}
-{% block page_title %}CSE Stock Prices{% endblock %}
+{% block title %}CSE Live Stocks{% endblock %}
+{% block page_title %}CSE Stocks{% endblock %}
+
+{% block extra_style %}
+.cse-wrap { background: var(--bg); padding: 24px; }
+
+/* Header */
+.cse-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.cse-title { font-size:1.5rem; font-weight:800; letter-spacing:-0.03em; color:var(--text); }
+.cse-title-sub { font-size:0.75rem; color:var(--text3); margin-top:2px; }
+
+/* Market status badge */
+.market-open  { display:inline-flex; align-items:center; gap:6px; background:#f0fdf4; border:1px solid #86efac; color:#15803d; padding:5px 12px; border-radius:999px; font-size:0.72rem; font-weight:700; }
+.market-closed { display:inline-flex; align-items:center; gap:6px; background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; padding:5px 12px; border-radius:999px; font-size:0.72rem; font-weight:700; }
+.market-dot { width:7px; height:7px; border-radius:50%; animation:pulse 2s infinite; }
+.market-dot.green { background:#16a34a; }
+.market-dot.red { background:#dc2626; animation:none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* Tabs */
+.cse-tabs { display:flex; gap:4px; background:var(--surface); border:1px solid var(--border2); border-radius:12px; padding:4px; margin-bottom:20px; width:fit-content; }
+.cse-tab { padding:8px 20px; border-radius:9px; font-size:0.82rem; font-weight:700; border:none; background:transparent; color:var(--text2); cursor:pointer; font-family:var(--font); transition:all 0.15s; display:flex; align-items:center; gap:7px; }
+.cse-tab.active { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; box-shadow:0 2px 8px rgba(99,102,241,0.3); }
+.cse-tab:hover:not(.active) { background:var(--surface2); color:var(--text); }
+
+/* Stock card row */
+.stock-table { width:100%; border-collapse:collapse; }
+.stock-table th { font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); padding:8px 10px; border-bottom:2px solid var(--border2); text-align:left; }
+.stock-table td { padding:10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.stock-table tr:last-child td { border:none; }
+.stock-table tr:hover td { background:var(--surface2); cursor:pointer; }
+
+.stock-sym { font-size:0.875rem; font-weight:800; color:var(--text); }
+.stock-name { font-size:0.68rem; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+.stock-price { font-family:var(--mono); font-size:0.875rem; font-weight:700; color:var(--text); }
+.badge-up   { display:inline-flex; align-items:center; gap:3px; background:#f0fdf4; color:#15803d; border:1px solid #86efac; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:700; }
+.badge-down { display:inline-flex; align-items:center; gap:3px; background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:700; }
+.badge-flat { display:inline-flex; align-items:center; gap:3px; background:#f8fafc; color:#64748b; border:1px solid #e2e8f0; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:700; }
+.add-fav-btn { width:28px; height:28px; border-radius:8px; border:1px solid var(--border2); background:var(--surface); color:var(--text3); display:grid; place-items:center; font-size:0.75rem; cursor:pointer; transition:all 0.15s; }
+.add-fav-btn:hover { background:#fffbeb; color:#d97706; border-color:#fcd34d; }
+.add-fav-btn.added { background:#fffbeb; color:#d97706; border-color:#fcd34d; }
+
+/* Section card */
+.cse-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px; overflow:hidden; }
+.cse-card-header { padding:14px 16px; border-bottom:1px solid var(--border2); display:flex; align-items:center; justify-content:space-between; }
+.cse-card-title { font-size:0.82rem; font-weight:800; color:var(--text); display:flex; align-items:center; gap:7px; }
+
+/* Favourites cards */
+.fav-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+.fav-card { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:16px; transition:all 0.2s; position:relative; }
+.fav-card:hover { border-color:rgba(99,102,241,0.3); box-shadow:0 4px 16px rgba(99,102,241,0.08); transform:translateY(-2px); }
+.fav-sym { font-size:1rem; font-weight:800; color:var(--text); margin-bottom:2px; }
+.fav-name { font-size:0.68rem; color:var(--text3); margin-bottom:10px; }
+.fav-price { font-family:var(--mono); font-size:1.3rem; font-weight:800; color:var(--text); }
+.fav-change { font-size:0.75rem; font-weight:700; margin-top:4px; }
+.fav-remove { position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:6px; border:none; background:transparent; color:var(--text3); cursor:pointer; display:grid; place-items:center; font-size:0.7rem; transition:all 0.15s; }
+.fav-remove:hover { background:#fef2f2; color:#ef4444; }
+.fav-flash { animation:priceFlash 0.8s ease; }
+@keyframes priceFlash { 0%,100%{background:transparent} 50%{background:rgba(99,102,241,0.1)} }
+
+/* Search */
+.search-box { position:relative; max-width:400px; margin-bottom:20px; }
+.search-input { width:100%; padding:12px 16px 12px 42px; border:1.5px solid var(--border2); border-radius:12px; font-size:0.875rem; font-family:var(--font); background:var(--surface); color:var(--text); outline:none; transition:border-color 0.15s; }
+.search-input:focus { border-color:var(--accent); }
+.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text3); font-size:0.875rem; }
+.search-btn { padding:12px 24px; border-radius:12px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; font-size:0.875rem; font-weight:700; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+.search-btn:hover { opacity:0.9; transform:translateY(-1px); }
+
+/* Empty state */
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-icon { font-size:3rem; margin-bottom:12px; }
+.empty-title { font-size:0.95rem; font-weight:700; color:var(--text); margin-bottom:6px; }
+.empty-sub { font-size:0.82rem; color:var(--text3); }
+
+/* Error / market closed banner */
+.cse-banner { border-radius:14px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:flex-start; gap:12px; }
+.cse-banner.closed { background:#fffbeb; border:1px solid #fcd34d; }
+.cse-banner.error  { background:#fef2f2; border:1px solid #fca5a5; }
+
+/* Volume */
+.vol-text { font-size:0.72rem; color:var(--text3); font-family:var(--mono); }
+
+@media (max-width:768px) {
+  .cse-wrap { padding:14px; }
+  .stock-table .hide-mobile { display:none; }
+  .fav-grid { grid-template-columns:1fr 1fr; }
+}
+{% endblock %}
 
 {% block content %}
+<div class="cse-wrap">
 
 <!-- Header -->
-<div class="flex items-center justify-between mb-4">
+<div class="cse-header">
   <div>
-    <h2 style="font-size:1.4rem;font-weight:500;">Colombo Stock Exchange</h2>
-    <p class="text-muted text-sm">Live data via cse.lk · Unofficial API</p>
+    <div class="cse-title">📈 CSE Live Stocks</div>
+    <div class="cse-title-sub">Colombo Stock Exchange · Unofficial API · Data from cse.lk</div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
-    <span id="liveIndicator" style="display:none;font-size:0.72rem;color:var(--green);font-weight:600;">
-      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;"></span>
-      LIVE
-    </span>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    {% if market_open %}
+    <div class="market-open"><div class="market-dot green"></div> Market Open</div>
+    {% else %}
+    <div class="market-closed"><div class="market-dot red"></div> Market Closed</div>
+    {% endif %}
     <a href="{{ url_for('cse_stocks') }}" class="btn btn-ghost btn-sm">
       <i class="fas fa-rotate"></i> Refresh
+    </a>
+    <a href="https://www.cse.lk" target="_blank" class="btn btn-ghost btn-sm">
+      cse.lk <i class="fas fa-external-link-alt" style="font-size:0.65rem;"></i>
     </a>
   </div>
 </div>
 
-{% if error %}
-<div class="alert alert-warning mb-4">
-  <i class="fas fa-triangle-exclamation"></i>
-  CSE data unavailable right now. This usually means:
-  the market is closed (Mon–Fri 9:30am–2:30pm Colombo time), or the CSE API is temporarily down.
-  Try refreshing during market hours.
-  <a href="https://www.cse.lk" target="_blank" style="color:var(--accent);">Visit cse.lk directly →</a>
+<!-- Error/closed banner -->
+{% if error == 'market_closed' %}
+<div class="cse-banner closed">
+  <i class="fas fa-clock" style="color:#d97706;margin-top:2px;flex-shrink:0;"></i>
+  <div>
+    <div style="font-size:0.85rem;font-weight:700;color:#92400e;">Market is currently closed</div>
+    <div style="font-size:0.78rem;color:#b45309;margin-top:2px;">Trading hours: Mon–Fri, 9:30am – 2:30pm Colombo time (UTC+5:30). You can still view your favourites below.</div>
+  </div>
+</div>
+{% elif error == 'api_down' %}
+<div class="cse-banner error">
+  <i class="fas fa-triangle-exclamation" style="color:#ef4444;margin-top:2px;flex-shrink:0;"></i>
+  <div>
+    <div style="font-size:0.85rem;font-weight:700;color:#991b1b;">CSE API temporarily unavailable</div>
+    <div style="font-size:0.78rem;color:#b91c1c;margin-top:2px;">
+      The CSE data feed is down. Try refreshing in a few minutes, or
+      <a href="https://www.cse.lk" target="_blank" style="color:#6366f1;">visit cse.lk directly →</a>
+    </div>
+  </div>
+</div>
+{% elif error %}
+<div class="cse-banner error">
+  <i class="fas fa-triangle-exclamation" style="color:#ef4444;flex-shrink:0;"></i>
+  <div style="font-size:0.82rem;color:#991b1b;">{{ error }}</div>
 </div>
 {% endif %}
 
 <!-- Tabs -->
-<div style="display:flex;gap:0;border-bottom:2px solid var(--border2);margin-bottom:20px;">
+<div class="cse-tabs">
   <button class="cse-tab active" id="tab-market" onclick="switchTab('market')">
     <i class="fas fa-chart-column"></i> Market
   </button>
@@ -41,451 +149,392 @@
   </button>
   <button class="cse-tab" id="tab-favourites" onclick="switchTab('favourites')">
     <i class="fas fa-star"></i> Favourites
-    <span id="favCount" style="background:var(--accent2);color:white;border-radius:999px;padding:1px 6px;font-size:0.65rem;margin-left:4px;">{{ favourites|length }}</span>
+    {% if favourites %}
+    <span style="background:rgba(255,255,255,0.25);padding:1px 7px;border-radius:999px;font-size:0.65rem;">{{ favourites|length }}</span>
+    {% endif %}
   </button>
 </div>
 
-<!-- ── TAB: MARKET ── -->
+<!-- ── MARKET TAB ── -->
 <div id="pane-market">
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" class="cse-grid">
+  {% if top_gainers or top_losers or most_active %}
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" class="resp-grid-3">
 
     <!-- Top Gainers -->
-    <div class="card">
-      <div class="card-title" style="color:var(--green);"><i class="fas fa-arrow-trend-up"></i> Top Gainers</div>
-      {% if top_gainers %}
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Symbol</th><th>Price</th><th>%</th><th></th></tr></thead>
-          <tbody>
-            {% for s in top_gainers %}
-            {% set short = s.symbol.replace('.N0000','').replace('.X0000','') %}
-            <tr>
-              <td style="cursor:pointer;" onclick="switchTab('search');quickSearch('{{ short }}')">
-                <div style="font-weight:600;font-size:0.82rem;">{{ short }}</div>
-                <div style="font-size:0.65rem;color:var(--text2);">{{ (s.name or '')[:20] }}</div>
-              </td>
-              <td class="font-mono" style="font-size:0.82rem;">{{ "{:,.2f}".format(s.lastTradedPrice or s.closingPrice or 0) }}</td>
-              <td><span class="badge-pill badge-green">+{{ "{:.2f}".format(s.changePercentage or 0) }}%</span></td>
-              <td>
-                <button class="btn btn-sm btn-ghost" title="Add to favourites"
-                  onclick="addFav('{{ s.symbol }}','{{ (s.name or short)|replace("'","") }}')">
-                  <i class="fas fa-star" style="color:var(--text3);"></i>
-                </button>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="cse-card">
+      <div class="cse-card-header">
+        <div class="cse-card-title" style="color:#15803d;"><i class="fas fa-arrow-trend-up"></i> Top Gainers</div>
+        <span style="font-size:0.65rem;color:var(--text3);">Today</span>
       </div>
+      {% if top_gainers %}
+      <table class="stock-table">
+        <thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th></th></tr></thead>
+        <tbody>
+          {% for s in top_gainers %}
+          {% set sym = s.symbol.replace('.N0000','').replace('.X0000','').replace('.B0000','') %}
+          {% set price = s.price or s.lastTradedPrice or s.closingPrice or 0 %}
+          {% set chg = (s.changePercentage or s.changePct or s.change or 0)|float %}
+          <tr onclick="switchTab('search');quickSearch('{{ sym }}')">
+            <td>
+              <div class="stock-sym">{{ sym }}</div>
+              <div class="stock-name">{{ (s.name or '')[:22] }}</div>
+            </td>
+            <td><div class="stock-price">{{ "{:,.2f}".format(price) }}</div></td>
+            <td>
+              {% if chg > 0 %}
+              <span class="badge-up"><i class="fas fa-arrow-up" style="font-size:0.55rem;"></i> {{ "{:.2f}".format(chg) }}%</span>
+              {% elif chg < 0 %}
+              <span class="badge-down"><i class="fas fa-arrow-down" style="font-size:0.55rem;"></i> {{ "{:.2f}".format(chg|abs) }}%</span>
+              {% else %}
+              <span class="badge-flat">0.00%</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="add-fav-btn" onclick="event.stopPropagation();addFav('{{ sym }}','{{ s.name or sym }}')" title="Add to favourites">
+                <i class="fas fa-star"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
-      <p class="text-muted text-sm" style="padding:20px 0;text-align:center;"><i class="fas fa-clock" style="color:var(--orange);"></i> No data — market hours: Mon–Fri 9:30am–2:30pm Colombo</p>
+      <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data</div><div class="empty-sub">Market may be closed</div></div>
       {% endif %}
     </div>
 
     <!-- Top Losers -->
-    <div class="card">
-      <div class="card-title" style="color:var(--red);"><i class="fas fa-arrow-trend-down"></i> Top Losers</div>
-      {% if top_losers %}
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Symbol</th><th>Price</th><th>%</th><th></th></tr></thead>
-          <tbody>
-            {% for s in top_losers %}
-            {% set short = s.symbol.replace('.N0000','').replace('.X0000','') %}
-            <tr>
-              <td style="cursor:pointer;" onclick="switchTab('search');quickSearch('{{ short }}')">
-                <div style="font-weight:600;font-size:0.82rem;">{{ short }}</div>
-                <div style="font-size:0.65rem;color:var(--text2);">{{ (s.name or '')[:20] }}</div>
-              </td>
-              <td class="font-mono" style="font-size:0.82rem;">{{ "{:,.2f}".format(s.lastTradedPrice or s.closingPrice or 0) }}</td>
-              <td><span class="badge-pill badge-red">{{ "{:.2f}".format(s.changePercentage or 0) }}%</span></td>
-              <td>
-                <button class="btn btn-sm btn-ghost" title="Add to favourites"
-                  onclick="addFav('{{ s.symbol }}','{{ (s.name or short)|replace("'","") }}')">
-                  <i class="fas fa-star" style="color:var(--text3);"></i>
-                </button>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="cse-card">
+      <div class="cse-card-header">
+        <div class="cse-card-title" style="color:#dc2626;"><i class="fas fa-arrow-trend-down"></i> Top Losers</div>
+        <span style="font-size:0.65rem;color:var(--text3);">Today</span>
       </div>
+      {% if top_losers %}
+      <table class="stock-table">
+        <thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th></th></tr></thead>
+        <tbody>
+          {% for s in top_losers %}
+          {% set sym = s.symbol.replace('.N0000','').replace('.X0000','').replace('.B0000','') %}
+          {% set price = s.price or s.lastTradedPrice or s.closingPrice or 0 %}
+          {% set chg = (s.changePercentage or s.changePct or s.change or 0)|float %}
+          <tr onclick="switchTab('search');quickSearch('{{ sym }}')">
+            <td>
+              <div class="stock-sym">{{ sym }}</div>
+              <div class="stock-name">{{ (s.name or '')[:22] }}</div>
+            </td>
+            <td><div class="stock-price">{{ "{:,.2f}".format(price) }}</div></td>
+            <td>
+              {% if chg < 0 %}
+              <span class="badge-down"><i class="fas fa-arrow-down" style="font-size:0.55rem;"></i> {{ "{:.2f}".format(chg|abs) }}%</span>
+              {% else %}
+              <span class="badge-flat">{{ "{:.2f}".format(chg) }}%</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="add-fav-btn" onclick="event.stopPropagation();addFav('{{ sym }}','{{ s.name or sym }}')" title="Add to favourites">
+                <i class="fas fa-star"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
-      <p class="text-muted text-sm" style="padding:20px 0;text-align:center;"><i class="fas fa-clock" style="color:var(--orange);"></i> No data — market hours: Mon–Fri 9:30am–2:30pm Colombo</p>
+      <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data</div><div class="empty-sub">Market may be closed</div></div>
       {% endif %}
     </div>
 
     <!-- Most Active -->
-    <div class="card">
-      <div class="card-title" style="color:var(--accent2);"><i class="fas fa-fire"></i> Most Active</div>
-      {% if most_active %}
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Symbol</th><th>Price</th><th>Vol</th><th></th></tr></thead>
-          <tbody>
-            {% for s in most_active %}
-            {% set short = s.symbol.replace('.N0000','').replace('.X0000','') %}
-            <tr>
-              <td style="cursor:pointer;" onclick="switchTab('search');quickSearch('{{ short }}')">
-                <div style="font-weight:600;font-size:0.82rem;">{{ short }}</div>
-                <div style="font-size:0.65rem;color:var(--text2);">{{ (s.name or '')[:20] }}</div>
-              </td>
-              <td class="font-mono" style="font-size:0.82rem;">{{ "{:,.2f}".format(s.lastTradedPrice or s.closingPrice or 0) }}</td>
-              <td style="font-size:0.72rem;color:var(--text2);">{{ "{:,.0f}".format(s.volume or 0) }}</td>
-              <td>
-                <button class="btn btn-sm btn-ghost" title="Add to favourites"
-                  onclick="addFav('{{ s.symbol }}','{{ (s.name or short)|replace("'","") }}')">
-                  <i class="fas fa-star" style="color:var(--text3);"></i>
-                </button>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="cse-card">
+      <div class="cse-card-header">
+        <div class="cse-card-title" style="color:#6366f1;"><i class="fas fa-fire"></i> Most Active</div>
+        <span style="font-size:0.65rem;color:var(--text3);">By volume</span>
       </div>
+      {% if most_active %}
+      <table class="stock-table">
+        <thead><tr><th>Symbol</th><th class="hide-mobile">Turnover</th><th>Vol (M)</th><th></th></tr></thead>
+        <tbody>
+          {% for s in most_active %}
+          {% set sym = s.symbol.replace('.N0000','').replace('.X0000','').replace('.B0000','') %}
+          {% set price = s.price or s.lastTradedPrice or s.closingPrice or 0 %}
+          {% set vol = s.tradeVolume or s.volume or s.totalVolume or 0 %}
+          <tr onclick="switchTab('search');quickSearch('{{ sym }}')">
+            <td>
+              <div class="stock-sym">{{ sym }}</div>
+              <div class="stock-name">{{ (s.name or '')[:22] }}</div>
+            </td>
+            <td class="hide-mobile"><div class="vol-text">{{ "{:,.0f}".format(s.turnover or 0) }}</div></td>
+            <td><div class="vol-text">{{ "{:,.1f}".format((s.shareVolume or 0) / 1000000) }}M</div></td>
+            <td>
+              <button class="add-fav-btn" onclick="event.stopPropagation();addFav('{{ sym }}','{{ s.name or sym }}')" title="Add to favourites">
+                <i class="fas fa-star"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
-      <p class="text-muted text-sm" style="padding:20px 0;text-align:center;"><i class="fas fa-clock" style="color:var(--orange);"></i> No data — market hours: Mon–Fri 9:30am–2:30pm Colombo</p>
+      <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data</div><div class="empty-sub">Market may be closed</div></div>
       {% endif %}
     </div>
+
   </div>
-</div>
-
-<!-- ── TAB: SEARCH ── -->
-<div id="pane-search" style="display:none;">
-  <div class="card mb-6" style="max-width:560px;">
-    <div class="card-title">Search Stock by Symbol</div>
-    <div style="display:flex;gap:10px;align-items:flex-end;">
-      <div class="form-group" style="flex:1;margin-bottom:0;">
-        <label class="form-label">Symbol or Code</label>
-        <input type="text" id="symbolInput" class="form-control" placeholder="e.g. JKH, LOLC, COMB, DIPD"
-          onkeydown="if(event.key==='Enter') searchSymbol()">
-      </div>
-      <button class="btn btn-primary" onclick="searchSymbol()"><i class="fas fa-search"></i> Search</button>
-    </div>
-
-    <div id="searchSpinner" style="display:none;margin-top:12px;color:var(--text2);font-size:0.82rem;">
-      <i class="fas fa-spinner fa-spin"></i> Fetching live data...
-    </div>
-    <div id="searchError" style="display:none;margin-top:10px;color:var(--red);font-size:0.82rem;"></div>
-
-    <!-- Result -->
-    <div id="searchResult" style="display:none;margin-top:14px;padding:16px;background:var(--surface2);border-radius:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
-        <div>
-          <div id="res_name" style="font-weight:700;font-size:1rem;"></div>
-          <div id="res_symbol" style="font-size:0.72rem;color:var(--text2);font-family:var(--mono);"></div>
-        </div>
-        <div style="text-align:right;">
-          <div id="res_price" style="font-family:var(--mono);font-size:1.5rem;font-weight:700;"></div>
-          <div id="res_change" style="font-size:0.82rem;font-weight:600;"></div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
-        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;">
-          <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:2px;">Market Cap</div>
-          <div id="res_mktcap" style="font-size:0.82rem;font-weight:600;font-family:var(--mono);"></div>
-        </div>
-        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;">
-          <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:2px;">52W High</div>
-          <div id="res_high" style="font-size:0.82rem;font-weight:600;font-family:var(--mono);"></div>
-        </div>
-        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;">
-          <div style="font-size:0.58rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:2px;">52W Low</div>
-          <div id="res_low" style="font-size:0.82rem;font-weight:600;font-family:var(--mono);"></div>
-        </div>
-      </div>
-      <button id="addFavBtn" class="btn btn-sm btn-ghost" onclick="addFavFromSearch()">
-        <i class="fas fa-star"></i> Add to Favourites
-      </button>
-    </div>
-  </div>
-
-  <div style="padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:0.75rem;color:var(--text3);">
-    <strong>Common symbols:</strong> JKH · LOLC · COMB · DIPD · SAMP · HNB · CTC · DIST · GRAN · PARQ · WIND · LIOC
-  </div>
-</div>
-
-<!-- ── TAB: FAVOURITES ── -->
-<div id="pane-favourites" style="display:none;">
-  {% if favourites %}
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <p class="text-muted text-sm">Prices refresh every 60 seconds during market hours.</p>
-    <button class="btn btn-sm btn-ghost" onclick="fetchFavPrices()">
-      <i class="fas fa-rotate"></i> Refresh Now
-    </button>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="favGrid">
-    {% for fav in favourites %}
-    <div class="card fav-card" id="fav-{{ fav.id }}" style="position:relative;">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
-        <div>
-          <div style="font-weight:700;font-size:0.95rem;font-family:var(--mono);">
-            {{ fav.symbol.replace('.N0000','').replace('.X0000','') }}
-          </div>
-          <div class="fav-name" style="font-size:0.72rem;color:var(--text2);">{{ fav.display_name or fav.symbol }}</div>
-        </div>
-        <button class="btn btn-sm btn-danger" onclick="removeFav('{{ fav.symbol }}',{{ fav.id }})" title="Remove">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="fav-price" style="font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--text);">—</div>
-      <div class="fav-change" style="font-size:0.78rem;font-weight:600;margin-top:2px;">Loading...</div>
-      <div class="fav-mktcap" style="font-size:0.68rem;color:var(--text3);margin-top:6px;"></div>
-      <!-- Flash overlay on price update -->
-      <div class="fav-flash" style="position:absolute;inset:0;border-radius:inherit;opacity:0;pointer-events:none;transition:opacity 0.4s;"></div>
-    </div>
-    {% endfor %}
-  </div>
-
   {% else %}
-  <div class="card" style="text-align:center;padding:60px;">
-    <div style="font-size:3rem;margin-bottom:16px;">⭐</div>
-    <h3 style="font-weight:500;margin-bottom:8px;">No favourites yet</h3>
-    <p style="color:var(--text2);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto;">
-      Go to the Market or Search tab and click the ⭐ star icon to add stocks here. Prices update live every 60 seconds.
-    </p>
-    <button class="btn btn-primary" onclick="switchTab('market')">
-      <i class="fas fa-chart-column"></i> Browse Market
-    </button>
+  <div class="cse-card" style="padding:48px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:16px;">📈</div>
+    <div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:8px;">No market data available</div>
+    <div style="font-size:0.85rem;color:var(--text3);margin-bottom:20px;">
+      CSE trades Mon–Fri, 9:30am–2:30pm Colombo time.<br>
+      Try refreshing during market hours.
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a href="{{ url_for('cse_stocks') }}" class="btn btn-primary btn-sm"><i class="fas fa-rotate"></i> Refresh</a>
+      <a href="https://www.cse.lk" target="_blank" class="btn btn-ghost btn-sm">Visit cse.lk →</a>
+    </div>
   </div>
   {% endif %}
 </div>
 
-<!-- Source note -->
-<div style="margin-top:20px;padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:0.75rem;color:var(--text3);">
-  <i class="fas fa-info-circle"></i>
-  Data from <strong>cse.lk</strong> (unofficial API). For official data visit
-  <a href="https://www.cse.lk" target="_blank" style="color:var(--accent);">cse.lk</a>.
-  Market hours: Mon–Fri 09:30–14:30 Colombo time.
+<!-- ── SEARCH TAB ── -->
+<div id="pane-search" style="display:none;">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+    <div class="search-box" style="max-width:340px;margin:0;">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search by symbol e.g. JKH, COMB, DIAL..."
+        onkeydown="if(event.key==='Enter')doSearch()">
+    </div>
+    <button class="search-btn" onclick="doSearch()"><i class="fas fa-search"></i> Search</button>
+  </div>
+
+  <div id="searchResult"></div>
+
+  <div id="searchEmpty" style="text-align:center;padding:48px 0;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>
+    <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:6px;">Search for a stock</div>
+    <div style="font-size:0.82rem;color:var(--text3);">Enter a company symbol like JKH, COMB, DIAL, SPEN</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+      {% for sym in ['JKH','COMB','DIAL','SPEN','HNB','LOLC','CALT'] %}
+      <button onclick="quickSearch('{{ sym }}')" class="btn btn-ghost btn-sm">{{ sym }}</button>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 
+<!-- ── FAVOURITES TAB ── -->
+<div id="pane-favourites" style="display:none;">
+  {% if favourites %}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:0.82rem;color:var(--text3);">{{ favourites|length }} stock{{ 's' if favourites|length != 1 }} · Auto-refreshes every 60s during market hours</div>
+    <div id="lastUpdated" style="font-size:0.72rem;color:var(--text3);display:flex;align-items:center;gap:5px;">
+      <span id="liveIndicator" style="display:none;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite;margin-right:4px;"></span>LIVE</span>
+    </div>
+  </div>
+  <div class="fav-grid" id="favGrid">
+    {% for fav in favourites %}
+    <div class="fav-card" id="fav-{{ fav.symbol }}">
+      <button class="fav-remove" onclick="removeFav('{{ fav.symbol }}')" title="Remove">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="fav-sym">{{ fav.symbol }}</div>
+      <div class="fav-name">{{ fav.display_name or fav.symbol }}</div>
+      <div class="fav-price" id="price-{{ fav.symbol }}">—</div>
+      <div class="fav-change" id="change-{{ fav.symbol }}" style="color:var(--text3);">Loading...</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">⭐</div>
+    <div class="empty-title">No favourites yet</div>
+    <div class="empty-sub">Search for stocks and click ⭐ to add them here.<br>They'll auto-refresh with live prices.</div>
+    <button onclick="switchTab('search')" class="btn btn-primary btn-sm" style="margin-top:16px;">Search Stocks</button>
+  </div>
+  {% endif %}
+</div>
+
+</div><!-- cse-wrap -->
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ── Tab switching ──
+const favSymbols = {{ favourites | map(attribute='symbol') | list | tojson }};
+
 function switchTab(tab) {
   ['market','search','favourites'].forEach(t => {
-    document.getElementById('pane-'+t).style.display = t === tab ? 'block' : 'none';
-    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
+    document.getElementById('pane-'+t).style.display = t===tab ? 'block' : 'none';
+    const btn = document.getElementById('tab-'+t);
+    if (btn) btn.classList.toggle('active', t===tab);
   });
-  if (tab === 'favourites') {
-    document.getElementById('liveIndicator').style.display = 'flex';
-    fetchFavPrices();
-  } else {
-    document.getElementById('liveIndicator').style.display = 'none';
-  }
-}
-
-// ── Search ──
-let lastSearchResult = null;
-
-function searchSymbol() {
-  const sym = document.getElementById('symbolInput').value.trim();
-  if (!sym) return;
-  doSearch(sym);
+  if (tab === 'search') document.getElementById('searchInput').focus();
 }
 
 function quickSearch(sym) {
-  document.getElementById('symbolInput').value = sym;
-  doSearch(sym);
+  document.getElementById('searchInput').value = sym;
+  doSearch();
 }
 
-function doSearch(sym) {
-  document.getElementById('searchResult').style.display = 'none';
-  document.getElementById('searchError').style.display = 'none';
-  document.getElementById('searchSpinner').style.display = 'block';
-  lastSearchResult = null;
-
-  const fd = new FormData();
-  fd.append('symbol', sym);
-
-  fetch('/cse/search', { method:'POST', body: fd })
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById('searchSpinner').style.display = 'none';
-      if (data.error) {
-        document.getElementById('searchError').textContent = '⚠️ ' + data.error;
-        document.getElementById('searchError').style.display = 'block';
-        return;
-      }
-      if (data.success && data.data) {
-        const d = data.data;
-        lastSearchResult = d;
-        const price = d.lastTradedPrice || d.closingPrice || 0;
-        const change = d.change || 0;
-        const pct = d.changePercentage || 0;
-        const up = change >= 0;
-
-        document.getElementById('res_name').textContent = d.name || '—';
-        document.getElementById('res_symbol').textContent = d.symbol || '—';
-
-        const priceEl = document.getElementById('res_price');
-        priceEl.textContent = 'LKR ' + price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-        priceEl.style.color = up ? 'var(--green)' : 'var(--red)';
-
-        const chEl = document.getElementById('res_change');
-        chEl.textContent = `${up ? '▲' : '▼'} ${Math.abs(change).toFixed(2)} (${pct.toFixed(2)}%)`;
-        chEl.style.color = up ? 'var(--green)' : 'var(--red)';
-
-        const mc = d.marketCap || 0;
-        document.getElementById('res_mktcap').textContent =
-          mc >= 1e9 ? (mc/1e9).toFixed(2)+'B' : mc >= 1e6 ? (mc/1e6).toFixed(2)+'M' : mc.toLocaleString();
-        document.getElementById('res_high').textContent = d['52weekHigh'] ? d['52weekHigh'].toFixed(2) : '—';
-        document.getElementById('res_low').textContent  = d['52weekLow']  ? d['52weekLow'].toFixed(2)  : '—';
-        document.getElementById('searchResult').style.display = 'block';
-      } else {
-        document.getElementById('searchError').textContent = '⚠️ Symbol not found. Try e.g. JKH, LOLC, COMB';
-        document.getElementById('searchError').style.display = 'block';
-      }
-    })
-    .catch(() => {
-      document.getElementById('searchSpinner').style.display = 'none';
-      document.getElementById('searchError').textContent = '⚠️ Request failed. Try again.';
-      document.getElementById('searchError').style.display = 'block';
+async function doSearch() {
+  const sym = document.getElementById('searchInput').value.trim().toUpperCase();
+  if (!sym) return;
+  const result = document.getElementById('searchResult');
+  const empty = document.getElementById('searchEmpty');
+  result.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+  empty.style.display = 'none';
+  try {
+    const res = await fetch('/cse/search', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'symbol='+encodeURIComponent(sym)
     });
-}
-
-function addFavFromSearch() {
-  if (!lastSearchResult) return;
-  addFav(lastSearchResult.symbol, lastSearchResult.name || '');
-}
-
-// ── Favourites ──
-function addFav(symbol, name) {
-  const fd = new FormData();
-  fd.append('symbol', symbol);
-  fd.append('name', name);
-  fetch('/cse/favourites/add', { method:'POST', body: fd })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) {
-        alert(data.error);
-      } else {
-        // Add card dynamically or reload
-        window.location.href = '/cse#favourites';
-        location.reload();
-      }
-    });
-}
-
-function removeFav(symbol, id) {
-  const fd = new FormData();
-  fd.append('symbol', symbol);
-  fetch('/cse/favourites/remove', { method:'POST', body: fd })
-    .then(r => r.json())
-    .then(() => {
-      const card = document.getElementById('fav-'+id);
-      if (card) {
-        card.style.transition = 'opacity 0.3s';
-        card.style.opacity = '0';
-        setTimeout(() => card.remove(), 300);
-      }
-      // Update count
-      const cnt = document.getElementById('favCount');
-      cnt.textContent = Math.max(0, parseInt(cnt.textContent) - 1);
-    });
-}
-
-function fetchFavPrices() {
-  fetch('/cse/favourites/prices', { method:'POST' })
-    .then(r => r.json())
-    .then(data => {
-      data.stocks.forEach(s => {
-        const card = document.getElementById('fav-'+s.id);
-        if (!card) return;
-
-        const nameEl = card.querySelector('.fav-name');
-        const priceEl = card.querySelector('.fav-price');
-        const changeEl = card.querySelector('.fav-change');
-        const mcEl = card.querySelector('.fav-mktcap');
-        const flash = card.querySelector('.fav-flash');
-
-        if (s.name) nameEl.textContent = s.name;
-
-        if (s.price !== null) {
-          const oldPrice = parseFloat(priceEl.dataset.price || 0);
-          const newPrice = s.price;
-          const up = s.change >= 0;
-
-          priceEl.textContent = 'LKR ' + newPrice.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-          priceEl.style.color = up ? 'var(--green)' : 'var(--red)';
-          priceEl.dataset.price = newPrice;
-
-          changeEl.textContent = `${up ? '▲' : '▼'} ${Math.abs(s.change||0).toFixed(2)} (${(s.changePct||0).toFixed(2)}%)`;
-          changeEl.style.color = up ? 'var(--green)' : 'var(--red)';
-
-          // Flash green/red on price change
-          if (oldPrice && oldPrice !== newPrice) {
-            flash.style.background = newPrice > oldPrice ? 'rgba(0,200,83,0.12)' : 'rgba(220,38,38,0.1)';
-            flash.style.opacity = '1';
-            setTimeout(() => flash.style.opacity = '0', 600);
-          }
-
-          const mc = s.marketCap || 0;
-          mcEl.textContent = mc >= 1e9 ? 'MCap: ' + (mc/1e9).toFixed(2)+'B'
-            : mc >= 1e6 ? 'MCap: ' + (mc/1e6).toFixed(2)+'M' : '';
-        } else {
-          priceEl.textContent = '—';
-          changeEl.textContent = 'No data';
-          changeEl.style.color = 'var(--text3)';
-        }
-      });
-    })
-    .catch(() => console.log('Price fetch failed'));
-}
-
-// ── Live polling (60s) ──
-let pollInterval = null;
-function startPolling() {
-  if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(fetchFavPrices, 60000);
-}
-function stopPolling() {
-  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-}
-
-// On load — check hash
-window.addEventListener('load', () => {
-  if (window.location.hash === '#favourites') {
-    switchTab('favourites');
-    startPolling();
+    const data = await res.json();
+    // Handle both old {data: {...}} and new direct format
+    const info = data.data || data;
+    if (data.error || !info.symbol) {
+      result.innerHTML = `<div class="cse-card" style="padding:24px;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:8px;">🔍</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Not found: ${sym}</div>
+        <div style="font-size:0.82rem;color:var(--text3);">Try the full symbol e.g. JKH.N0000 or just JKH</div>
+      </div>`;
+      return;
+    }
+    const chg = info.changePercentage || info.changePct || 0;
+    const price = info.lastTradedPrice || info.closingPrice || 0;
+    const isFav = favSymbols.includes((info.symbol||sym).replace('.N0000','').replace('.X0000','').replace('.B0000',''));
+    const shortSym = (info.symbol||sym).replace('.N0000','').replace('.X0000','').replace('.B0000','');
+    result.innerHTML = `
+      <div class="cse-card">
+        <div style="padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:1.4rem;font-weight:800;color:var(--text);">${shortSym}</div>
+              <div style="font-size:0.82rem;color:var(--text3);margin-bottom:12px;">${info.name || ''}</div>
+              <div style="font-family:var(--mono);font-size:2rem;font-weight:800;color:var(--text);">LKR ${price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+              <div style="margin-top:8px;">
+                ${chg > 0
+                  ? `<span class="badge-up"><i class="fas fa-arrow-up" style="font-size:0.6rem;"></i> ${chg.toFixed(2)}% today</span>`
+                  : chg < 0
+                  ? `<span class="badge-down"><i class="fas fa-arrow-down" style="font-size:0.6rem;"></i> ${Math.abs(chg).toFixed(2)}% today</span>`
+                  : `<span class="badge-flat">0.00% today</span>`}
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:160px;">
+              ${[
+                ['52W High', info['52WeekHigh'] || info.yearHigh || '—'],
+                ['52W Low',  info['52WeekLow']  || info.yearLow  || '—'],
+                ['Volume',   info.volume ? Number(info.volume).toLocaleString() : '—'],
+                ['Market Cap', info.marketCap ? 'LKR '+Number(info.marketCap).toLocaleString() : '—'],
+              ].map(([k,v]) => `
+                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--surface2);border-radius:8px;">
+                  <span style="font-size:0.72rem;color:var(--text3);">${k}</span>
+                  <span style="font-family:var(--mono);font-size:0.72rem;font-weight:700;color:var(--text);">${v}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <button onclick="${isFav ? `removeFav('${shortSym}')` : `addFav('${shortSym}','${info.name||shortSym}')`}"
+              class="btn btn-sm ${isFav ? 'btn-ghost' : 'btn-primary'}" style="font-size:0.78rem;">
+              <i class="fas fa-star"></i> ${isFav ? 'Remove from Favourites' : 'Add to Favourites'}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  } catch(e) {
+    result.innerHTML = '<div class="cse-card" style="padding:24px;text-align:center;color:var(--text3);">Search failed. Please try again.</div>';
   }
-});
+}
 
-// Tab click handlers also manage polling
-document.getElementById('tab-favourites').addEventListener('click', startPolling);
-document.getElementById('tab-market').addEventListener('click', stopPolling);
-document.getElementById('tab-search').addEventListener('click', stopPolling);
+async function addFav(symbol, name) {
+  try {
+    const body = new URLSearchParams({symbol, name});
+    const res = await fetch('/cse/favourites/add', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: body.toString()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('⭐ Added '+symbol+' to favourites');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'Could not add favourite');
+    }
+  } catch(e) { showToast('Error adding favourite'); }
+}
+
+async function removeFav(symbol) {
+  try {
+    const body = new URLSearchParams({symbol});
+    const res = await fetch('/cse/favourites/remove', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: body.toString()
+    });
+    const data = await res.json();
+    if (data.success) {
+      const card = document.getElementById('fav-'+symbol);
+      if (card) { card.style.opacity='0'; card.style.transform='scale(0.9)'; setTimeout(()=>card.remove(),300); }
+      showToast('Removed '+symbol+' from favourites');
+    }
+  } catch(e) { showToast('Error removing favourite'); }
+}
+
+function showToast(msg) {
+  let t = document.getElementById('cse-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'cse-toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1f37;color:white;padding:10px 20px;border-radius:10px;font-size:0.82rem;font-weight:600;z-index:999;transition:opacity 0.3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2500);
+}
+
+// Live polling for favourites
+async function pollFavPrices() {
+  if (!favSymbols.length) return;
+  try {
+    const res = await fetch('/cse/favourites/prices', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({symbols: favSymbols})
+    });
+    const data = await res.json();
+    const live = document.getElementById('liveIndicator');
+    if (live && Object.keys(data).length) live.style.display = 'inline';
+    // data format: {symbol: {price, change}}
+    Object.entries(data).forEach(([sym, info]) => {
+      if (!info || info.price === null) return;
+      const priceEl = document.getElementById('price-'+sym);
+      const changeEl = document.getElementById('change-'+sym);
+      const card = document.getElementById('fav-'+sym);
+      if (priceEl && info.price) {
+        const oldPrice = priceEl.textContent;
+        const newPrice = 'LKR '+Number(info.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (card && oldPrice !== newPrice && oldPrice !== '—') {
+          card.classList.add('fav-flash');
+          setTimeout(()=>card.classList.remove('fav-flash'),800);
+        }
+        priceEl.textContent = newPrice;
+      }
+      if (changeEl && info.change !== undefined && info.change !== null) {
+        const chg = Number(info.change);
+        changeEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+        changeEl.style.color = chg > 0 ? '#15803d' : chg < 0 ? '#dc2626' : 'var(--text3)';
+      }
+    });
+  } catch(e) {}
+}
+
+// Poll immediately then every 60s
+if (favSymbols.length > 0) {
+  pollFavPrices();
+  setInterval(pollFavPrices, 60000);
+}
 </script>
-
 <style>
-.cse-tab {
-  padding: 10px 20px;
-  border: none;
-  background: transparent;
-  font-family: var(--font);
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text2);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.cse-tab:hover { color: var(--text); }
-.cse-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
-.fav-card { transition: transform 0.2s; overflow: hidden; }
-.fav-card:hover { transform: translateY(-2px); }
-@media (max-width: 768px) {
-  .cse-grid { grid-template-columns: 1fr !important; }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
+@media (max-width:900px) { .resp-grid-3 { grid-template-columns:1fr !important; } }
 </style>
 {% endblock %}

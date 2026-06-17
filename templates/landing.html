@@ -251,7 +251,22 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
 {% endblock %}
 
 {% block content %}
-
+<!-- ── NAV ── -->
+<nav class="lp-nav">
+  <a href="{{ url_for('landing') }}" class="nav-logo">
+    <div class="nav-logo-icon">💰</div>
+    <span class="nav-logo-text">FinanceOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#ecosystem">Ecosystem</a>
+  </div>
+  <div class="nav-actions">
+    <a href="{{ url_for('auth_login') }}" class="btn-signin">Sign In</a>
+    <a href="{{ url_for('auth_signup') }}" class="btn-signup">Get Started Free</a>
+  </div>
+</nav>
 
 <!-- ── HERO ── -->
 <section style="background:linear-gradient(135deg,#0a3d1f 0%,#0f5c2e 40%,#0d6e35 70%,#0f5c2e 100%);position:relative;overflow:hidden;min-height:580px;display:flex;align-items:center;">

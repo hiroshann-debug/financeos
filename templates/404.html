@@ -1,15 +1,80 @@
 {% extends "base_public.html" %}
-{% block title %}404 — Page Not Found{% endblock %}
+{% block title %}404 — Page Not Found · FinanceOS{% endblock %}
+
+{% block extra_style %}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'DM Sans',-apple-system,sans-serif; background:#0f172a; color:white; min-height:100vh; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased; }
+.wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; position:relative; overflow:hidden; }
+.glow { position:absolute; width:500px; height:500px; border-radius:50%; background:radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%); top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
+.code { font-size:8rem; font-weight:800; letter-spacing:-0.06em; line-height:1; background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:8px; position:relative; z-index:1; }
+.title { font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; position:relative; z-index:1; }
+.title-si { font-size:0.875rem; color:rgba(255,255,255,0.35); margin-bottom:16px; position:relative; z-index:1; font-family:serif; }
+.sub { font-size:0.95rem; color:rgba(255,255,255,0.5); line-height:1.7; max-width:420px; margin-bottom:36px; position:relative; z-index:1; }
+.actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; position:relative; z-index:1; }
+.btn-primary { padding:12px 28px; border-radius:10px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; text-decoration:none; font-size:0.875rem; font-weight:700; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s; box-shadow:0 4px 16px rgba(99,102,241,0.4); }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(99,102,241,0.5); }
+.btn-ghost { padding:12px 24px; border-radius:10px; background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.7); text-decoration:none; font-size:0.875rem; font-weight:600; border:1px solid rgba(255,255,255,0.12); display:inline-flex; align-items:center; gap:8px; transition:all 0.2s; }
+.btn-ghost:hover { background:rgba(255,255,255,0.12); color:white; }
+.nav-mini { padding:20px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.06); }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; }
+.logo-icon { width:32px; height:32px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:8px; display:grid; place-items:center; color:white; font-size:0.8rem; font-weight:800; }
+.logo-text { font-size:0.95rem; font-weight:800; color:white; letter-spacing:-0.02em; }
+.footer-mini { padding:20px 32px; text-align:center; border-top:1px solid rgba(255,255,255,0.06); font-size:0.75rem; color:rgba(255,255,255,0.2); }
+.quick-links { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:28px; position:relative; z-index:1; }
+.quick-link { padding:6px 14px; border-radius:999px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.5); text-decoration:none; font-size:0.75rem; font-weight:600; transition:all 0.15s; }
+.quick-link:hover { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.9); border-color:rgba(255,255,255,0.15); }
+@media (max-width:480px) { .code { font-size:5rem; } .title { font-size:1.2rem; } .actions { flex-direction:column; align-items:center; } .nav-mini { padding:16px; } }
+{% endblock %}
+
 {% block content %}
-<div style="min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;text-align:center;padding:40px 20px;">
-  <div>
-    <div style="font-size:6rem;font-weight:800;color:var(--accent2);letter-spacing:-0.04em;line-height:1;margin-bottom:8px;">404</div>
-    <div style="font-size:1.4rem;font-weight:700;margin-bottom:12px;">Page not found</div>
-    <p style="color:var(--text2);margin-bottom:32px;max-width:360px;">The page you're looking for doesn't exist or has been moved.</p>
-    <div style="display:flex;gap:12px;justify-content:center;">
-      <a href="javascript:history.back()" class="btn btn-ghost">← Go Back</a>
-      <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Dashboard</a>
-    </div>
+<nav class="nav-mini">
+  <a href="{{ url_for('landing') }}" class="logo">
+    <div class="logo-icon">F</div>
+    <span class="logo-text">FinanceOS</span>
+  </a>
+  <a href="{{ url_for('dashboard') }}" class="btn-ghost" style="padding:7px 16px;font-size:0.78rem;">
+    <i class="fas fa-arrow-left"></i> Back to Dashboard
+  </a>
+</nav>
+
+<div class="wrap">
+  <div class="glow"></div>
+
+  <div class="code">404</div>
+
+  <h1 class="title">Page not found</h1>
+  <div class="title-si" style="font-family:'Noto Sans Sinhala',sans-serif;">පිටුව හමු නොවීය</div>
+
+  <p class="sub">
+    The page you're looking for doesn't exist or has been moved.
+    Let's get you back on track.
+  </p>
+
+  <div class="actions">
+    <a href="{{ url_for('dashboard') }}" class="btn-primary">
+      <i class="fas fa-house"></i> Go to Dashboard
+    </a>
+    <a href="{{ url_for('landing') }}" class="btn-ghost">
+      <i class="fas fa-home"></i> Homepage
+    </a>
+  </div>
+
+  <div class="quick-links">
+    <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);align-self:center;">Quick links:</span>
+    {% for label, endpoint in [
+      ('Transactions', 'transactions'),
+      ('Analytics', 'analytics'),
+      ('AI Advisor', 'advisor_page'),
+      ('CC Offers', 'card_offers'),
+      ('Settings', 'settings'),
+    ] %}
+    <a href="{{ url_for(endpoint) }}" class="quick-link">{{ label }}</a>
+    {% endfor %}
   </div>
 </div>
+
+<footer class="footer-mini">
+  © 2026 FinanceOS · Built in Sri Lanka 🇱🇰
+</footer>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600&display=swap" rel="stylesheet">
 {% endblock %}

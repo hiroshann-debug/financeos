@@ -272,47 +272,47 @@
   </div>
   <div class="zp-g4">
     <div class="zp-tile" style="background:#fff1f2;">
-      <div class="zp-tile-label" style="color:#ef4444;">Unpaid</div>
-      <div class="zp-tile-val" style="color:#dc2626;">{{ currency_symbol }} {{ "{:,.0f}".format(unpaid_fixed_total) }}</div>
-      <div style="font-size:0.65rem;color:#f87171;margin-top:3px;">{{ upcoming_payments|length }} pending</div>
+      <div class="zp-tile-label" style="color:#ef4444;">Fixed Committed</div>
+      <div class="zp-tile-val" style="color:#dc2626;">{{ currency_symbol }} {{ "{:,.0f}".format(total_committed) }}</div>
+      <div style="font-size:0.65rem;color:#f87171;margin-top:3px;">loans + cards + fixed</div>
     </div>
-    <div class="zp-tile" style="background:#f0fdf4;">
-      <div class="zp-tile-label" style="color:#10b981;">Available</div>
-      <div class="zp-tile-val" style="color:{% if available_after_fixed >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(available_after_fixed) }}</div>
-      <div style="font-size:0.65rem;color:#6ee7b7;margin-top:3px;">wallet − unpaid</div>
+    <div class="zp-tile" style="background:#f5f3ff;">
+      <div class="zp-tile-label" style="color:#7c3aed;">Truly Available</div>
+      <div class="zp-tile-val" style="color:{% if truly_available > 0 %}#4c1d95{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(truly_available) }}</div>
+      <div style="font-size:0.65rem;color:#a78bfa;margin-top:3px;">income minus commitments</div>
     </div>
     <div class="zp-tile" style="background:#eff6ff;">
-      <div class="zp-tile-label" style="color:#3b82f6;">Daily Budget</div>
-      <div class="zp-tile-val" style="color:#2563eb;">{{ currency_symbol }} {{ "{:,.0f}".format(daily_budget_remaining) }}</div>
-      <div style="font-size:0.65rem;color:#93c5fd;margin-top:3px;">avg {{ currency_symbol }} {{ "{:,.0f}".format(daily_avg_so_far) }}/day</div>
+      <div class="zp-tile-label" style="color:#3b82f6;">Today's Budget</div>
+      <div class="zp-tile-val" style="color:{% if smart_today_remaining > 0 %}#2563eb{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
+      <div style="font-size:0.65rem;color:#93c5fd;margin-top:3px;">spent {{ currency_symbol }} {{ "{:,.0f}".format(today_variable_spent) }} today</div>
     </div>
-    <div class="zp-tile" style="background:#fffbeb;">
-      <div class="zp-tile-label" style="color:#d97706;">Next Min.</div>
-      <div class="zp-tile-val" style="color:#b45309;">{{ currency_symbol }} {{ "{:,.0f}".format(minimum_required) }}</div>
-      <div style="font-size:0.65rem;color:#fcd34d;margin-top:3px;">next period</div>
+    <div class="zp-tile" style="background:#f0fdf4;">
+      <div class="zp-tile-label" style="color:#10b981;">Days Remaining</div>
+      <div class="zp-tile-val" style="color:{% if days_left_in_period <= 5 %}#dc2626{% elif days_left_in_period <= 10 %}#d97706{% else %}#059669{% endif %};">{{ days_left_in_period }}</div>
+      <div style="font-size:0.65rem;color:#6ee7b7;margin-top:3px;">of {{ days_total_period }} day period</div>
     </div>
   </div>
 </div>
 
-<!-- ── PRIMARY KPIs ── -->
+<!-- ── PRIMARY KPIs — unique metrics not in hero ── -->
 <div class="zp-g4" style="margin-bottom:14px;">
-  <a href="{{ url_for('wallets') }}" class="zp-stat" style="background:#e0f2fe;">
-    <div class="zp-stat-icon" style="background:#bae6fd;color:#0369a1;"><i class="fas fa-wallet"></i></div>
-    <div class="zp-stat-val" style="color:#0c4a6e;">{{ "{:,.0f}".format(available_after_fixed) }}</div>
-    <div class="zp-stat-label">Available Cash</div>
-    <div class="zp-stat-change" style="color:#0369a1;">wallet − unpaid →</div>
-  </a>
-  <a href="{{ url_for('net_worth_tracker') }}" class="zp-stat" style="background:#ede9fe;">
-    <div class="zp-stat-icon" style="background:#ddd6fe;color:#7c3aed;"><i class="fas fa-chart-line"></i></div>
-    <div class="zp-stat-val" style="color:{% if net_worth >= 0 %}#4c1d95{% else %}#dc2626{% endif %};">{{ "{:,.0f}".format(net_worth) }}</div>
-    <div class="zp-stat-label">Net Worth</div>
-    <div class="zp-stat-change" style="color:#7c3aed;">assets − liabilities →</div>
-  </a>
   <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fce7f3;">
     <div class="zp-stat-icon" style="background:#fbcfe8;color:#be185d;"><i class="fas fa-piggy-bank"></i></div>
     <div class="zp-stat-val" style="color:{% if savings_rate >= 20 %}#831843{% elif savings_rate >= 10 %}#9d174d{% else %}#dc2626{% endif %};">{{ savings_rate }}%</div>
     <div class="zp-stat-label">Savings Rate</div>
     <div class="zp-stat-change" style="color:#be185d;">of income saved →</div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:#eff6ff;">
+    <div class="zp-stat-icon" style="background:#bfdbfe;color:#2563eb;"><i class="fas fa-scale-balanced"></i></div>
+    <div class="zp-stat-val" style="color:{% if balance >= 0 %}#1d4ed8{% else %}#dc2626{% endif %};">{{ "{:,.0f}".format(balance) }}</div>
+    <div class="zp-stat-label">Net Balance</div>
+    <div class="zp-stat-change" style="color:#3b82f6;">income − expenses →</div>
+  </a>
+  <a href="{{ url_for('investments') }}" class="zp-stat" style="background:#f0fdf4;">
+    <div class="zp-stat-icon" style="background:#bbf7d0;color:#15803d;"><i class="fas fa-chart-line"></i></div>
+    <div class="zp-stat-val" style="color:#14532d;">{{ "{:,.0f}".format(total_investments) }}</div>
+    <div class="zp-stat-label">Investments</div>
+    <div class="zp-stat-change" style="color:#16a34a;">portfolio value →</div>
   </a>
   <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fef3c7;">
     <div class="zp-stat-icon" style="background:#fde68a;color:#d97706;"><i class="fas fa-heart-pulse"></i></div>
@@ -545,6 +545,73 @@
 
 </div><!-- end dash-wrap -->
 
+<!-- DAILY BUDGET POPUP -->
+{% if show_daily_popup %}
+<div class="modal-overlay" id="dailyPopup" style="display:flex;z-index:500;">
+  <div class="modal" style="max-width:460px;border-radius:24px;padding:0;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:24px 28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);">FINANCEOS · DAILY BRIEF</div>
+        <div id="popupGreeting" style="font-size:0.72rem;color:rgba(255,255,255,0.4);"></div>
+      </div>
+      <div style="font-size:1.3rem;font-weight:800;color:white;letter-spacing:-0.02em;">{{ preferred_name }}, here's your financial snapshot</div>
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.4);margin-top:3px;">{{ period_start.strftime('%d %b') }} → {{ period_end.strftime('%d %b %Y') }} · {{ days_left_in_period }} days left</div>
+    </div>
+    <div style="padding:20px 28px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#15803d;margin-bottom:4px;">Income</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:#14532d;">{{ currency_symbol }} {{ "{:,.0f}".format(total_income) }}</div>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#dc2626;margin-bottom:4px;">Fixed Committed</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:#991b1b;">{{ currency_symbol }} {{ "{:,.0f}".format(total_committed) }}</div>
+          <div style="font-size:0.6rem;color:#f87171;margin-top:2px;">loans + cards + fixed</div>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.6);margin-bottom:4px;">Truly Available to Spend</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.5);">income minus all commitments</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:1.5rem;font-weight:800;color:white;">{{ currency_symbol }} {{ "{:,.0f}".format(truly_available) }}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2563eb;margin-bottom:4px;">Daily Budget</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:#1d4ed8;">{{ currency_symbol }} {{ "{:,.0f}".format(smart_daily_budget) }}</div>
+          <div style="font-size:0.6rem;color:#60a5fa;margin-top:2px;">available / {{ days_total_period }} days</div>
+        </div>
+        <div style="background:{% if smart_today_remaining > 0 %}#f0fdf4;border:1px solid #86efac{% else %}#fef2f2;border:1px solid #fca5a5{% endif %};border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:{% if smart_today_remaining > 0 %}#15803d{% else %}#dc2626{% endif %};margin-bottom:4px;">Today You Can Spend</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:{% if smart_today_remaining > 0 %}#14532d{% else %}#991b1b{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
+          <div style="font-size:0.6rem;color:{% if smart_today_remaining > 0 %}#4ade80{% else %}#f87171{% endif %};margin-top:2px;">spent {{ currency_symbol }} {{ "{:,.0f}".format(today_variable_spent) }} today</div>
+        </div>
+      </div>
+      {% set spent_pct = [(total_variable_spent / truly_available * 100)|int, 100]|min if truly_available > 0 else 0 %}
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text2);margin-bottom:5px;">
+          <span>Period spending progress</span>
+          <span style="font-weight:700;color:{% if spent_pct > 80 %}#dc2626{% elif spent_pct > 60 %}#d97706{% else %}#6366f1{% endif %};">{{ spent_pct }}% used</span>
+        </div>
+        <div style="height:8px;background:#f1f5f9;border-radius:999px;overflow:hidden;">
+          <div style="height:8px;width:{{ spent_pct }}%;background:{% if spent_pct > 80 %}linear-gradient(90deg,#ef4444,#f97316){% elif spent_pct > 60 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#6366f1,#8b5cf6){% endif %};border-radius:999px;"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.78rem;color:var(--text2);">
+          <input type="checkbox" id="dontShowPopup" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer;">
+          Don't show this again
+        </label>
+        <button onclick="closeDailyPopup()" class="btn btn-primary btn-sm" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;padding:8px 20px;">
+          Let's go! 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- MODALS -->
 <div class="modal-overlay" id="addExpenseModal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
@@ -578,9 +645,28 @@
 
 {% block scripts %}
 <script>
-// Greeting by time
+// Greeting
 const hr = new Date().getHours();
-document.getElementById('greeting').textContent = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
+const greetingText = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
+document.getElementById('greeting').textContent = greetingText;
+const pg = document.getElementById('popupGreeting');
+if (pg) pg.textContent = greetingText;
+
+// Daily popup
+function closeDailyPopup() {
+  const cb = document.getElementById('dontShowPopup');
+  if (cb && cb.checked) {
+    fetch('/toggle-popup', { method: 'POST' });
+  }
+  const popup = document.getElementById('dailyPopup');
+  if (popup) {
+    popup.style.opacity = '0';
+    popup.style.transition = 'opacity 0.3s';
+    setTimeout(() => popup.style.display = 'none', 300);
+  }
+}
+const dp = document.getElementById('dailyPopup');
+if (dp) dp.addEventListener('click', e => { if (e.target === dp) closeDailyPopup(); });
 
 const trends = {{ monthly_trends | safe }};
 new Chart(document.getElementById('trendChart'), {

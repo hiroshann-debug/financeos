@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, g, jsonify, Response, session
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import atexit
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
     Investment, InvestmentIncome, Debt, FavouriteStock, CardOffer, OfferUpvote
@@ -210,6 +213,96 @@ def auth_signup():
     )
 
 
+
+# ─────────────────────────────────────────
+#  Email — Resend.com
+# ─────────────────────────────────────────
+def send_email(to_email, subject, html_body):
+    import requests as http
+    import os
+    api_key = os.environ.get("RESEND_API_KEY", "")
+    if not api_key:
+        app.logger.warning("RESEND_API_KEY not set — email not sent")
+        return False
+    try:
+        r = http.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "FinanceOS <noreply@financeos.app>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+            },
+            timeout=10,
+        )
+        return r.status_code in [200, 201]
+    except Exception as e:
+        app.logger.error(f"Email error: {e}")
+        return False
+
+
+def send_welcome_email(to_email, name):
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>
+body{{margin:0;padding:0;background:#f0ebe3;font-family:'Segoe UI',Arial,sans-serif;}}
+.wrap{{max-width:580px;margin:0 auto;padding:32px 16px;}}
+.card{{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}}
+.hero{{background:linear-gradient(135deg,#0f172a,#1e293b);padding:40px 32px;text-align:center;}}
+.logo-icon{{display:inline-block;width:44px;height:44px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;color:white;font-size:1.3rem;font-weight:800;line-height:44px;text-align:center;}}
+.hero h1{{color:white;font-size:1.6rem;font-weight:800;margin:16px 0 8px;}}
+.hero p{{color:rgba(255,255,255,0.5);font-size:0.85rem;margin:0;}}
+.body{{padding:32px;}}
+.greeting{{font-size:1.1rem;font-weight:700;color:#1a1f37;margin-bottom:12px;}}
+.text{{font-size:0.875rem;color:#64748b;line-height:1.75;margin-bottom:20px;}}
+.feature{{display:flex;gap:12px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:10px;}}
+.fi{{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}}
+.ft{{font-size:0.85rem;font-weight:700;color:#1a1f37;margin-bottom:2px;}}
+.fd{{font-size:0.78rem;color:#64748b;}}
+.cta{{text-align:center;margin:28px 0;}}
+.btn{{display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-decoration:none;border-radius:12px;font-size:0.9rem;font-weight:700;}}
+.footer{{padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;}}
+.footer p{{font-size:0.75rem;color:#94a3b8;margin:4px 0;}}
+.footer a{{color:#6366f1;text-decoration:none;}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<div class="hero">
+  <div class="logo-icon">F</div>
+  <h1>Welcome to FinanceOS! 🎉</h1>
+  <p>Sri Lanka's Personal Financial Operating System</p>
+  <p style="font-size:0.75rem;color:rgba(255,255,255,0.3);margin-top:4px;">FinanceOS වෙත සාදරයෙන් පිළිගනිමු!</p>
+</div>
+<div class="body">
+  <div class="greeting">Hey {name}! 👋</div>
+  <p class="text">Your FinanceOS account is ready. Take control of your finances with everything built specifically for Sri Lanka.</p>
+  <div class="feature"><div class="fi" style="background:#eff6ff;">📊</div><div><div class="ft">Smart Dashboard</div><div class="fd">Salary cycle, net worth, savings rate and freedom score at a glance.</div></div></div>
+  <div class="feature"><div class="fi" style="background:#f5f3ff;">🧠</div><div><div class="ft">AI Financial Advisor</div><div class="fd">Ask anything about your finances. Powered by Claude AI with your real data.</div></div></div>
+  <div class="feature"><div class="fi" style="background:#fce7f3;">🎁</div><div><div class="ft">Sri Lanka CC Offers</div><div class="fd">Live deals from ComBank, Sampath, HNB, BOC and more.</div></div></div>
+  <div class="feature"><div class="fi" style="background:#f0fdf4;">📈</div><div><div class="ft">CSE Live Stocks</div><div class="fd">Real-time Colombo Stock Exchange prices and your favourites.</div></div></div>
+  <div class="cta">
+    <a href="https://brave-grace-production-6691.up.railway.app/dashboard" class="btn">🚀 Go to Your Dashboard</a>
+    <p style="font-size:0.72rem;color:#94a3b8;margin-top:10px;">Get started: Add wallets → Log income → Ask AI Advisor</p>
+  </div>
+</div>
+<div class="footer">
+  <p>Built with ❤️ in Sri Lanka 🇱🇰 · © 2026 FinanceOS</p>
+  <p><a href="https://brave-grace-production-6691.up.railway.app/privacy">Privacy</a> · <a href="https://brave-grace-production-6691.up.railway.app/terms">Terms</a></p>
+</div>
+</div></div>
+</body>
+</html>"""
+    send_email(to_email, f"Welcome to FinanceOS, {name}! 🎉", html)
+
+
 @app.route('/callback')
 def callback():
     token = auth0.authorize_access_token()
@@ -220,7 +313,24 @@ def callback():
         'email': userinfo.get('email', ''),
         'picture': userinfo.get('picture', '')
     }
-    flash(f"Welcome back, {session['user']['name'].split()[0]}! 👋", "success")
+    user_id = userinfo['sub']
+    user_email = userinfo.get('email', '')
+    user_name = userinfo.get('name', 'User').split()[0]
+
+    # Save email to settings so scheduler can find it
+    if user_email:
+        set_setting('email', user_email, user_id=user_id)
+
+    # Check if first time login — send welcome email
+    with app.app_context():
+        is_new = not AppSettings.query.filter_by(
+            user_id=user_id, key='welcome_sent'
+        ).first()
+        if is_new and user_email:
+            send_welcome_email(user_email, user_name)
+            set_setting('welcome_sent', 'true', user_id=user_id)
+
+    flash(f"Welcome back, {user_name}! 👋", "success")
     return redirect(url_for('dashboard'))
 
 
@@ -543,6 +653,49 @@ def dashboard():
         Transaction.date <= period_end
     ).order_by(Transaction.date.desc()).all()
 
+    # ── SMART DAILY BUDGET ──
+    # Fixed committed = loan payments + card minimums + fixed expenses
+    loan_monthly = sum(l.monthly_payment for l in Loan.query.filter_by(user_id=uid(), loan_status='Active').all())
+    card_minimums = sum(c.minimum_payment for c in cards)
+    fixed_exp_total = sum(f.amount for f in FixedExpense.query.filter_by(user_id=uid()).all())
+    recurring_total = sum(r.amount for r in RecurringPayment.query.filter_by(user_id=uid(), is_active=True).all())
+
+    total_committed = loan_monthly + card_minimums + fixed_exp_total + recurring_total
+
+    # Truly available = income - all committed costs
+    truly_available = total_income - total_committed
+    truly_available = max(0, truly_available)
+
+    # Daily variable spend = only non-fixed, non-loan, non-card transactions
+    # Exclude categories: Loan Payment, Credit Card, fixed expense names
+    fixed_names = {f.name.lower() for f in FixedExpense.query.filter_by(user_id=uid()).all()}
+    excluded_cats = {'loan payment', 'credit card', 'loan', 'emi', 'insurance'}
+
+    daily_variable_txns = [
+        t for t in period_transactions
+        if t.trans_type == 'expense'
+        and (t.category or '').lower() not in excluded_cats
+        and (t.description or '').lower() not in fixed_names
+    ]
+    total_variable_spent = sum(t.amount for t in daily_variable_txns)
+
+    # Today's variable spend
+    today_variable_spent = sum(
+        t.amount for t in daily_variable_txns
+        if (t.date if isinstance(t.date, type(today)) else t.date.date()) == today
+    )
+
+    # Smart daily budget = truly_available / total days in period
+    # Today's remaining = (truly_available - variable_spent_so_far) / days_left
+    smart_daily_budget = round(truly_available / max(1, days_total_period), 0)
+    smart_today_remaining = round(
+        (truly_available - total_variable_spent) / max(1, days_left_in_period), 0
+    )
+    smart_today_remaining = max(0, smart_today_remaining)
+
+    # Popup — show based on user setting
+    show_daily_popup = get_setting('show_daily_popup', 'true', user_id=uid()) == 'true'
+
     return render_template(
         "dashboard.html",
         preferred_name=preferred_name,
@@ -588,6 +741,13 @@ def dashboard():
         health=health,
         active_goals=active_goals_sorted,
         recent_notifications=recent_notifications,
+        truly_available=truly_available,
+        total_committed=total_committed,
+        smart_daily_budget=smart_daily_budget,
+        smart_today_remaining=smart_today_remaining,
+        today_variable_spent=today_variable_spent,
+        total_variable_spent=total_variable_spent,
+        show_daily_popup=show_daily_popup,
     )
 
 
@@ -2103,7 +2263,17 @@ def investments():
 @app.route("/investments/add", methods=["POST"])
 @login_required
 def add_investment():
-    name, err = validate_text(request.form.get('name'), "Investment name")
+    # For FD, name may come from bank+reference; fall back to institution
+    raw_name = request.form.get('name', '').strip()
+    if not raw_name:
+        # FD: use institution as name fallback
+        institution = request.form.get('institution', '').strip()
+        asset_type = request.form.get('asset_type', 'Other')
+        if institution:
+            raw_name = f"{institution} {asset_type}"
+        else:
+            raw_name = asset_type
+    name, err = validate_text(raw_name, "Investment name")
     if err: flash(err, "danger"); return redirect(url_for('investments'))
 
     units = float(request.form.get('units') or 0)
@@ -2395,60 +2565,87 @@ def exchange_rates():
 @login_required
 def cse_stocks():
     import requests as http
+    from datetime import datetime as dt
     error = None
     top_gainers = []
     top_losers = []
     most_active = []
+    market_open = False
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Origin": "https://www.cse.lk",
-        "Referer": "https://www.cse.lk/trade-summary",
-        "Connection": "keep-alive",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-    }
+    # Check if market is open (Mon-Fri 9:30-14:30 Colombo = UTC+5:30)
+    now_utc = dt.utcnow()
+    now_colombo_hour = (now_utc.hour + 5) % 24
+    now_colombo_min  = (now_utc.minute + 30) % 60
+    now_colombo_time = now_colombo_hour * 60 + now_colombo_min
+    is_weekday = now_utc.weekday() < 5
+    market_open = is_weekday and (9*60+30) <= now_colombo_time <= (14*60+30)
+
+    # Try multiple header combinations — CSE API is strict
+    header_sets = [
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/trade-summary",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        },
+        {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/",
+        },
+    ]
+
+    def cse_post(session, endpoint, response_key):
+        for headers in header_sets:
+            try:
+                r = session.post(
+                    f"https://www.cse.lk/api/{endpoint}",
+                    headers=headers,
+                    data={},
+                    timeout=12,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    # API may return plain list OR dict with key
+                    if isinstance(data, list) and data:
+                        return data
+                    elif isinstance(data, dict):
+                        # Try the expected key first
+                        items = data.get(response_key, [])
+                        if items:
+                            return items
+                        # Try common fallback keys
+                        for key in data:
+                            val = data[key]
+                            if isinstance(val, list) and val:
+                                return val
+            except Exception:
+                continue
+        return []
 
     session = http.Session()
-    session.headers.update(headers)
-
-    # First hit the main page to get any cookies
+    # Seed cookies
     try:
-        session.get("https://www.cse.lk/", timeout=6)
+        session.get("https://www.cse.lk/", timeout=8,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
     except Exception:
         pass
 
     try:
-        r = session.post("https://www.cse.lk/api/topGainers",
-            data={}, timeout=10)
-        r.raise_for_status()
-        gainers_data = r.json()
-        top_gainers = gainers_data.get("reqTopGainers", [])[:10]
+        top_gainers = cse_post(session, "topGainers", "reqTopGainers")[:10]
+        top_losers  = cse_post(session, "topLooses",  "reqTopLooses")[:10]
+        most_active = cse_post(session, "mostActiveTrades", "reqMostActiveTrades")[:10]
+        if not top_gainers and not top_losers and not most_active:
+            error = "market_closed" if not market_open else "api_down"
     except Exception as e:
-        error = f"CSE API unavailable: {str(e)[:60]}"
-
-    try:
-        r = session.post("https://www.cse.lk/api/topLooses",
-            data={}, timeout=10)
-        r.raise_for_status()
-        losers_data = r.json()
-        top_losers = losers_data.get("reqTopLooses", [])[:10]
-    except Exception:
-        pass
-
-    try:
-        r = session.post("https://www.cse.lk/api/mostActiveTrades",
-            data={}, timeout=10)
-        r.raise_for_status()
-        active_data = r.json()
-        most_active = active_data.get("reqMostActiveTrades", [])[:10]
-    except Exception:
-        pass
+        error = "api_down"
 
     favourites = FavouriteStock.query.filter_by(user_id=uid()).order_by(FavouriteStock.added_at).all()
     return render_template("cse_stocks.html",
@@ -2457,6 +2654,7 @@ def cse_stocks():
         most_active=most_active,
         favourites=favourites,
         error=error,
+        market_open=market_open,
     )
 
 
@@ -2468,25 +2666,70 @@ def cse_search():
     if not symbol:
         return jsonify({"error": "Symbol required"})
 
-    # Add suffix if not present
+    # Try with and without suffix
+    symbols_to_try = []
     if "." not in symbol:
-        symbol = symbol + ".N0000"
+        symbols_to_try = [symbol + ".N0000", symbol + ".X0000", symbol + ".B0000"]
+    else:
+        symbols_to_try = [symbol]
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Origin": "https://www.cse.lk",
-        "Referer": "https://www.cse.lk/trade-summary",
-    }
+    header_sets = [
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/trade-summary",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        },
+        {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/",
+        },
+    ]
+
+    session = http.Session()
     try:
-        r = http.post("https://www.cse.lk/api/companyInfoSummery",
-            data={"symbol": symbol}, headers=headers, timeout=10)
-        data = r.json()
-        info = data.get("reqSymbolInfo", {})
-        return jsonify({"success": True, "data": info})
-    except Exception as e:
-        return jsonify({"error": str(e)[:80]})
+        session.get("https://www.cse.lk/", timeout=6,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+    except Exception:
+        pass
+
+    for sym in symbols_to_try:
+        for headers in header_sets:
+            try:
+                r = session.post(
+                    "https://www.cse.lk/api/companyInfoSummery",
+                    data={"symbol": sym},
+                    headers=headers,
+                    timeout=12,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    info = data.get("reqSymbolInfo", {})
+                    if info:
+                        # Normalise field names for template
+                        return jsonify({
+                            "symbol": info.get("symbol", sym),
+                            "name": info.get("name", info.get("companyName", "")),
+                            "lastTradedPrice": info.get("lastTradedPrice", info.get("closingPrice", 0)),
+                            "closingPrice": info.get("closingPrice", 0),
+                            "changePercentage": info.get("changePercentage", info.get("changePct", 0)),
+                            "change": info.get("change", 0),
+                            "volume": info.get("volume", info.get("totalVolume", 0)),
+                            "marketCap": info.get("marketCap", 0),
+                            "52WeekHigh": info.get("52WeekHigh", info.get("yearHigh", 0)),
+                            "52WeekLow": info.get("52WeekLow", info.get("yearLow", 0)),
+                        })
+            except Exception:
+                continue
+
+    return jsonify({"error": "not_found"})
 
 
 # ─────────────────────────────────────────
@@ -2531,39 +2774,65 @@ def favourite_stock_prices():
     """Fetch live prices for all favourite stocks — called by JS polling."""
     import requests as http
     favs = FavouriteStock.query.filter_by(user_id=uid()).all()
-    results = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Origin": "https://www.cse.lk",
-        "Referer": "https://www.cse.lk/trade-summary",
-    }
+    if not favs:
+        return jsonify({})
+
+    header_sets = [
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/trade-summary",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        },
+        {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/",
+        },
+    ]
+
+    session = http.Session()
+    try:
+        session.get("https://www.cse.lk/", timeout=6,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+    except Exception:
+        pass
+
+    results = {}
     for fav in favs:
-        try:
-            r = http.post("https://www.cse.lk/api/companyInfoSummery",
-                data={"symbol": fav.symbol}, headers=headers, timeout=10)
-            d = r.json().get("reqSymbolInfo", {})
-            results.append({
-                "id": fav.id,
-                "symbol": fav.symbol,
-                "name": d.get("name") or fav.display_name or fav.symbol,
-                "price": d.get("lastTradedPrice") or d.get("closingPrice") or 0,
-                "change": d.get("change") or 0,
-                "changePct": d.get("changePercentage") or 0,
-                "marketCap": d.get("marketCap") or 0,
-            })
-        except Exception:
-            results.append({
-                "id": fav.id,
-                "symbol": fav.symbol,
-                "name": fav.display_name or fav.symbol,
-                "price": None,
-                "change": None,
-                "changePct": None,
-                "marketCap": None,
-            })
-    return jsonify({"stocks": results})
+        sym = fav.symbol
+        if "." not in sym:
+            sym = sym + ".N0000"
+        fetched = False
+        for headers in header_sets:
+            try:
+                r = session.post(
+                    "https://www.cse.lk/api/companyInfoSummery",
+                    data={"symbol": sym},
+                    headers=headers,
+                    timeout=12,
+                )
+                if r.status_code == 200:
+                    d = r.json().get("reqSymbolInfo", {})
+                    if d:
+                        results[fav.symbol] = {
+                            "price": d.get("price") or d.get("lastTradedPrice") or d.get("closingPrice") or 0,
+                            "change": d.get("changePercentage") or d.get("changePct") or 0,
+                        }
+                        fetched = True
+                        break
+            except Exception:
+                continue
+        if not fetched:
+            results[fav.symbol] = {"price": None, "change": None}
+
+    return jsonify(results)
 
 
 # ─────────────────────────────────────────
@@ -2840,8 +3109,7 @@ WALLETS (actual cash):
 """
         for w in wallets:
             ctx += f"• {w.name} ({w.wallet_type}): {currency} {w.balance:,.0f}\n"
-        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}"
-        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}"
+        ctx += f"• TOTAL CASH: {currency} {total_wallet:,.0f}\n"
 
         ctx += f"""
 UPCOMING PAYMENTS (this period):
@@ -2851,33 +3119,35 @@ UPCOMING PAYMENTS (this period):
 TOP SPENDING CATEGORIES:
 """
         for cat, amt in top_cats:
-            ctx += f"• {cat}: {currency} {amt:,.0f}"
+            ctx += f"• {cat}: {currency} {amt:,.0f}\n"
+
 
         if cards:
-            ctx += f"CREDIT CARDS:"
+            ctx += f"\nCREDIT CARDS:\n"
             for c in cards:
                 used = c.credit_limit - c.available_balance
                 util = round(used / c.credit_limit * 100) if c.credit_limit > 0 else 0
-                ctx += f"• {c.bank_name}: {currency} {used:,.0f} used of {currency} {c.credit_limit:,.0f} ({util}% utilization), min payment {currency} {c.minimum_payment:,.0f}, due {c.due_date.strftime('%d %b') if c.due_date else 'N/A'}"
+                ctx += f"• {c.bank_name}: {currency} {used:,.0f} used of {currency} {c.credit_limit:,.0f} ({util}% utilization), min payment {currency} {c.minimum_payment:,.0f}, due {c.due_date.strftime('%d %b') if c.due_date else 'N/A'}\n"
 
         if loans:
-            ctx += f"ACTIVE LOANS:"
-        for l in loans:  ctx += f"• {l.loan_name}: {currency} {l.outstanding_balance:,.0f} outstanding, monthly payment {currency} {l.monthly_payment:,.0f}"
+            ctx += f"\nACTIVE LOANS:\n"
+            for l in loans:
+                ctx += f"• {l.loan_name}: {currency} {l.outstanding_balance:,.0f} outstanding, monthly payment {currency} {l.monthly_payment:,.0f}\n"
 
         if goals:
-            ctx += f"SAVINGS GOALS:\n"
+            ctx += f"\nSAVINGS GOALS:\n"
             for g in goals:
                 pct = round(g.current_amount / g.target_amount * 100) if g.target_amount > 0 else 0
                 needed = g.target_amount - g.current_amount
                 ctx += f"• {g.name}: {currency} {g.current_amount:,.0f} of {currency} {g.target_amount:,.0f} ({pct}%), need {currency} {needed:,.0f} more\n"
 
         if investments:
-            ctx += f"INVESTMENTS:\n"
+            ctx += f"\nINVESTMENTS:\n"
             for inv in investments:
                 ctx += f"• {inv.name} ({inv.asset_type}): current value {currency} {inv.current_value:,.0f}, gain/loss {currency} {inv.gain_loss:,.0f} ({inv.gain_loss_pct:+.1f}%)\n"
 
-        ctx += f""" 
-        NET WORTH SUMMARY:
+        ctx += f"""
+NET WORTH SUMMARY:
 • Cash in wallets: {currency} {total_wallet:,.0f}
 • Investments: {currency} {total_investments:,.0f}
 • Outstanding loans: {currency} {total_loan_balance:,.0f}
@@ -2940,6 +3210,644 @@ def advisor_chat():
             return jsonify({"error": result.get("error", {}).get("message", "API error")}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+# ─────────────────────────────────────────
+#  Calendar page + Analytics heatmap data
+# ─────────────────────────────────────────
+@app.route("/calendar")
+@login_required
+def calendar_view():
+    from calendar import monthrange
+    today = date.today()
+    month_str = request.args.get("month", today.strftime("%Y-%m"))
+    try:
+        year, month = int(month_str.split("-")[0]), int(month_str.split("-")[1])
+    except:
+        year, month = today.year, today.month
+
+    month_start = date(year, month, 1)
+    _, days_in_month = monthrange(year, month)
+    month_end = date(year, month, days_in_month)
+
+    # All transactions for the month
+    txns = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.date >= month_start,
+        Transaction.date <= month_end
+    ).order_by(Transaction.date).all()
+
+    # Group by day — keep SQLAlchemy objects for template, build JSON-safe copy separately
+    cal_data = defaultdict(list)
+    cal_data_json = {}
+    for t in txns:
+        d = t.date.day if isinstance(t.date, date) else t.date.date().day
+        cal_data[d].append(t)
+
+    # Build JSON-serialisable version for JS
+    for day, txs in cal_data.items():
+        cal_data_json[day] = [{
+            "description": t.description or "",
+            "category": t.category or "General",
+            "amount": float(t.amount),
+            "trans_type": t.trans_type,
+        } for t in txs]
+
+    # Daily totals for summary
+    daily_totals = {}
+    for day, txs in cal_data.items():
+        income = sum(t.amount for t in txs if t.trans_type == "income")
+        expense = sum(t.amount for t in txs if t.trans_type == "expense")
+        daily_totals[day] = {"income": income, "expense": expense, "count": len(txs)}
+
+    # Month summary
+    total_income = sum(t.amount for t in txns if t.trans_type == "income")
+    total_expense = sum(t.amount for t in txns if t.trans_type == "expense")
+
+    # Prev/next month
+    if month == 1:
+        prev_month = f"{year-1}-12"
+    else:
+        prev_month = f"{year}-{month-1:02d}"
+    if month == 12:
+        next_month = f"{year+1}-01"
+    else:
+        next_month = f"{year}-{month+1:02d}"
+
+    currency = get_setting("currency_symbol", "LKR", user_id=uid())
+
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
+
+    return render_template("calendar.html",
+        month_start=month_start,
+        month_end=month_end,
+        days_in_month=days_in_month,
+        cal_data=cal_data,
+        cal_data_json=cal_data_json,
+        daily_totals=daily_totals,
+        total_income=total_income,
+        total_expense=total_expense,
+        today=today,
+        year=year,
+        month=month,
+        month_str=month_str,
+        prev_month=prev_month,
+        next_month=next_month,
+        currency_symbol=currency,
+        wallets=wallets,
+        credit_cards=credit_cards,
+    )
+
+
+@app.route("/analytics/heatmap-data")
+@login_required
+def heatmap_data():
+    """Return last 12 months of daily spending for heatmap."""
+    today = date.today()
+    year_ago = today - timedelta(days=365)
+
+    txns = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.trans_type == "expense",
+        Transaction.date >= year_ago,
+        Transaction.date <= today
+    ).all()
+
+    daily = defaultdict(float)
+    for t in txns:
+        d = t.date if isinstance(t.date, date) else t.date.date()
+        daily[d.strftime("%Y-%m-%d")] += t.amount
+
+    return jsonify(dict(daily))
+
+
+
+@app.route("/run-welcome-migration")
+def run_welcome_migration():
+    """One-time fix — mark all existing users as already welcomed. Remove after running."""
+    try:
+        # Get all unique user_ids that have any data
+        user_ids = set()
+        for model in [Transaction, Wallet, CreditCard, Loan, Goal, AppSettings]:
+            rows = db.session.query(model.user_id).distinct().all()
+            for row in rows:
+                if row[0]:
+                    user_ids.add(row[0])
+
+        count = 0
+        for user_id in user_ids:
+            existing = AppSettings.query.filter_by(
+                user_id=user_id, key='welcome_sent'
+            ).first()
+            if not existing:
+                db.session.add(AppSettings(
+                    user_id=user_id,
+                    key='welcome_sent',
+                    value='true'
+                ))
+                count += 1
+
+        db.session.commit()
+        return f"✅ Marked {count} existing users as welcomed. Remove this route now."
+    except Exception as e:
+        return f"Error: {e}"
+
+
+
+def send_monthly_summary_email(user_id, user_email, user_name):
+    """Send monthly financial summary email."""
+    from datetime import date, timedelta
+    from collections import defaultdict
+    import calendar
+
+    today = date.today()
+    # Get the period that just ended
+    period_start, period_end = get_salary_period(today - timedelta(days=5))
+    currency = get_setting("currency_symbol", "LKR", user_id=user_id)
+
+    # ── Income ──
+    income_txns = Transaction.query.filter(
+        Transaction.user_id == user_id,
+        Transaction.trans_type == "income",
+        Transaction.date >= period_start,
+        Transaction.date <= period_end,
+    ).order_by(Transaction.date).all()
+    total_income = sum(t.amount for t in income_txns)
+
+    # ── Expenses by category ──
+    expense_txns = Transaction.query.filter(
+        Transaction.user_id == user_id,
+        Transaction.trans_type == "expense",
+        Transaction.date >= period_start,
+        Transaction.date <= period_end,
+    ).order_by(Transaction.date).all()
+    total_expense = sum(t.amount for t in expense_txns)
+    cat_totals = defaultdict(lambda: {"amount": 0, "count": 0})
+    for t in expense_txns:
+        cat = t.category or "Other"
+        cat_totals[cat]["amount"] += t.amount
+        cat_totals[cat]["count"] += 1
+    top_cats = sorted(cat_totals.items(), key=lambda x: x[1]["amount"], reverse=True)[:6]
+
+    saved = total_income - total_expense
+    savings_rate = round(saved / total_income * 100, 1) if total_income > 0 else 0
+
+    # ── Next period fixed commitments ──
+    next_period_start, next_period_end = get_salary_period(period_end + timedelta(days=2))
+    fixed_expenses = FixedExpense.query.filter_by(user_id=user_id).all()
+    recurring = RecurringPayment.query.filter_by(user_id=user_id, is_active=True).all()
+    cards = CreditCard.query.filter_by(user_id=user_id).all()
+    loans = Loan.query.filter_by(user_id=user_id, loan_status="Active").all()
+
+    commitments = []
+    for f in fixed_expenses:
+        commitments.append({"name": f.name, "amount": f.amount, "due": f.date.strftime("%d %b") if f.date else "—"})
+    for r in recurring:
+        commitments.append({"name": r.name, "amount": r.amount, "due": f"Monthly"})
+    for c in cards:
+        if c.minimum_payment:
+            commitments.append({"name": f"{c.bank_name} — Min Payment", "amount": c.minimum_payment, "due": c.due_date.strftime("%d %b") if c.due_date else "—"})
+    for l in loans:
+        commitments.append({"name": f"{l.loan_name} — EMI", "amount": l.monthly_payment, "due": "Monthly"})
+
+    total_committed = sum(c["amount"] for c in commitments)
+    available_after = total_income - total_committed
+
+    # ── Credit cards ──
+    credit_rows = []
+    for c in cards:
+        used = c.credit_limit - c.available_balance
+        util = round(used / c.credit_limit * 100) if c.credit_limit > 0 else 0
+        credit_rows.append({
+            "bank": c.bank_name,
+            "limit": c.credit_limit,
+            "used": used,
+            "util": util,
+            "due": c.due_date.strftime("%d %b") if c.due_date else "—",
+            "warning": util > 60,
+        })
+    total_credit_used = sum(r["used"] for r in credit_rows)
+
+    # ── Loans ──
+    loan_rows = []
+    for l in loans:
+        loan_rows.append({
+            "name": l.loan_name,
+            "outstanding": l.outstanding_balance,
+            "monthly": l.monthly_payment,
+        })
+    total_outstanding = sum(r["outstanding"] for r in loan_rows)
+
+    # ── Health score ──
+    health = get_financial_health_score(user_id=user_id)
+
+    # ── Build HTML ──
+    CAT_COLORS = ['#6366f1','#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6']
+
+    def fmt(n): return f"{n:,.0f}"
+
+    income_rows_html = "".join(f"""
+    <tr>
+      <td style="padding:8px 12px;color:#1a1f37;">{t.description or t.category or 'Income'}</td>
+      <td style="padding:8px 12px;color:#64748b;text-align:right;">{t.date.strftime('%d %b') if t.date else '—'}</td>
+      <td style="padding:8px 12px;color:#15803d;text-align:right;font-weight:600;">+{fmt(t.amount)}</td>
+    </tr>""" for t in income_txns)
+
+    cat_rows_html = "".join(f"""
+    <tr>
+      <td style="padding:8px 12px;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{CAT_COLORS[i % 6]};margin-right:8px;vertical-align:middle;"></span>
+        <span style="color:#1a1f37;">{cat}</span>
+      </td>
+      <td style="padding:8px 12px;color:#64748b;text-align:right;">{data['count']} txns</td>
+      <td style="padding:8px 12px;color:#1a1f37;text-align:right;font-weight:600;">{fmt(data['amount'])}</td>
+    </tr>""" for i, (cat, data) in enumerate(top_cats))
+
+    commitment_rows_html = "".join(f"""
+    <tr>
+      <td style="padding:7px 12px;color:#1a1f37;">{c['name']}</td>
+      <td style="padding:7px 12px;color:#64748b;text-align:right;">{c['due']}</td>
+      <td style="padding:7px 12px;color:#92400e;text-align:right;font-weight:600;">{fmt(c['amount'])}</td>
+    </tr>""" for c in commitments)
+
+    card_rows_html = "".join(f"""
+    <tr>
+      <td style="padding:7px 12px;color:#1a1f37;font-weight:600;">{r['bank']}</td>
+      <td style="padding:7px 12px;color:#64748b;text-align:right;">{fmt(r['limit'])}</td>
+      <td style="padding:7px 12px;color:#1a1f37;text-align:right;font-weight:600;">{fmt(r['used'])}</td>
+      <td style="padding:7px 12px;text-align:right;">
+        <span style="font-size:11px;font-weight:700;color:{'#dc2626' if r['util']>60 else '#15803d'};">{r['util']}%</span>
+      </td>
+      <td style="padding:7px 12px;color:#64748b;text-align:right;">{r['due']}</td>
+    </tr>""" for r in credit_rows)
+
+    card_warnings_html = "".join(f"""
+    <div style="font-size:12px;color:#dc2626;margin-top:6px;padding:8px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">
+      ⚠️ {r['bank']} at {r['util']}% utilization — aim to reduce below 30%
+    </div>""" for r in credit_rows if r['warning'])
+
+    loan_rows_html = "".join(f"""
+    <tr>
+      <td style="padding:7px 12px;color:#1a1f37;font-weight:600;">{r['name']}</td>
+      <td style="padding:7px 12px;color:#dc2626;text-align:right;font-weight:600;">{fmt(r['outstanding'])}</td>
+      <td style="padding:7px 12px;color:#64748b;text-align:right;">{fmt(r['monthly'])}/mo</td>
+    </tr>""" for r in loan_rows) if loan_rows else ""
+
+    savings_bar_w = min(savings_rate, 100)
+    score_bar_w = min(health.score, 100)
+    score_color = health.color
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>
+body{{margin:0;padding:0;background:#f0ebe3;font-family:'Segoe UI',Arial,sans-serif;}}
+.wrap{{max-width:600px;margin:0 auto;padding:28px 16px;}}
+.card{{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07);}}
+table{{width:100%;border-collapse:collapse;font-size:13px;}}
+th{{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;padding:8px 12px;background:#f8fafc;text-align:left;border-bottom:1px solid #f1f5f9;}}
+tr+tr td{{border-top:1px solid #f8fafc;}}
+.tfoot td{{border-top:2px solid #f1f5f9 !important;background:#f8fafc;font-weight:700;}}
+.section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin-bottom:8px;display:block;}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+
+<!-- Hero -->
+<div style="background:#0f172a;padding:36px;text-align:center;">
+  <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <div style="width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:16px;font-weight:800;">F</div>
+    <span style="color:white;font-size:16px;font-weight:800;letter-spacing:-0.02em;">FinanceOS</span>
+  </div>
+  <div style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Monthly Financial Summary</div>
+  <div style="color:white;font-size:24px;font-weight:800;letter-spacing:-0.02em;">{period_start.strftime('%B %Y')}</div>
+  <div style="color:rgba(255,255,255,0.35);font-size:12px;margin-top:4px;">{period_start.strftime('%d %b')} – {period_end.strftime('%d %b %Y')} · Salary Period</div>
+</div>
+
+<!-- Summary bar -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid #f1f5f9;">
+  <div style="padding:16px;text-align:center;border-right:1px solid #f1f5f9;">
+    <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Income</div>
+    <div style="font-size:20px;font-weight:800;color:#15803d;">{fmt(total_income)}</div>
+    <div style="font-size:10px;color:#94a3b8;">{currency}</div>
+  </div>
+  <div style="padding:16px;text-align:center;border-right:1px solid #f1f5f9;">
+    <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Expenses</div>
+    <div style="font-size:20px;font-weight:800;color:#dc2626;">{fmt(total_expense)}</div>
+    <div style="font-size:10px;color:#94a3b8;">{currency}</div>
+  </div>
+  <div style="padding:16px;text-align:center;">
+    <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Saved</div>
+    <div style="font-size:20px;font-weight:800;color:#6366f1;">{fmt(saved)}</div>
+    <div style="font-size:10px;color:#6366f1;">{savings_rate}% rate</div>
+  </div>
+</div>
+
+<div style="padding:24px;">
+
+<!-- 1. Income -->
+<span class="section-label">↓ Income this period</span>
+<div style="border:1px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+  <table>
+    <tr><th>Description</th><th style="text-align:right;">Date</th><th style="text-align:right;">Amount</th></tr>
+    {income_rows_html}
+    <tr class="tfoot"><td style="padding:8px 12px;">Total</td><td></td><td style="padding:8px 12px;color:#15803d;text-align:right;">{currency} {fmt(total_income)}</td></tr>
+  </table>
+</div>
+
+<!-- 2. Spending by category -->
+<span class="section-label">↑ Spending by category</span>
+<div style="border:1px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+  <table>
+    <tr><th>Category</th><th style="text-align:right;">Txns</th><th style="text-align:right;">Amount</th></tr>
+    {cat_rows_html}
+    <tr class="tfoot"><td style="padding:8px 12px;">Total</td><td></td><td style="padding:8px 12px;color:#dc2626;text-align:right;">{currency} {fmt(total_expense)}</td></tr>
+  </table>
+</div>
+
+<!-- 3. Starting next period — fixed commitments -->
+<span class="section-label">📅 Starting {next_period_start.strftime('%B')} — fixed commitments</span>
+<div style="font-size:12px;color:#92400e;padding:8px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fcd34d;margin-bottom:8px;">
+  ℹ️ Your next salary period starts <strong>{next_period_start.strftime('%d %b %Y')}</strong>. These are your known fixed costs — plan your free spending around them.
+</div>
+<div style="border:1px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-bottom:8px;">
+  <table>
+    <tr><th>Commitment</th><th style="text-align:right;">Due</th><th style="text-align:right;">Amount</th></tr>
+    {commitment_rows_html}
+    <tr class="tfoot"><td style="padding:8px 12px;">Total committed</td><td></td><td style="padding:8px 12px;color:#d97706;text-align:right;">{currency} {fmt(total_committed)}</td></tr>
+  </table>
+</div>
+<div style="padding:12px 16px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <div>
+    <div style="font-size:13px;font-weight:700;color:#15803d;">Available after fixed costs</div>
+    <div style="font-size:11px;color:#16a34a;margin-top:2px;">Based on last period income of {currency} {fmt(total_income)}</div>
+  </div>
+  <div style="font-size:18px;font-weight:800;color:#15803d;">{currency} {fmt(available_after)}</div>
+</div>
+
+<!-- 4. Credit cards -->
+<span class="section-label">💳 Credit card balances</span>
+<div style="border:1px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-bottom:8px;">
+  <table>
+    <tr><th>Bank</th><th style="text-align:right;">Limit</th><th style="text-align:right;">Used</th><th style="text-align:right;">Util</th><th style="text-align:right;">Due</th></tr>
+    {card_rows_html}
+    <tr class="tfoot"><td style="padding:8px 12px;">Total used</td><td></td><td style="padding:8px 12px;color:#dc2626;text-align:right;">{currency} {fmt(total_credit_used)}</td><td></td><td></td></tr>
+  </table>
+</div>
+{card_warnings_html}
+
+<!-- 5. Loans -->
+{'<span class="section-label" style="margin-top:20px;display:block;">🏦 Active loans</span><div style="border:1px solid #f1f5f9;border-radius:12px;overflow:hidden;margin-bottom:8px;"><table><tr><th>Loan</th><th style="text-align:right;">Outstanding</th><th style="text-align:right;">Monthly EMI</th></tr>' + loan_rows_html + f'<tr class="tfoot"><td style="padding:8px 12px;">Total outstanding</td><td style="padding:8px 12px;color:#dc2626;text-align:right;">{currency} {fmt(total_outstanding)}</td><td></td></tr></table></div>' if loan_rows else ''}
+
+<!-- 6. Health metrics -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;margin-bottom:24px;">
+  <div style="background:#f8fafc;border-radius:12px;padding:14px;border:1px solid #f1f5f9;">
+    <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Savings Rate</div>
+    <div style="font-size:22px;font-weight:800;color:#6366f1;">{savings_rate}%</div>
+    <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;overflow:hidden;"><div style="width:{savings_bar_w}%;height:100%;background:#6366f1;border-radius:2px;"></div></div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:5px;">{'Excellent!' if savings_rate >= 20 else 'Good' if savings_rate >= 10 else 'Needs improvement'}</div>
+  </div>
+  <div style="background:#f8fafc;border-radius:12px;padding:14px;border:1px solid #f1f5f9;">
+    <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Freedom Score</div>
+    <div style="font-size:22px;font-weight:800;color:{score_color};">{health.score}/100</div>
+    <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;overflow:hidden;"><div style="width:{score_bar_w}%;height:100%;background:{score_color};border-radius:2px;"></div></div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:5px;">{health.label}</div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div style="text-align:center;">
+  <a href="https://brave-grace-production-6691.up.railway.app/dashboard" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-decoration:none;border-radius:12px;font-size:14px;font-weight:700;">View Full Dashboard</a>
+  <div style="font-size:11px;color:#94a3b8;margin-top:10px;">Next summary: 1 {(today.replace(day=1) + timedelta(days=32)).replace(day=1).strftime('%B %Y')}</div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<div style="padding:16px 24px;border-top:1px solid #f1f5f9;text-align:center;">
+  <p style="font-size:11px;color:#94a3b8;margin:4px 0;">FinanceOS · Built in Sri Lanka 🇱🇰 · © 2026</p>
+  <p style="font-size:11px;margin:4px 0;">
+    <a href="https://brave-grace-production-6691.up.railway.app/privacy" style="color:#6366f1;text-decoration:none;">Privacy</a> ·
+    <a href="https://brave-grace-production-6691.up.railway.app/terms" style="color:#6366f1;text-decoration:none;">Terms</a>
+  </p>
+  <p style="font-size:10px;color:#cbd5e1;margin-top:6px;font-family:serif;">ශ්‍රී ලංකාවේ නිර්මාණය කරන ලදී</p>
+</div>
+
+</div></div>
+</body>
+</html>"""
+
+    send_email(
+        user_email,
+        f"Your FinanceOS Summary — {period_start.strftime('%B %Y')} 📊",
+        html
+    )
+
+
+@app.route("/send-monthly-summary")
+@login_required
+def trigger_monthly_summary():
+    """Manual trigger — for testing. Remove or restrict after launch."""
+    user = session.get("user", {})
+    send_monthly_summary_email(
+        user_id=uid(),
+        user_email=user.get("email", ""),
+        user_name=user.get("name", "User").split()[0],
+    )
+    flash("Monthly summary email sent! Check your inbox.", "success")
+    return redirect(url_for("dashboard"))
+
+
+
+# ─────────────────────────────────────────
+#  Monthly Email Scheduler
+# ─────────────────────────────────────────
+def send_all_monthly_summaries():
+    """Send monthly summary to all users — runs on 1st of each month at 8am."""
+    with app.app_context():
+        try:
+            # Get all unique users who have transactions
+            user_ids = db.session.query(Transaction.user_id).distinct().all()
+            user_ids = [u[0] for u in user_ids if u[0]]
+
+            app.logger.info(f"[Scheduler] Sending monthly summaries to {len(user_ids)} users")
+
+            for user_id in user_ids:
+                try:
+                    # Get user email from AppSettings or skip
+                    # We store email via Auth0 session — look up from transactions
+                    # Use preferred name from settings
+                    preferred_name = get_setting("preferred_name", "there", user_id=user_id)
+
+                    # Get email from a notification or settings record
+                    email_setting = AppSettings.query.filter_by(
+                        user_id=user_id, key="email"
+                    ).first()
+
+                    if email_setting and email_setting.value:
+                        send_monthly_summary_email(
+                            user_id=user_id,
+                            user_email=email_setting.value,
+                            user_name=preferred_name,
+                        )
+                        app.logger.info(f"[Scheduler] Sent summary to {email_setting.value}")
+                    else:
+                        app.logger.warning(f"[Scheduler] No email found for user {user_id[:20]}")
+                except Exception as e:
+                    app.logger.error(f"[Scheduler] Error for user {user_id[:20]}: {e}")
+
+        except Exception as e:
+            app.logger.error(f"[Scheduler] Fatal error: {e}")
+
+
+# Start scheduler — only in production (not during Flask reloader child process)
+import os
+if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+    scheduler = BackgroundScheduler(daemon=True)
+    # Run on 1st of every month at 8:00am
+    scheduler.add_job(
+        func=send_all_monthly_summaries,
+        trigger=CronTrigger(day=1, hour=8, minute=0),
+        id="monthly_summary",
+        name="Monthly financial summary email",
+        replace_existing=True,
+    )
+    scheduler.start()
+    app.logger.info("[Scheduler] Monthly email scheduler started — runs on 1st of each month at 8am")
+    # Shut down cleanly on exit
+    atexit.register(lambda: scheduler.shutdown())
+
+
+@app.route("/toggle-popup", methods=["POST"])
+@login_required
+def toggle_popup():
+    """Toggle the daily summary popup preference."""
+    current = get_setting("show_daily_popup", "true", user_id=uid())
+    new_val = "false" if current == "true" else "true"
+    set_setting("show_daily_popup", new_val, user_id=uid())
+    return jsonify({"show": new_val == "true"})
+
+
+@app.route("/loan/reverse/<int:loan_id>", methods=["POST"])
+@login_required
+def reverse_loan_payment(loan_id):
+    loan = Loan.query.filter_by(id=loan_id, user_id=uid()).first_or_404()
+
+    last_payment = Transaction.query.filter_by(
+        user_id=uid(),
+        category="Loan Payment"
+    ).filter(
+        Transaction.description.contains(loan.loan_name)
+    ).order_by(Transaction.date.desc(), Transaction.id.desc()).first()
+
+    if not last_payment:
+        flash("No payment found to reverse for this loan.", "danger")
+        return redirect(url_for("loan_list"))
+
+    amount = last_payment.amount
+
+    # Restore to first wallet
+    wallet = Wallet.query.filter_by(user_id=uid()).first()
+    if wallet:
+        wallet.balance += amount
+
+    # Restore loan balance
+    loan.outstanding_balance += amount
+    if loan.loan_status == "Paid Off":
+        loan.loan_status = "Active"
+
+    loan.next_due_date = loan.next_due_date - relativedelta(months=1)
+
+    db.session.delete(last_payment)
+    db.session.commit()
+
+    flash(f"✅ Payment of LKR {amount:,.2f} reversed. Wallet and loan balance restored.", "success")
+    return redirect(url_for("loan_list"))
+
+
+
+# ─────────────────────────────────────────
+#  Crypto Page
+# ─────────────────────────────────────────
+@app.route("/crypto")
+@login_required
+def crypto_page():
+    import requests as http
+
+    top_coins = []
+    error = None
+
+    try:
+        r = http.get(
+            "https://api.coingecko.com/api/v3/coins/markets",
+            params={
+                "vs_currency": "lkr",
+                "order": "market_cap_desc",
+                "per_page": 20,
+                "page": 1,
+                "price_change_percentage": "24h",
+            },
+            headers={"User-Agent": "FinanceOS/1.0"},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            top_coins = r.json()
+        else:
+            error = "api_down"
+    except Exception as e:
+        error = "api_down"
+
+    crypto_investments = Investment.query.filter_by(
+        user_id=uid(), asset_type="Crypto", status="active"
+    ).all()
+
+    currency = get_setting("currency_symbol", "LKR", user_id=uid())
+
+    return render_template("crypto.html",
+        top_coins=top_coins,
+        crypto_investments=crypto_investments,
+        error=error,
+        currency_symbol=currency,
+    )
+
+
+@app.route("/crypto/prices", methods=["POST"])
+@login_required
+def crypto_prices():
+    import requests as http
+    data = request.get_json()
+    coin_ids = data.get("ids", [])
+    if not coin_ids:
+        return jsonify({})
+    try:
+        r = http.get(
+            "https://api.coingecko.com/api/v3/simple/price",
+            params={
+                "ids": ",".join(coin_ids),
+                "vs_currencies": "lkr",
+                "include_24hr_change": "true",
+            },
+            headers={"User-Agent": "FinanceOS/1.0"},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            return jsonify(r.json())
+    except Exception:
+        pass
+    return jsonify({})
 
 if __name__ == '__main__':
     with app.app_context():
