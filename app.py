@@ -307,26 +307,35 @@ body{{margin:0;padding:0;background:#f0ebe3;font-family:'Segoe UI',Arial,sans-se
 def callback():
     token = auth0.authorize_access_token()
     userinfo = token.get('userinfo')
-    session['user'] = {
-        'id': userinfo['sub'],
-        'name': userinfo.get('name', 'User'),
-        'email': userinfo.get('email', ''),
-        'picture': userinfo.get('picture', '')
-    }
-    user_id = userinfo['sub']
-    user_email = userinfo.get('email', '')
+
+    # ── Use email as universal user ID ──
+    # Same person logging in via Google OR password → same data
+    user_email = userinfo.get('email', '').lower().strip()
+    if not user_email:
+        flash("Could not retrieve email from login provider.", "danger")
+        return redirect(url_for('landing'))
+
+    user_id = user_email  # email is the primary identifier
     user_name = userinfo.get('name', 'User').split()[0]
+    provider = userinfo.get('sub', '').split('|')[0]  # 'google-oauth2' or 'auth0'
+
+    session['user'] = {
+        'id': user_id,
+        'name': userinfo.get('name', 'User'),
+        'email': user_email,
+        'picture': userinfo.get('picture', ''),
+        'provider': provider
+    }
 
     # Save email to settings so scheduler can find it
-    if user_email:
-        set_setting('email', user_email, user_id=user_id)
+    set_setting('email', user_email, user_id=user_id)
 
     # Check if first time login — send welcome email
     with app.app_context():
         is_new = not AppSettings.query.filter_by(
             user_id=user_id, key='welcome_sent'
         ).first()
-        if is_new and user_email:
+        if is_new:
             send_welcome_email(user_email, user_name)
             set_setting('welcome_sent', 'true', user_id=user_id)
 
@@ -3503,8 +3512,8 @@ def send_monthly_summary_email(user_id, user_email, user_name):
     </tr>""" for r in loan_rows) if loan_rows else ""
 
     savings_bar_w = min(savings_rate, 100)
-    score_bar_w = min(health.get('score', 0), 100)
-    score_color = health.get('color', '#6366f1')
+    score_bar_w = min(health.score, 100)
+    score_color = health.color
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -3621,9 +3630,9 @@ tr+tr td{{border-top:1px solid #f8fafc;}}
   </div>
   <div style="background:#f8fafc;border-radius:12px;padding:14px;border:1px solid #f1f5f9;">
     <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Freedom Score</div>
-    <div style="font-size:22px;font-weight:800;color:{score_color};">{health.get('score', 0)}/100</div>
+    <div style="font-size:22px;font-weight:800;color:{score_color};">{health.score}/100</div>
     <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:8px;overflow:hidden;"><div style="width:{score_bar_w}%;height:100%;background:{score_color};border-radius:2px;"></div></div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:5px;">{health.get('label', 'Unknown')}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:5px;">{health.label}</div>
   </div>
 </div>
 
@@ -3804,6 +3813,15 @@ def delete_account():
         db.session.rollback()
         flash(f"Error deleting data: {str(e)}", "danger")
         return redirect(url_for("settings"))
+
+
+@app.route("/notifications/delete/<int:notif_id>", methods=["POST"])
+@login_required
+def delete_notification(notif_id):
+    n = Notification.query.filter_by(id=notif_id, user_id=uid()).first_or_404()
+    db.session.delete(n)
+    db.session.commit()
+    return redirect(request.referrer or url_for("notifications"))
 @app.route("/crypto")
 @login_required
 def crypto_page():
@@ -3898,6 +3916,31 @@ def crypto_update_portfolio_prices():
         return jsonify({'updated':updated,'prices':result})
     except Exception as e:
         return jsonify({'error':str(e),'updated':0})
+
+
+@app.route("/migrate-to-email")
+def migrate_to_email():
+    email = "hiroshann@gmail.com"
+    old_ids = [
+        "auth0|6a1d58287f1bf67cfc7e872d",
+        "google-oauth2|103051075859000420599"
+    ]
+    models = [Transaction, Wallet, CreditCard, Loan, Goal,
+              BudgetPlanner, FixedExpense, RecurringPayment,
+              Investment, InvestmentIncome, Debt, AppSettings,
+              Notification, NetWorthHistory, FavouriteStock]
+    total = 0
+    for old_id in old_ids:
+        for model in models:
+            try:
+                updated = model.query.filter_by(user_id=old_id).update({"user_id": email})
+                total += updated
+            except:
+                pass
+    db.session.commit()
+    return f"✅ Migrated {total} records to {email}"    
+    
+    
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

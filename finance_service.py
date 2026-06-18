@@ -1,8 +1,14 @@
 from datetime import datetime, date, timedelta, time
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
-from models import db, Transaction, Wallet, CreditCard, Loan, NetWorthHistory, Notification, Goal, RecurringPayment, AppSettings
+from models import (db, Transaction, Wallet, CreditCard, Loan, NetWorthHistory,
+                    Notification, Goal, RecurringPayment, AppSettings,
+                    BudgetPlanner, Investment)
 
+
+# ─────────────────────────────────────────
+#  Settings helpers
+# ─────────────────────────────────────────
 
 def get_setting(key, default=None, user_id=None):
     q = AppSettings.query.filter_by(key=key)
@@ -22,11 +28,15 @@ def set_setting(key, value, user_id=None):
     else:
         s = AppSettings(key=key, value=str(value), user_id=user_id)
         db.session.add(s)
-    db.session.commit()
 
+
+# ─────────────────────────────────────────
+#  Transaction
+# ─────────────────────────────────────────
 
 def add_transaction(amount, description, trans_type, wallet_id=None, linked_credit=None,
-                    linked_loan=None, currency="LKR", date_obj=None, category=None, notes=None, tags=None, user_id=None):
+                    linked_loan=None, currency="LKR", date_obj=None, category=None,
+                    notes=None, tags=None, user_id=None):
     txn = Transaction(
         amount=amount,
         description=description,
@@ -65,19 +75,24 @@ def add_transaction(amount, description, trans_type, wallet_id=None, linked_cred
             if loan.outstanding_balance < 0:
                 loan.outstanding_balance = 0
 
-    update_networth_snapshot()
-    check_and_create_notifications()
+    update_networth_snapshot(user_id=user_id)
+    check_and_create_notifications(user_id=user_id)
     db.session.commit()
     return txn
 
+
+# ─────────────────────────────────────────
+#  Net Worth Snapshot
+# ─────────────────────────────────────────
 
 def update_networth_snapshot(user_id=None):
     today = date.today()
     wallets = Wallet.query.filter_by(user_id=user_id).all() if user_id else Wallet.query.all()
     loans = Loan.query.filter_by(user_id=user_id).all() if user_id else Loan.query.all()
     cards = CreditCard.query.filter_by(user_id=user_id).all() if user_id else CreditCard.query.all()
+    investments = Investment.query.filter_by(user_id=user_id, status='active').all() if user_id else []
 
-    total_assets = sum(w.balance for w in wallets)
+    total_assets = sum(w.balance for w in wallets) + sum(i.current_value for i in investments)
     total_loans = sum(l.outstanding_balance for l in loans)
     total_cards = sum(c.credit_limit - c.available_balance for c in cards)
     total_liabilities = total_loans + total_cards
@@ -97,20 +112,16 @@ def update_networth_snapshot(user_id=None):
         existing.total_liabilities = total_liabilities
         existing.net_worth = net_worth
 
-    db.session.commit()
 
+# ─────────────────────────────────────────
+#  Notifications
+# ─────────────────────────────────────────
 
 def check_and_create_notifications(user_id=None):
     today = date.today()
     soon = today + timedelta(days=7)
-    # Use today as a key — only create ONE notification per item per day
-    today_str = today.strftime('%Y-%m-%d')
 
     def already_notified(related_type, related_id, title_contains):
-        """Check if this notification already exists — ever (not just today).
-        Prevents duplicates accumulating over time."""
-        from datetime import datetime, time, timedelta
-        # Check last 30 days to avoid spam but allow re-notification after a month
         thirty_days_ago = datetime.combine(today - timedelta(days=30), time(0, 0))
         return Notification.query.filter(
             Notification.user_id == user_id,
@@ -120,7 +131,7 @@ def check_and_create_notifications(user_id=None):
             Notification.created_at >= thirty_days_ago,
         ).first() is not None
 
-    # Loan due soon
+    # ── Loan due soon ──
     for loan in Loan.query.filter_by(loan_status='Active', user_id=user_id).all():
         if loan.next_due_date and today <= loan.next_due_date <= soon:
             if not already_notified("loan", loan.id, "Loan payment"):
@@ -133,7 +144,7 @@ def check_and_create_notifications(user_id=None):
                     user_id=user_id
                 ))
 
-    # Credit card due soon
+    # ── Credit card due soon + high utilization ──
     for card in CreditCard.query.filter_by(user_id=user_id).all():
         if card.due_date and today <= card.due_date <= soon:
             if not already_notified("credit_card", card.id, "Credit card payment"):
@@ -145,8 +156,6 @@ def check_and_create_notifications(user_id=None):
                     related_id=card.id,
                     user_id=user_id
                 ))
-
-        # High utilization
         if card.credit_limit and card.credit_limit > 0:
             utilization = (card.credit_limit - card.available_balance) / card.credit_limit * 100
             if utilization > 80:
@@ -160,8 +169,70 @@ def check_and_create_notifications(user_id=None):
                         user_id=user_id
                     ))
 
+    # ── Budget exceeded ──
+    budgets = BudgetPlanner.query.filter_by(user_id=user_id).all()
+    if budgets:
+        cat_txns = Transaction.query.filter(
+            Transaction.user_id == user_id,
+            Transaction.trans_type == 'expense',
+            Transaction.date >= today.replace(day=1),
+            Transaction.date <= today
+        ).all()
+        cat_totals = defaultdict(float)
+        for t in cat_txns:
+            cat_totals[t.category or 'Other'] += t.amount
+        for b in budgets:
+            actual = cat_totals.get(b.category, 0)
+            if b.amount > 0 and actual > b.amount:
+                if not already_notified('budget', b.id, 'over budget'):
+                    db.session.add(Notification(
+                        title=f'{b.category} over budget',
+                        message=f'Spent {actual:,.0f} of {b.amount:,.0f} budget ({actual/b.amount*100:.0f}%)',
+                        notif_type='danger',
+                        related_type='budget',
+                        related_id=b.id,
+                        user_id=user_id
+                    ))
+            elif b.amount > 0 and actual > b.amount * 0.8:
+                if not already_notified('budget', b.id, 'approaching'):
+                    db.session.add(Notification(
+                        title=f'{b.category} approaching limit',
+                        message=f'Spent {actual:,.0f} of {b.amount:,.0f} budget ({actual/b.amount*100:.0f}%)',
+                        notif_type='warning',
+                        related_type='budget',
+                        related_id=b.id,
+                        user_id=user_id
+                    ))
+
+    # ── Goal reached or close ──
+    for g in Goal.query.filter_by(user_id=user_id, status='active').all():
+        if g.target_amount and g.target_amount > 0:
+            pct = g.current_amount / g.target_amount * 100
+            if pct >= 100 and not already_notified('goal', g.id, 'reached'):
+                db.session.add(Notification(
+                    title=f"Goal reached: {g.name}",
+                    message=f"You've reached your {g.name} goal of {g.target_amount:,.0f}!",
+                    notif_type='success',
+                    related_type='goal',
+                    related_id=g.id,
+                    user_id=user_id
+                ))
+            elif pct >= 80 and not already_notified('goal', g.id, '80%'):
+                db.session.add(Notification(
+                    title=f'Goal almost there: {g.name}',
+                    message=f'{pct:.0f}% of {g.target_amount:,.0f} reached — keep going!',
+                    notif_type='success',
+                    related_type='goal',
+                    related_id=g.id,
+                    user_id=user_id
+                ))
+
     db.session.commit()
 
+
+# ─────────────────────────────────────────
+#  Recurring Payments
+# ─────────────────────────────────────────
 
 def apply_due_recurring_payments(user_id=None):
     """Auto-apply recurring payments that are due."""
@@ -172,7 +243,7 @@ def apply_due_recurring_payments(user_id=None):
             if rec.end_date and rec.end_date < today:
                 rec.is_active = False
                 continue
-            txn = add_transaction(
+            add_transaction(
                 amount=rec.amount,
                 description=rec.name,
                 trans_type="expense",
@@ -183,7 +254,6 @@ def apply_due_recurring_payments(user_id=None):
                 user_id=user_id
             )
             rec.last_applied = rec.next_date
-            # Advance next date
             freq_map = {
                 "weekly": timedelta(weeks=1),
                 "biweekly": timedelta(weeks=2),
@@ -198,6 +268,10 @@ def apply_due_recurring_payments(user_id=None):
     db.session.commit()
     return applied
 
+
+# ─────────────────────────────────────────
+#  Spending Insights
+# ─────────────────────────────────────────
 
 def get_spending_insights(period_start, period_end, user_id=None):
     q = [Transaction.trans_type == "expense",
@@ -246,6 +320,10 @@ def get_spending_insights(period_start, period_end, user_id=None):
         "transaction_count": len(transactions)
     }
 
+
+# ─────────────────────────────────────────
+#  Financial Health Score
+# ─────────────────────────────────────────
 
 def get_financial_health_score(user_id=None):
     score = 100
