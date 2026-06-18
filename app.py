@@ -3918,27 +3918,7 @@ def crypto_update_portfolio_prices():
         return jsonify({'error':str(e),'updated':0})
 
 
-@app.route("/migrate-to-email")
-def migrate_to_email():
-    email = "hiroshann@gmail.com"
-    old_ids = [
-        "auth0|6a1d58287f1bf67cfc7e872d",
-        "google-oauth2|103051075859000420599"
-    ]
-    models = [Transaction, Wallet, CreditCard, Loan, Goal,
-              BudgetPlanner, FixedExpense, RecurringPayment,
-              Investment, InvestmentIncome, Debt, AppSettings,
-              Notification, NetWorthHistory, FavouriteStock]
-    total = 0
-    for old_id in old_ids:
-        for model in models:
-            try:
-                updated = model.query.filter_by(user_id=old_id).update({"user_id": email})
-                total += updated
-            except:
-                pass
-    db.session.commit()
-    return f"✅ Migrated {total} records to {email}"    
+  
     
     
 if __name__ == '__main__':
