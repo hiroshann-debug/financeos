@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Import Bank Statement{% endblock %}
+{% block page_title %}Import Bank Statement{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:700;">Import Bank Statement</h2>
+    <p class="text-muted text-sm">Upload a CSV export from your bank and we'll turn it into transactions.</p>
+  </div>
+  <a href="{{ url_for('transactions') }}" class="btn btn-ghost btn-sm">
+    <i class="fas fa-arrow-left"></i> Back to Transactions
+  </a>
+</div>
+
+{% if not show_preview %}
+
+<!-- ── UPLOAD FORM ── -->
+<div class="card mb-4" style="max-width:640px;">
+  <div class="card-title">1. Choose your file</div>
+  <form method="POST" action="{{ url_for('import_statement_preview') }}" enctype="multipart/form-data">
+    <div class="form-group">
+      <label class="form-label">Bank Statement (CSV)</label>
+      <input type="file" name="statement_file" accept=".csv" required class="form-control">
+      <p class="text-muted text-sm" style="margin-top:6px;">
+        Most Sri Lankan banks (Commercial, Sampath, HNB, NDB, BOC, Seylan) let you export your transaction
+        history as CSV from online banking — usually under "Transactions" or "Statement Export".
+      </p>
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-upload"></i> Upload &amp; Preview
+    </button>
+  </form>
+</div>
+
+<div class="card" style="max-width:640px;">
+  <div class="card-title">What we look for</div>
+  <ul class="text-sm text-muted" style="line-height:1.8;padding-left:18px;">
+    <li>A <strong>Date</strong> column (any common format)</li>
+    <li>A <strong>Description</strong> column (narration, particulars, details)</li>
+    <li>Either separate <strong>Debit / Credit</strong> columns, or a single signed <strong>Amount</strong> column</li>
+  </ul>
+  <p class="text-sm text-muted" style="margin-top:10px;">
+    We auto-detect columns from the header row. If detection fails, we'll show you exactly what
+    headers we found so you can check your export.
+  </p>
+</div>
+
+{% else %}
+
+<!-- ── PREVIEW & CONFIRM ── -->
+<div class="card mb-4">
+  <div class="flex items-center justify-between mb-3" style="flex-wrap:wrap;gap:10px;">
+    <div class="card-title" style="margin-bottom:0;">
+      2. Review {{ preview_rows|length }} detected transaction{{ 's' if preview_rows|length != 1 }}
+    </div>
+    <div class="flex gap-2" style="flex-wrap:wrap;">
+      {% if skipped_count %}
+      <span class="badge-pill" style="background:var(--orange-soft);color:var(--orange);">
+        {{ skipped_count }} row{{ 's' if skipped_count != 1 }} skipped (unreadable)
+      </span>
+      {% endif %}
+      {% if dup_count %}
+      <span class="badge-pill" style="background:var(--accent-glow);color:var(--accent);">
+        {{ dup_count }} possible duplicate{{ 's' if dup_count != 1 }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('import_statement_confirm') }}">
+    <div class="grid-2 mb-4" style="max-width:520px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Default wallet (used unless you pick something else per row)</label>
+        <select name="wallet_id" class="form-control">
+          <option value="">None — record only</option>
+          {% for w in wallets %}
+          <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;display:flex;align-items:flex-end;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;">
+          <input type="checkbox" name="skip_duplicates" checked style="accent-color:var(--accent);">
+          Skip likely duplicates automatically
+        </label>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 mb-3" style="font-size:0.82rem;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAll(true)">Select All</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAll(false)">Deselect All</button>
+      <span class="text-muted">Rows flagged as duplicates are unchecked by default.</span>
+    </div>
+
+    <div class="card" style="background:var(--accent-glow);border:none;padding:10px 14px;margin-bottom:14px;font-size:0.78rem;color:var(--text2);">
+      <i class="fas fa-circle-info"></i>
+      <strong>Goes to</strong> controls what each row affects: a normal wallet deduction, a credit card
+      <em>purchase</em> (reduces available credit), a credit card <em>payment</em> (restores available credit),
+      a loan payment (reduces outstanding balance), or record-only with no balance changes.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;"></th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th style="text-align:right;">Amount</th>
+            <th>Type</th>
+            <th style="min-width:180px;">Goes to</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview_rows %}
+          <tr style="{% if row.is_duplicate %}opacity:0.55;{% endif %}">
+            <td>
+              <input type="checkbox" name="row_{{ row.row_index }}" class="row-checkbox"
+                {% if not row.is_duplicate %}checked{% endif %} style="accent-color:var(--accent);">
+            </td>
+            <td class="font-mono text-sm" style="color:var(--text2);">{{ row.date }}</td>
+            <td style="font-weight:500;">
+              {{ row.description }}
+              {% if row.is_duplicate %}
+              <span class="badge-pill" style="background:var(--orange-soft);color:var(--orange);margin-left:6px;font-size:0.65rem;">possible duplicate</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge-pill badge-accent">{{ row.category }}</span>
+            </td>
+            <td class="font-mono" style="text-align:right;font-weight:600;color:{% if row.trans_type == 'income' %}var(--green){% else %}var(--red){% endif %};">
+              {{ '+' if row.trans_type == 'income' else '-' }}{{ "{:,.0f}".format(row.amount) }}
+            </td>
+            <td>
+              <span class="badge-pill {% if row.trans_type == 'income' %}badge-green{% else %}badge-red{% endif %}">
+                {{ row.trans_type|capitalize }}
+              </span>
+            </td>
+            <td>
+              <select name="dest_{{ row.row_index }}" class="form-control" style="font-size:0.78rem;padding:5px 8px;">
+                <option value="wallet" {% if row.suggested_destination == 'wallet' %}selected{% endif %}>Wallet (default above)</option>
+                <option value="none" {% if row.suggested_destination == 'none' %}selected{% endif %}>Record only — no balance change</option>
+                {% if credit_cards %}
+                <optgroup label="Credit card purchase">
+                  {% for c in credit_cards %}
+                  <option value="cc_purchase_{{ c.id }}">{{ c.bank_name }} •{{ c.card_number[-4:] if c.card_number else '' }} — reduces available credit</option>
+                  {% endfor %}
+                </optgroup>
+                <optgroup label="Credit card payment">
+                  {% for c in credit_cards %}
+                  <option value="cc_payment_{{ c.id }}" {% if row.suggested_destination == 'cc_payment_' + c.id|string %}selected{% endif %}>{{ c.bank_name }} •{{ c.card_number[-4:] if c.card_number else '' }} — restores available credit</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if loans %}
+                <optgroup label="Loan payment">
+                  {% for l in loans %}
+                  <option value="loan_{{ l.id }}">{{ l.loan_name }} — reduces outstanding balance</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex items-center justify-between mt-4" style="flex-wrap:wrap;gap:10px;">
+      <a href="{{ url_for('import_statement') }}" class="btn btn-ghost">
+        <i class="fas fa-rotate-left"></i> Upload a Different File
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-check"></i> Import Selected Transactions
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+function toggleAll(checked) {
+  document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
+}
+</script>
+
+{% endif %}
+{% endblock %}

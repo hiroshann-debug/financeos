@@ -1,372 +1,528 @@
 {% extends "base_public.html" %}
-{% block title %}FinanceOS — Your Complete Personal Finance Command Center{% endblock %}
+{% block title %}FinanceOS — ඔබේ පුද්ගලික මූල්‍ය පද්ධතිය | Your Personal Finance OS{% endblock %}
 
 {% block extra_style %}
-/* ── DESIGN TOKENS ── */
+/* ── TOKENS ── */
 :root {
-  --primary:      #00C853;
-  --primary-dark: #00A844;
-  --navy:         #0F172A;
-  --text:         #1E293B;
-  --muted:        #64748B;
-  --bg:           #F8FAFC;
-  --card:         #FFFFFF;
-  --border:       #E2E8F0;
-  --font:        'Plus Jakarta Sans', -apple-system, sans-serif;
+  --navy:    #0f172a;
+  --navy2:   #1e293b;
+  --indigo:  #6366f1;
+  --purple:  #8b5cf6;
+  --pink:    #ec4899;
+  --amber:   #f59e0b;
+  --green:   #10b981;
+  --text:    #1a1f37;
+  --muted:   #64748b;
+  --bg:      #f0ebe3;
+  --surface: #ffffff;
+  --border:  #e2e8f0;
+  --font:    'DM Sans', -apple-system, sans-serif;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font); background: #fff; color: var(--text); -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: #fff; color: var(--text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+/* ── Sinhala text helper ── */
+.si { font-family: 'Noto Sans Sinhala', var(--font); }
+.bilingual-head { line-height: 1.2; }
+.bilingual-head .en { display: block; font-size: 1em; font-weight: 800; letter-spacing: -0.03em; }
+.bilingual-head .si { display: block; font-size: 0.55em; font-weight: 600; opacity: 0.6; letter-spacing: 0.01em; margin-top: 4px; }
 
 /* ── NAV ── */
 .lp-nav {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(255,255,255,0.95); backdrop-filter: blur(14px);
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
-  padding: 0 60px; height: 68px;
+  padding: 0 60px; height: 66px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.nav-logo-icon { width: 38px; height: 38px; background: var(--primary); border-radius: 10px; display: grid; place-items: center; font-size: 1.15rem; }
-.nav-logo-text { font-size: 1.1rem; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
-.nav-links { display: flex; align-items: center; gap: 32px; }
+.nav-logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--indigo), var(--purple));
+  border-radius: 10px; display: grid; place-items: center;
+  font-size: 1rem; font-weight: 800; color: white;
+  letter-spacing: -0.02em;
+}
+.nav-logo-text { font-size: 1.05rem; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
+.nav-logo-sub { font-size: 0.6rem; color: var(--muted); font-weight: 500; display: block; margin-top: -1px; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a { font-size: 0.875rem; font-weight: 600; color: var(--muted); text-decoration: none; transition: color 0.15s; }
 .nav-links a:hover { color: var(--navy); }
-.nav-actions { display: flex; align-items: center; gap: 10px; }
-.btn-signin { padding: 8px 20px; border-radius: 8px; font-size: 0.875rem; font-weight: 700; color: var(--navy); background: transparent; border: 1.5px solid var(--border); text-decoration: none; transition: all 0.15s; }
-.btn-signin:hover { border-color: #94a3b8; background: var(--bg); }
-.btn-signup { padding: 9px 22px; border-radius: 8px; font-size: 0.875rem; font-weight: 700; color: #fff; background: var(--navy); border: none; text-decoration: none; transition: all 0.15s; }
-.btn-signup:hover { background: #1e293b; }
+.btn-nav-login { padding: 8px 18px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: var(--navy); background: transparent; border: 1.5px solid var(--border); text-decoration: none; transition: all 0.15s; }
+.btn-nav-login:hover { background: #f8fafc; border-color: #94a3b8; }
+.btn-nav-signup { padding: 9px 20px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: white; background: linear-gradient(135deg, var(--indigo), var(--purple)); border: none; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 12px rgba(99,102,241,0.35); }
+.btn-nav-signup:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(99,102,241,0.45); }
 
 /* ── HERO ── */
-.hero {
-  max-width: 1200px; margin: 0 auto;
-  padding: 96px 60px 80px;
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 64px; align-items: center;
+.lp-hero {
+  background: linear-gradient(135deg, var(--navy) 0%, #1e293b 60%, #0f172a 100%);
+  padding: 100px 60px 90px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.lp-hero::before {
+  content: ''; position: absolute;
+  width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+  top: -200px; left: 50%; transform: translateX(-50%);
+}
+.lp-hero::after {
+  content: ''; position: absolute;
+  width: 400px; height: 400px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%);
+  bottom: -100px; right: 10%;
 }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 8px;
-  background: #f0fdf4; border: 1.5px solid #bbf7d0;
-  color: #15803d; padding: 6px 14px; border-radius: 999px;
-  font-size: 0.78rem; font-weight: 700; margin-bottom: 24px;
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.3);
+  color: #a5b4fc; padding: 6px 16px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 700; margin-bottom: 28px;
+  letter-spacing: 0.04em;
+}
+.hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+.hero-h1 {
+  font-size: 4rem; font-weight: 800;
+  letter-spacing: -0.04em; line-height: 1.05;
+  color: white; margin-bottom: 10px;
+  position: relative; z-index: 1;
+}
+.hero-h1 .gradient-text {
+  background: linear-gradient(135deg, #a5b4fc, #e879f9, #f59e0b);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-h1-si {
+  font-size: 1.6rem; font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 28px;
   letter-spacing: 0.01em;
+  position: relative; z-index: 1;
 }
-.hero h1 {
-  font-size: 3.4rem; font-weight: 800;
-  letter-spacing: -0.04em; line-height: 1.08;
-  color: var(--navy); margin-bottom: 22px;
+.hero-sub {
+  font-size: 1.1rem; color: rgba(255,255,255,0.6);
+  line-height: 1.75; max-width: 560px;
+  margin: 0 auto 12px; position: relative; z-index: 1;
 }
-.hero h1 span { color: var(--primary); }
-.hero p { font-size: 1.05rem; color: var(--muted); line-height: 1.75; margin-bottom: 36px; max-width: 480px; }
-.hero-buttons { display: flex; gap: 14px; align-items: center; margin-bottom: 30px; flex-wrap: wrap; }
-.btn-primary {
-  padding: 15px 32px; border-radius: 10px; font-size: 1rem; font-weight: 700;
-  color: #fff; background: var(--primary); border: none; text-decoration: none;
-  transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
-  box-shadow: 0 4px 20px rgba(0,200,83,0.35);
+.hero-sub-si {
+  font-size: 0.875rem; color: rgba(255,255,255,0.35);
+  margin-bottom: 40px; position: relative; z-index: 1;
 }
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,200,83,0.4); }
-.btn-secondary {
-  padding: 15px 28px; border-radius: 10px; font-size: 1rem; font-weight: 700;
-  color: var(--navy); background: #fff; border: 1.5px solid var(--border);
-  text-decoration: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 8px;
+.hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 48px; position: relative; z-index: 1; }
+.btn-hero-primary {
+  padding: 16px 36px; border-radius: 12px;
+  font-size: 1rem; font-weight: 800; color: white;
+  background: linear-gradient(135deg, var(--indigo), var(--purple));
+  border: none; text-decoration: none; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 10px;
+  box-shadow: 0 4px 24px rgba(99,102,241,0.45);
 }
-.btn-secondary:hover { border-color: #94a3b8; background: var(--bg); }
-.hero-trust { font-size: 0.78rem; color: var(--muted); display: flex; gap: 20px; flex-wrap: wrap; }
-.hero-trust span { display: flex; align-items: center; gap: 5px; }
-.hero-trust span::before { content: '✓'; color: var(--primary); font-weight: 800; }
+.btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(99,102,241,0.55); }
+.btn-hero-secondary {
+  padding: 16px 32px; border-radius: 12px;
+  font-size: 1rem; font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  text-decoration: none; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 10px;
+  backdrop-filter: blur(10px);
+}
+.btn-hero-secondary:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.25); }
+.hero-trust { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; position: relative; z-index: 1; }
+.hero-trust-item { font-size: 0.78rem; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.hero-trust-item i { color: #4ade80; }
 
-/* ── DASHBOARD MOCKUP ── */
-.hero-dashboard {
-  background: var(--navy);
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 32px 80px rgba(15,23,42,0.25), 0 0 0 1px rgba(255,255,255,0.06);
-  position: relative;
+/* ── PUBLIC TOOLS ROW ── */
+.hero-public-tools {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  max-width: 900px; margin: 36px auto 0; position: relative; z-index: 1;
 }
-.dash-topbar { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; }
-.dash-dot { width: 10px; height: 10px; border-radius: 50%; }
-.dash-url { flex: 1; background: rgba(255,255,255,0.07); border-radius: 5px; height: 8px; margin-left: 8px; }
-.dash-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-.metric-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; }
-.metric-label { font-size: 0.6rem; color: rgba(255,255,255,0.45); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
-.metric-value { font-size: 1.1rem; font-weight: 800; color: white; letter-spacing: -0.02em; }
-.metric-change { font-size: 0.62rem; font-weight: 700; margin-top: 3px; }
-.dash-salary-bar { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-.salary-bar-title { font-size: 0.6rem; color: rgba(255,255,255,0.45); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; display: flex; justify-content: space-between; }
-.salary-track { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
-.salary-fill { height: 100%; border-radius: 3px; background: var(--primary); }
-.salary-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.salary-tile { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px; text-align: center; }
-.salary-tile-label { font-size: 0.48rem; color: rgba(255,255,255,0.35); text-transform: uppercase; font-weight: 600; margin-bottom: 3px; letter-spacing: 0.04em; }
-.salary-tile-value { font-size: 0.72rem; font-weight: 700; }
-.dash-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.dash-chart { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; }
-.chart-title { font-size: 0.6rem; color: rgba(255,255,255,0.45); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
-.chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 50px; }
-.bar-group { display: flex; gap: 2px; align-items: flex-end; flex: 1; }
-.bar { border-radius: 3px 3px 0 0; flex: 1; }
-.dash-goals { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; }
-.goal-row { margin-bottom: 8px; }
-.goal-row:last-child { margin-bottom: 0; }
-.goal-info { display: flex; justify-content: space-between; font-size: 0.6rem; color: rgba(255,255,255,0.55); margin-bottom: 4px; }
-.goal-track { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-.goal-fill { height: 100%; border-radius: 2px; }
+.public-tool-card {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; padding: 12px 18px;
+  text-decoration: none; transition: all 0.2s;
+  min-width: 190px;
+}
+.public-tool-card:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); transform: translateY(-2px); }
+.public-tool-card i { font-size: 1.1rem; color: #4ade80; flex-shrink: 0; }
+.public-tool-card span { display: block; font-size: 0.82rem; font-weight: 700; color: white; }
+.public-tool-card small { display: block; font-size: 0.68rem; color: rgba(255,255,255,0.45); font-weight: 500; }
 
-/* ── STATS ── */
-.stats-section { background: var(--navy); padding: 56px 60px; }
-.stats-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
-.stat-item { text-align: center; padding: 20px; border-right: 1px solid rgba(255,255,255,0.08); }
-.stat-item:last-child { border-right: none; }
-.stat-item h2 { font-size: 2.8rem; font-weight: 800; color: var(--primary); letter-spacing: -0.04em; margin-bottom: 6px; }
-.stat-item p { font-size: 0.875rem; color: rgba(255,255,255,0.55); font-weight: 500; }
+/* ── DASHBOARD PREVIEW ── */
+.hero-preview {
+  max-width: 900px; margin: 60px auto 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px; padding: 20px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(99,102,241,0.2);
+  position: relative; z-index: 1;
+}
+.preview-topbar { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; }
+.preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+.preview-url { flex: 1; background: rgba(255,255,255,0.06); border-radius: 4px; height: 8px; margin-left: 10px; }
+.preview-hero-card {
+  background: linear-gradient(135deg, rgba(245,158,11,0.9), rgba(251,191,36,0.9));
+  border-radius: 16px; padding: 20px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.preview-greeting { font-size: 1.1rem; font-weight: 800; color: #1a1f37; }
+.preview-greeting-si { font-size: 0.65rem; color: rgba(26,31,55,0.55); margin-top: 2px; }
+.preview-stats { display: flex; gap: 8px; }
+.preview-stat {
+  background: rgba(255,255,255,0.4); border-radius: 10px;
+  padding: 10px 14px; text-align: center; min-width: 90px;
+}
+.preview-stat-label { font-size: 0.5rem; color: rgba(26,31,55,0.5); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.preview-stat-val { font-size: 0.9rem; font-weight: 800; color: #1a1f37; margin-top: 2px; }
+.preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.preview-kpi { border-radius: 12px; padding: 12px; }
+.preview-kpi-label { font-size: 0.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; opacity: 0.6; }
+.preview-kpi-val { font-size: 0.85rem; font-weight: 800; }
+.preview-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.preview-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; }
+.preview-card-title { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.4); margin-bottom: 10px; }
+.preview-bars { display: flex; align-items: flex-end; gap: 4px; height: 40px; }
+.preview-bar { border-radius: 3px 3px 0 0; flex: 1; }
+.preview-chart-lines { display: flex; flex-direction: column; gap: 6px; }
+.preview-chart-line { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.preview-chart-line-fill { height: 100%; border-radius: 2px; }
+
+/* ── STATS BAR ── */
+.stats-bar { background: var(--navy); padding: 48px 60px; }
+.stats-bar-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
+.stats-bar-item { text-align: center; padding: 16px; border-right: 1px solid rgba(255,255,255,0.07); }
+.stats-bar-item:last-child { border: none; }
+.stats-bar-num { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em; background: linear-gradient(135deg, #a5b4fc, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; }
+.stats-bar-en { font-size: 0.82rem; color: rgba(255,255,255,0.55); font-weight: 600; }
+.stats-bar-si { font-size: 0.65rem; color: rgba(255,255,255,0.25); margin-top: 2px; }
+
+/* ── SECTION COMMON ── */
+.section-wrap { max-width: 1100px; margin: 0 auto; padding: 96px 60px; }
+.section-eyebrow { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--indigo); margin-bottom: 12px; }
+.section-heading { font-size: 2.6rem; font-weight: 800; letter-spacing: -0.04em; color: var(--navy); line-height: 1.1; margin-bottom: 8px; }
+.section-heading-si { font-size: 1rem; font-weight: 500; color: var(--muted); margin-bottom: 14px; }
+.section-sub { font-size: 1rem; color: var(--muted); line-height: 1.75; max-width: 520px; }
+
+/* ── FEATURES BENTO ── */
+.bento { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 48px; }
+.bento-big {
+  grid-row: span 2;
+  background: linear-gradient(135deg, var(--navy), #1e293b);
+  border-radius: 20px; padding: 36px; color: white;
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 340px; position: relative; overflow: hidden;
+}
+.bento-big::before {
+  content: ''; position: absolute;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: rgba(99,102,241,0.1);
+  top: -60px; right: -60px;
+}
+.bento-big-icon { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; font-size: 1.4rem; margin-bottom: 20px; position: relative; z-index: 1; }
+.bento-big h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; position: relative; z-index: 1; }
+.bento-big h3-si { display: block; font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 12px; position: relative; z-index: 1; }
+.bento-big p { font-size: 0.875rem; color: rgba(255,255,255,0.6); line-height: 1.65; position: relative; z-index: 1; }
+.bento-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 5px 12px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; margin-top: 20px; width: fit-content; position: relative; z-index: 1; }
+
+.bento-small {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 28px; transition: all 0.2s;
+}
+.bento-small:hover { border-color: rgba(99,102,241,0.3); box-shadow: 0 4px 24px rgba(99,102,241,0.08); transform: translateY(-2px); }
+.bento-small-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.1rem; margin-bottom: 14px; }
+.bento-small h3 { font-size: 0.95rem; font-weight: 800; color: var(--navy); margin-bottom: 2px; }
+.bento-small .si-label { font-size: 0.68rem; color: var(--muted); margin-bottom: 8px; display: block; }
+.bento-small p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
 
 /* ── HOW IT WORKS ── */
-.how-section { max-width: 1100px; margin: 0 auto; padding: 96px 60px; text-align: center; }
-.section-eyebrow { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--primary); margin-bottom: 14px; }
-.section-heading { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; color: var(--navy); margin-bottom: 14px; }
-.section-sub { font-size: 1rem; color: var(--muted); max-width: 520px; margin: 0 auto 56px; line-height: 1.7; }
-.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-.step-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 32px 28px; text-align: left; position: relative; transition: all 0.2s; }
-.step-card:hover { border-color: #bbf7d0; box-shadow: 0 8px 32px rgba(0,200,83,0.08); transform: translateY(-3px); }
-.step-number { width: 44px; height: 44px; background: var(--primary); border-radius: 12px; display: grid; place-items: center; font-size: 1rem; font-weight: 800; color: white; margin-bottom: 18px; }
-.step-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--navy); margin-bottom: 10px; }
-.step-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.65; }
-
-/* ── FEATURES ── */
-.features-section { background: var(--bg); padding: 96px 60px; }
-.features-inner { max-width: 1100px; margin: 0 auto; }
-.features-header { text-align: center; margin-bottom: 56px; }
-.features-bento { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.feat-big { grid-row: span 2; background: var(--navy); border-radius: 20px; padding: 36px; color: white; display: flex; flex-direction: column; justify-content: space-between; min-height: 320px; }
-.feat-big .feat-icon-big { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 1.4rem; margin-bottom: 24px; }
-.feat-big h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; }
-.feat-big p { font-size: 0.875rem; color: rgba(255,255,255,0.65); line-height: 1.65; }
-.feat-big-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; margin-top: 20px; width: fit-content; }
-.feat-small { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; transition: all 0.2s; }
-.feat-small:hover { border-color: #bbf7d0; box-shadow: 0 4px 20px rgba(0,200,83,0.08); transform: translateY(-2px); }
-.feat-small .feat-icon-sm { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.1rem; margin-bottom: 14px; }
-.feat-small h3 { font-size: 0.95rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
-.feat-small p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
-
-/* ── ECOSYSTEM ── */
-.eco-section { max-width: 1100px; margin: 0 auto; padding: 96px 60px; text-align: center; }
-.eco-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 700px; margin: 48px auto 0; position: relative; }
-.eco-center-badge { background: var(--navy); color: white; border-radius: 16px; padding: 18px 24px; grid-column: 2; font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.eco-item { background: var(--bg); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 20px; font-size: 0.875rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; transition: all 0.2s; cursor: default; }
-.eco-item:hover { border-color: #bbf7d0; background: #f0fdf4; color: var(--primary-dark); transform: scale(1.02); }
-.eco-item i { font-size: 1rem; }
+.how-bg { background: var(--bg); }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 48px; }
+.step {
+  background: white; border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px 28px;
+  position: relative; transition: all 0.2s;
+}
+.step:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(99,102,241,0.08); }
+.step-num {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, var(--indigo), var(--purple));
+  border-radius: 12px; display: grid; place-items: center;
+  font-size: 1rem; font-weight: 800; color: white;
+  margin-bottom: 18px;
+}
+.step h3 { font-size: 1rem; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+.step .si-label { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 10px; }
+.step p { font-size: 0.875rem; color: var(--muted); line-height: 1.65; }
+.step-connector { position: absolute; top: 52px; right: -16px; color: #cbd5e1; font-size: 1.2rem; z-index: 1; }
 
 /* ── AI SECTION ── */
-.ai-section { background: var(--bg); padding: 96px 60px; }
-.ai-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
-.ai-chat-preview { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.06); }
-.ai-chat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-.ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-.ai-chat-name { font-size: 0.82rem; font-weight: 700; color: var(--navy); }
-.ai-chat-status { font-size: 0.68rem; color: var(--primary); font-weight: 600; }
-.chat-msg { padding: 10px 14px; border-radius: 10px; font-size: 0.82rem; line-height: 1.5; margin-bottom: 10px; max-width: 85%; }
-.chat-user { background: var(--bg); border: 1px solid var(--border); color: var(--text); margin-left: auto; border-radius: 10px 10px 2px 10px; }
-.chat-ai { background: var(--navy); color: rgba(255,255,255,0.9); border-radius: 10px 10px 10px 2px; }
-.chat-ai strong { color: var(--primary); }
-.coming-soon-badge { display: inline-flex; align-items: center; gap: 6px; background: #fef3c7; border: 1.5px solid #fbbf24; color: #92400e; padding: 5px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; margin-bottom: 16px; }
+.ai-section-wrap { background: linear-gradient(135deg, #0f172a, #1e1b4b); }
+.ai-inner { max-width: 1100px; margin: 0 auto; padding: 96px 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+.ai-chat-box { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.ai-chat-header { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; margin-bottom: 16px; }
+.ai-online-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+.ai-chat-name { font-size: 0.85rem; font-weight: 800; color: var(--navy); }
+.ai-chat-sub { font-size: 0.68rem; color: #10b981; font-weight: 600; }
+.ai-msg { padding: 10px 14px; border-radius: 10px; font-size: 0.82rem; line-height: 1.55; margin-bottom: 8px; max-width: 88%; }
+.ai-msg-user { background: #f1f5f9; color: var(--text); margin-left: auto; border-radius: 10px 2px 10px 10px; font-weight: 500; }
+.ai-msg-bot { background: linear-gradient(135deg, var(--navy), #1e293b); color: rgba(255,255,255,0.9); border-radius: 2px 10px 10px 10px; }
+.ai-msg-bot strong { color: #a5b4fc; }
+.ai-input-preview { display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; margin-top: 12px; }
+.ai-input-preview span { flex: 1; font-size: 0.78rem; color: #94a3b8; }
+.ai-send { width: 30px; height: 30px; background: linear-gradient(135deg, var(--indigo), var(--purple)); border-radius: 8px; display: grid; place-items: center; color: white; font-size: 0.75rem; }
+
+/* ── CC OFFERS SECTION ── */
+.offers-bg { background: var(--bg); }
+.offers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 40px; }
+.offer-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px; transition: all 0.2s;
+}
+.offer-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.offer-bank { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.offer-title { font-size: 0.92rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; line-height: 1.4; }
+.offer-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; }
+.offer-meta { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.offer-chip { padding: 4px 10px; border-radius: 8px; font-size: 0.68rem; font-weight: 700; }
 
 /* ── CTA ── */
-.cta-section { padding: 96px 60px; }
-.cta-inner { max-width: 860px; margin: 0 auto; background: linear-gradient(135deg, var(--navy) 0%, #1e3a5f 100%); border-radius: 24px; padding: 72px 60px; text-align: center; position: relative; overflow: hidden; }
-.cta-inner::before { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; background: rgba(0,200,83,0.07); top: -100px; right: -100px; }
-.cta-inner::after { content: ''; position: absolute; width: 250px; height: 250px; border-radius: 50%; background: rgba(0,200,83,0.05); bottom: -60px; left: -60px; }
-.cta-inner h2 { font-size: 2.4rem; font-weight: 800; color: white; letter-spacing: -0.03em; margin-bottom: 14px; position: relative; }
-.cta-inner p { font-size: 1rem; color: rgba(255,255,255,0.65); margin-bottom: 36px; position: relative; }
-.btn-cta-main { padding: 16px 40px; border-radius: 10px; font-size: 1rem; font-weight: 800; color: var(--navy); background: var(--primary); border: none; text-decoration: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; position: relative; box-shadow: 0 4px 20px rgba(0,200,83,0.4); }
-.btn-cta-main:hover { background: #00df5c; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,200,83,0.5); }
-.cta-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-top: 16px; position: relative; }
+.cta-wrap { padding: 96px 60px; }
+.cta-box {
+  max-width: 900px; margin: 0 auto;
+  background: linear-gradient(135deg, var(--navy), #1e1b4b);
+  border-radius: 28px; padding: 72px 60px; text-align: center;
+  position: relative; overflow: hidden;
+  box-shadow: 0 24px 80px rgba(15,23,42,0.2);
+}
+.cta-box::before { content: ''; position: absolute; width: 350px; height: 350px; border-radius: 50%; background: rgba(99,102,241,0.1); top: -120px; right: -80px; }
+.cta-box::after { content: ''; position: absolute; width: 200px; height: 200px; border-radius: 50%; background: rgba(139,92,246,0.08); bottom: -60px; left: -40px; }
+.cta-h { font-size: 2.4rem; font-weight: 800; color: white; letter-spacing: -0.04em; margin-bottom: 8px; position: relative; z-index: 1; }
+.cta-h-si { font-size: 1rem; color: rgba(255,255,255,0.4); margin-bottom: 16px; position: relative; z-index: 1; }
+.cta-sub { font-size: 1rem; color: rgba(255,255,255,0.6); margin-bottom: 36px; position: relative; z-index: 1; }
+.btn-cta {
+  padding: 16px 40px; border-radius: 12px;
+  font-size: 1rem; font-weight: 800; color: white;
+  background: linear-gradient(135deg, var(--indigo), var(--purple));
+  border: none; text-decoration: none; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 10px;
+  box-shadow: 0 4px 24px rgba(99,102,241,0.45);
+  position: relative; z-index: 1;
+}
+.btn-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 36px rgba(99,102,241,0.55); }
+.cta-note { font-size: 0.75rem; color: rgba(255,255,255,0.3); margin-top: 16px; position: relative; z-index: 1; }
 
 /* ── FOOTER ── */
 .lp-footer { background: var(--navy); padding: 64px 60px 32px; }
-.lp-footer-inner { max-width: 1100px; margin: 0 auto; }
-.footer-top { display: grid; grid-template-columns: 2.5fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
-.footer-brand-desc { font-size: 0.82rem; color: rgba(255,255,255,0.45); line-height: 1.7; margin-top: 12px; max-width: 280px; }
-.footer-col h4 { font-size: 0.72rem; font-weight: 800; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
-.footer-col a { display: block; font-size: 0.82rem; color: rgba(255,255,255,0.45); text-decoration: none; margin-bottom: 10px; transition: color 0.15s; }
-.footer-col a:hover { color: var(--primary); }
-.footer-bottom { border-top: 1px solid rgba(255,255,255,0.07); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-.footer-bottom p { font-size: 0.78rem; color: rgba(255,255,255,0.3); }
+.footer-inner { max-width: 1100px; margin: 0 auto; }
+.footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+.footer-logo-text { font-size: 1.1rem; font-weight: 800; color: white; letter-spacing: -0.02em; }
+.footer-logo-si { font-size: 0.68rem; color: rgba(255,255,255,0.3); margin-top: 2px; display: block; }
+.footer-desc { font-size: 0.82rem; color: rgba(255,255,255,0.4); line-height: 1.7; margin-top: 10px; max-width: 240px; }
+.footer-col h4 { font-size: 0.65rem; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+.footer-col a { display: block; font-size: 0.82rem; color: rgba(255,255,255,0.35); text-decoration: none; margin-bottom: 10px; transition: color 0.15s; }
+.footer-col a:hover { color: #a5b4fc; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.footer-bottom p { font-size: 0.75rem; color: rgba(255,255,255,0.25); }
+.footer-lang-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); padding: 4px 12px; border-radius: 999px; font-size: 0.7rem; }
 
-@media (max-width: 960px) {
-  /* Nav */
-  .lp-nav { padding: 0 16px; height: 56px; }
+/* ── MOBILE ── */
+@media (max-width: 900px) {
+  .lp-nav { padding: 0 20px; }
   .nav-links { display: none; }
-  .btn-signup, .btn-signin { padding: 7px 14px; font-size: 0.8rem; }
-
-  /* Hero */
-  [style*="grid-template-columns:1.1fr 0.9fr"] { grid-template-columns: 1fr !important; padding: 48px 20px 40px !important; }
-  .hero-dashboard { display: none !important; }
-  h1[style*="3.4rem"] { font-size: 2.2rem !important; }
-
-  /* Sections — full width, no overflow */
-  .stats-section { padding: 40px 20px !important; }
-  .stats-inner { grid-template-columns: 1fr 1fr !important; gap: 0 !important; }
-  .stat-item { padding: 16px 12px !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .stat-item h2 { font-size: 2rem !important; }
-
-  .how-section { padding: 56px 20px !important; }
-  .steps-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
-
-  .features-section { padding: 56px 20px !important; }
-  .features-bento { grid-template-columns: 1fr !important; }
-  [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: 1fr 1fr !important; }
-  .feat-big { grid-row: span 1 !important; min-height: auto !important; }
-
-  .eco-section { padding: 56px 20px !important; }
-  .eco-grid { grid-template-columns: 1fr 1fr !important; max-width: 100% !important; }
-  .eco-center-badge { grid-column: span 2 !important; }
-
-  [style*="grid-template-columns:1fr 1fr;gap:64px"] { grid-template-columns: 1fr !important; gap: 32px !important; padding: 56px 20px !important; }
-
-  .cta-section { padding: 40px 20px !important; }
-  .cta-inner { padding: 40px 24px !important; border-radius: 16px; }
-  .cta-inner h2 { font-size: 1.6rem !important; }
-
-  .footer-top { grid-template-columns: 1fr 1fr !important; gap: 24px !important; }
-  .lp-footer { padding: 40px 20px 24px !important; }
-
-  /* Prevent overflow */
+  .lp-hero { padding: 64px 20px 56px; }
+  .hero-h1 { font-size: 2.4rem; }
+  .hero-h1-si { font-size: 1rem; }
+  .hero-preview { display: none; }
+  .stats-bar { padding: 36px 20px; }
+  .stats-bar-inner { grid-template-columns: 1fr 1fr; }
+  .stats-bar-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .stats-bar-item:nth-child(even) { border-bottom: none; }
+  .section-wrap { padding: 56px 20px; }
+  .section-heading { font-size: 1.8rem; }
+  .bento { grid-template-columns: 1fr; }
+  .bento-big { grid-row: span 1; min-height: auto; }
+  .steps { grid-template-columns: 1fr; }
+  .step-connector { display: none; }
+  .ai-inner { grid-template-columns: 1fr; gap: 32px; padding: 56px 20px; }
+  .offers-grid { grid-template-columns: 1fr; }
+  .cta-wrap { padding: 56px 20px; }
+  .cta-box { padding: 48px 28px; border-radius: 20px; }
+  .cta-h { font-size: 1.7rem; }
+  .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .lp-footer { padding: 48px 20px 28px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
   body { overflow-x: hidden; }
-  * { max-width: 100%; box-sizing: border-box; }
 }
-
 @media (max-width: 480px) {
-  .stats-inner { grid-template-columns: 1fr 1fr !important; }
-  [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: 1fr !important; }
-  .eco-grid { grid-template-columns: 1fr !important; }
-  .eco-center-badge { grid-column: 1 !important; }
-  .footer-top { grid-template-columns: 1fr !important; }
-  h1[style*="3.4rem"], h1[style*="2.2rem"] { font-size: 1.9rem !important; }
+  .hero-h1 { font-size: 1.9rem; }
+  .hero-ctas { flex-direction: column; align-items: center; }
   .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
-  [style*="display:flex;gap:12px"] { flex-direction: column; }
+  .stats-bar-inner { grid-template-columns: 1fr 1fr; }
+  .footer-top { grid-template-columns: 1fr; }
 }
 {% endblock %}
 
 {% block content %}
+<!-- Load Sinhala font -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
+
 <!-- ── NAV ── -->
 <nav class="lp-nav">
   <a href="{{ url_for('landing') }}" class="nav-logo">
-    <div class="nav-logo-icon">💰</div>
-    <span class="nav-logo-text">FinanceOS</span>
+    <div class="nav-logo-icon">F</div>
+    <div>
+      <span class="nav-logo-text">FinanceOS</span>
+      <span class="nav-logo-sub si">ඔබේ මූල්‍ය පද්ධතිය</span>
+    </div>
   </a>
   <div class="nav-links">
-    <a href="#how-it-works">How it works</a>
-    <a href="#features">Features</a>
-    <a href="#ecosystem">Ecosystem</a>
+    <a href="{{ url_for('cse_stocks') }}">CSE Stocks</a>
+    <a href="{{ url_for('crypto_page') }}">Crypto</a>
+    <a href="{{ url_for('exchange_rates') }}">Exchange Rates</a>
+    <a href="{{ url_for('card_offers') }}">CC Offers</a>
+    <a href="{{ url_for('financial_tools') }}">Tools</a>
   </div>
-  <div class="nav-actions">
-    <a href="{{ url_for('auth_login') }}" class="btn-signin">Sign In</a>
-    <a href="{{ url_for('auth_signup') }}" class="btn-signup">Get Started Free</a>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="{{ url_for('auth_login') }}" class="btn-nav-login">Sign In</a>
+    <a href="{{ url_for('auth_signup') }}" class="btn-nav-signup">
+      Get Started Free →
+    </a>
   </div>
 </nav>
 
 <!-- ── HERO ── -->
-<section style="background:linear-gradient(135deg,#0a3d1f 0%,#0f5c2e 40%,#0d6e35 70%,#0f5c2e 100%);position:relative;overflow:hidden;min-height:580px;display:flex;align-items:center;">
-  <!-- Background decorative circles -->
-  <div style="position:absolute;top:-120px;right:-120px;width:500px;height:500px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
-  <div style="position:absolute;bottom:-80px;left:30%;width:300px;height:300px;border-radius:50%;background:rgba(0,200,83,0.08);pointer-events:none;"></div>
-  <div style="position:absolute;top:40px;left:10%;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.03);pointer-events:none;"></div>
+<section class="lp-hero">
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    Sri Lanka's First Personal Finance OS · ශ්‍රී ලංකාවේ පළමු
+  </div>
 
-  <div style="max-width:1200px;margin:0 auto;padding:80px 60px;width:100%;display:grid;grid-template-columns:1.1fr 0.9fr;gap:60px;align-items:center;position:relative;z-index:1;">
-    <!-- Left: Text -->
-    <div>
-      <span class="hero-badge" style="background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.2);color:white;">🚀 Trusted Personal Finance Platform</span>
-      <h1 style="font-size:3.4rem;font-weight:800;letter-spacing:-0.04em;line-height:1.08;color:white;margin-bottom:22px;">
-        Smart financial decisions<br>start with <span style="color:#00C853;">FinanceOS</span>
-      </h1>
-      <p style="font-size:1.05rem;color:rgba(255,255,255,0.75);line-height:1.75;margin-bottom:32px;max-width:480px;">
-        Track expenses, manage loans, monitor credit cards, plan savings goals and understand your financial health from one powerful dashboard.
-      </p>
+  <h1 class="hero-h1">
+    Smart Money.<br>
+    <span class="gradient-text">Smarter Life.</span>
+  </h1>
+  <div class="hero-h1-si si">
+    ස්මාර්ට් මුදල්. ස්මාර්ට් ජීවිතයක්.
+  </div>
 
-      <!-- AI Search bar (NerdWallet style) -->
-      <div style="background:white;border-radius:14px;padding:6px 6px 6px 20px;display:flex;align-items:center;gap:12px;margin-bottom:24px;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-        <input type="text" placeholder="Ask me about my finances..." id="hero-ai-input"
-          style="flex:1;border:none;outline:none;font-family:var(--font);font-size:0.95rem;color:#1e293b;background:transparent;padding:10px 0;"
-          onfocus="this.placeholder='e.g. Can I afford a new phone?'"
-          onblur="this.placeholder='Ask me about my finances...'">
-        <div style="padding:4px 6px;border-radius:6px;background:#e8f5e9;">
-          <span style="font-size:0.62rem;font-weight:800;color:#16a34a;letter-spacing:0.05em;">FINANCE<span style="background:#16a34a;color:white;padding:1px 4px;border-radius:3px;margin-left:3px;">AI</span></span>
-        </div>
-        <a href="{{ url_for('auth_signup') }}" style="background:var(--primary);color:white;border-radius:10px;padding:12px 22px;font-weight:800;font-size:0.875rem;text-decoration:none;white-space:nowrap;transition:all 0.15s;box-shadow:0 4px 12px rgba(0,200,83,0.3);">
-          Get Started
-        </a>
+  <p class="hero-sub">
+    Track expenses, manage credit cards, plan goals and get AI-powered financial advice — all in one powerful dashboard built for Sri Lanka.
+  </p>
+  <p class="hero-sub-si si">
+    වියදම් නිරීක්ෂණය කරන්න, ණය කාඩ් කළමනාකරනය කරන්න, ඉලක්ක සැලසුම් කරන්න
+  </p>
+
+  <div class="hero-ctas">
+    <a href="{{ url_for('auth_signup') }}" class="btn-hero-primary">
+      <i class="fas fa-rocket"></i> Start Free — නොමිලේ ආරම්භ කරන්න
+    </a>
+    <a href="{{ url_for('auth_login') }}" class="btn-hero-secondary">
+      <i class="fas fa-sign-in-alt"></i> Sign In · ඇතුල් වන්න
+    </a>
+  </div>
+
+  <div class="hero-trust">
+    <div class="hero-trust-item"><i class="fas fa-check"></i> Free to use · නොමිලේ</div>
+    <div class="hero-trust-item"><i class="fas fa-check"></i> Browse CSE, crypto & rates — no login needed</div>
+    <div class="hero-trust-item"><i class="fas fa-check"></i> Your data is private · ඔබේ දත්ත ආරක්ෂිතයි</div>
+    <div class="hero-trust-item"><i class="fas fa-check"></i> Built for Sri Lanka · ශ්‍රී ලංකාව සඳහා</div>
+  </div>
+
+  <!-- Public tools — no login needed, crawlable -->
+  <div class="hero-public-tools">
+    <a href="{{ url_for('cse_stocks') }}" class="public-tool-card">
+      <i class="fas fa-chart-candlestick"></i>
+      <span>CSE live prices</span>
+      <small>280+ listed stocks</small>
+    </a>
+    <a href="{{ url_for('crypto_page') }}" class="public-tool-card">
+      <i class="fab fa-bitcoin"></i>
+      <span>Crypto market</span>
+      <small>BTC, ETH & top coins</small>
+    </a>
+    <a href="{{ url_for('exchange_rates') }}" class="public-tool-card">
+      <i class="fas fa-money-bill-transfer"></i>
+      <span>Exchange rates</span>
+      <small>USD, GBP, AUD & more</small>
+    </a>
+    <a href="{{ url_for('card_offers') }}" class="public-tool-card">
+      <i class="fas fa-credit-card"></i>
+      <span>CC offers</span>
+      <small>Sri Lankan banks compared</small>
+    </a>
+  </div>
+
+  <!-- Dashboard preview mockup -->
+  <div class="hero-preview">
+    <div class="preview-topbar">
+      <div class="preview-dot" style="background:#ef4444;"></div>
+      <div class="preview-dot" style="background:#f59e0b;"></div>
+      <div class="preview-dot" style="background:#10b981;"></div>
+      <div class="preview-url"></div>
+      <div style="font-size:0.62rem;color:rgba(255,255,255,0.3);margin-left:8px;">financeos.app/dashboard</div>
+    </div>
+    <div class="preview-hero-card">
+      <div>
+        <div class="preview-greeting">Good Morning, Hiroshan 👋</div>
+        <div class="preview-greeting-si si">සුභ උදෑසනක් · FinanceOS</div>
       </div>
-
-      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:0.78rem;color:rgba(255,255,255,0.6);">
-        <span style="display:flex;align-items:center;gap:5px;"><i class="fas fa-check" style="color:#00C853;"></i> Free Forever Plan</span>
-        <span style="display:flex;align-items:center;gap:5px;"><i class="fas fa-check" style="color:#00C853;"></i> Secure Authentication</span>
-        <span style="display:flex;align-items:center;gap:5px;"><i class="fas fa-check" style="color:#00C853;"></i> No Credit Card Required</span>
+      <div class="preview-stats">
+        <div class="preview-stat">
+          <div class="preview-stat-label">Net Worth</div>
+          <div class="preview-stat-val">4.8M</div>
+        </div>
+        <div class="preview-stat">
+          <div class="preview-stat-label">Available</div>
+          <div class="preview-stat-val">47K</div>
+        </div>
+        <div class="preview-stat">
+          <div class="preview-stat-label">Score</div>
+          <div class="preview-stat-val">82</div>
+        </div>
       </div>
     </div>
-
-    <!-- Right: Dashboard mockup -->
-    <div style="background:#0F172A;border-radius:20px;padding:22px;box-shadow:0 32px 80px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06);">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div>
-        <div style="width:10px;height:10px;border-radius:50%;background:#febc2e;"></div>
-        <div style="width:10px;height:10px;border-radius:50%;background:#28c840;"></div>
-        <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;margin-left:8px;"></div>
+    <div class="preview-grid">
+      <div class="preview-kpi" style="background:#e0f2fe;">
+        <div class="preview-kpi-label" style="color:#0369a1;">Cash</div>
+        <div class="preview-kpi-val" style="color:#0c4a6e;">58,200</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
-        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <div style="font-size:0.52rem;color:rgba(255,255,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Net Worth</div>
-          <div style="font-size:1.05rem;font-weight:800;color:white;">Rs. 4.2M</div>
-          <div style="font-size:0.6rem;font-weight:700;color:#00C853;margin-top:3px;">↑ +12.5%</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <div style="font-size:0.52rem;color:rgba(255,255,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Monthly Savings</div>
-          <div style="font-size:1.05rem;font-weight:800;color:#00C853;">78,000</div>
-          <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);margin-top:3px;">this period</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <div style="font-size:0.52rem;color:rgba(255,255,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Financial Score</div>
-          <div style="font-size:1.05rem;font-weight:800;color:#fbbf24;">86/100</div>
-          <div style="font-size:0.6rem;font-weight:700;color:#fbbf24;margin-top:3px;">Good ↑</div>
-        </div>
+      <div class="preview-kpi" style="background:#ede9fe;">
+        <div class="preview-kpi-label" style="color:#7c3aed;">Net Worth</div>
+        <div class="preview-kpi-val" style="color:#4c1d95;">4.8M</div>
       </div>
-      <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;font-size:0.52rem;color:rgba(255,255,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px;">
-          <span>Salary Cycle</span><span style="color:rgba(255,255,255,0.5);">14 days left</span>
-        </div>
-        <div style="height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-bottom:10px;">
-          <div style="height:5px;width:55%;background:#00C853;border-radius:3px;"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
-          {% for label,val,color in [('Unpaid','48,500','#f87171'),('Available','58,100','#00C853'),('Daily','4,150','#60a5fa'),('Next Min.','72,000','#fbbf24')] %}
-          <div style="background:rgba(255,255,255,0.05);border-radius:7px;padding:7px;text-align:center;">
-            <div style="font-size:0.45rem;color:rgba(255,255,255,0.3);text-transform:uppercase;font-weight:600;margin-bottom:3px;">{{ label }}</div>
-            <div style="font-size:0.7rem;font-weight:700;color:{{ color }};">{{ val }}</div>
-          </div>
+      <div class="preview-kpi" style="background:#fce7f3;">
+        <div class="preview-kpi-label" style="color:#be185d;">Savings</div>
+        <div class="preview-kpi-val" style="color:#831843;">28%</div>
+      </div>
+      <div class="preview-kpi" style="background:#fef3c7;">
+        <div class="preview-kpi-label" style="color:#d97706;">Score</div>
+        <div class="preview-kpi-val" style="color:#92400e;">82/100</div>
+      </div>
+    </div>
+    <div class="preview-row2">
+      <div class="preview-card">
+        <div class="preview-card-title">6-Month Trend</div>
+        <div class="preview-bars">
+          {% for h in [30,45,35,60,50,70] %}
+          <div class="preview-bar" style="height:{{ h }}%;background:{% if loop.index == 6 %}#6366f1{% else %}rgba(99,102,241,0.3){% endif %};"></div>
+          <div class="preview-bar" style="height:{{ (h*0.6)|int }}%;background:{% if loop.index == 6 %}#ef4444{% else %}rgba(239,68,68,0.25){% endif %};"></div>
           {% endfor %}
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <div style="font-size:0.52rem;color:rgba(255,255,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">6-Month Trend</div>
-          <div style="display:flex;align-items:flex-end;gap:4px;height:44px;">
-            {% for h,e in [(45,30),(60,35),(52,38),(70,28),(58,40),(75,36)] %}
-            <div style="display:flex;gap:2px;align-items:flex-end;flex:1;">
-              <div style="border-radius:2px 2px 0 0;flex:1;height:{{ h }}%;background:rgba(0,200,83,0.45);"></div>
-              <div style="border-radius:2px 2px 0 0;flex:1;height:{{ e }}%;background:rgba(248,113,113,0.35);"></div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <div style="font-size:0.52rem;color:rgba(255,255,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Goals</div>
-          {% for name,pct,color in [('Emergency Fund',62,'#00C853'),('Vacation',28,'#60a5fa'),('New Laptop',45,'#fbbf24')] %}
-          <div style="margin-bottom:6px;">
-            <div style="display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.5);margin-bottom:3px;"><span>{{ name }}</span><span>{{ pct }}%</span></div>
-            <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;"><div style="height:4px;width:{{ pct }}%;background:{{ color }};border-radius:2px;"></div></div>
-          </div>
+      <div class="preview-card">
+        <div class="preview-card-title">Goals · ඉලක්ක</div>
+        <div class="preview-chart-lines">
+          {% for w,c in [(75,'#6366f1'),(45,'#10b981'),(90,'#f59e0b')] %}
+          <div class="preview-chart-line"><div class="preview-chart-line-fill" style="width:{{ w }}%;background:{{ c }};"></div></div>
           {% endfor %}
         </div>
       </div>
@@ -374,96 +530,45 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
   </div>
 </section>
 
-<!-- ── STATS ── -->
-<section class="stats-section">
-  <div class="stats-inner">
-    {% for val, label in [('15+','Financial Tools'),('100%','Private & Secure'),('24/7','Access Anywhere'),('6+','Finance Modules')] %}
-    <div class="stat-item">
-      <h2>{{ val }}</h2>
-      <p>{{ label }}</p>
+<!-- ── STATS BAR ── -->
+<div class="stats-bar">
+  <div class="stats-bar-inner">
+    {% for num, en, si_text in [
+      ('14+', 'CC Offers', 'ණය කාඩ් දීමනා'),
+      ('6', 'Financial Tools', 'මූල්‍ය මෙවලම්'),
+      ('100%', 'Free to Use', 'නොමිලේ'),
+      ('AI', 'Powered Advisor', 'AI උපදේශක'),
+    ] %}
+    <div class="stats-bar-item">
+      <div class="stats-bar-num">{{ num }}</div>
+      <div class="stats-bar-en">{{ en }}</div>
+      <div class="stats-bar-si si">{{ si_text }}</div>
     </div>
     {% endfor %}
   </div>
-</section>
+</div>
 
 <!-- ── HOW IT WORKS ── -->
-<section id="how-it-works" class="how-section">
-  <div class="section-eyebrow">How it works</div>
-  <h2 class="section-heading">Up and running in 3 steps</h2>
-  <p class="section-sub">No complicated setup. No spreadsheets. Just a clean, smart dashboard that shows you where your money is going.</p>
-  <div class="steps-grid">
-    {% for num,icon,title,desc in [
-      ('1','fas fa-user-plus','Create your account','Sign up with Google or email in under 60 seconds. No credit card, no setup fees, no catch.'),
-      ('2','fas fa-wallet','Add your accounts','Add wallets, credit cards and loans with current balances. No bank linking required — full privacy.'),
-      ('3','fas fa-chart-line','See your full picture','Your dashboard instantly shows income vs expenses, upcoming payments, health score and goals.')
-    ] %}
-    <div class="step-card">
-      <div class="step-number">{{ num }}</div>
-      <h3>{{ title }}</h3>
-      <p>{{ desc }}</p>
-    </div>
-    {% endfor %}
-  </div>
-</section>
+<section class="how-bg" id="how">
+  <div class="section-wrap">
+    <div class="section-eyebrow">How It Works · ක්‍රියා කරන ආකාරය</div>
+    <h2 class="section-heading bilingual-head">
+      <span class="en">Up and running in minutes</span>
+      <span class="si">මිනිත්තු කිහිපයකින් ආරම්භ කරන්න</span>
+    </h2>
+    <p class="section-sub">No complicated setup. Sign in with Google, add your wallets and start tracking — it's that simple.</p>
 
-<!-- ── FEATURES BENTO ── -->
-<section id="features" class="features-section">
-  <div class="features-inner">
-    <div class="features-header">
-      <div class="section-eyebrow">Features</div>
-      <h2 class="section-heading">Built for serious money management</h2>
-      <p style="color:var(--muted);max-width:520px;margin:0 auto;line-height:1.7;">One platform that replaces five spreadsheets and three apps.</p>
-    </div>
-    <div class="features-bento">
-      <!-- Big card left -->
-      <div class="feat-big" style="background:linear-gradient(145deg,#0f172a,#1e3a5f);">
-        <div>
-          <div class="feat-icon-big" style="background:rgba(0,200,83,0.15);color:#00C853;"><i class="fas fa-gauge-high"></i></div>
-          <h3>Smart Dashboard</h3>
-          <p>Salary-cycle-aware balance, income vs expenses, upcoming payments and a financial health score — all on one screen. Updated in real time.</p>
-          <div class="feat-big-badge" style="color:#00C853;"><i class="fas fa-circle" style="font-size:0.4rem;"></i> Live updates</div>
-        </div>
-        <!-- Mini preview inside card -->
-        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;margin-top:16px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-            {% for label,val,color in [('Income','245k','#00C853'),('Spent','138k','#f87171'),('Balance','107k','#60a5fa')] %}
-            <div style="text-align:center;">
-              <div style="font-size:0.5rem;color:rgba(255,255,255,0.3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">{{ label }}</div>
-              <div style="font-size:0.85rem;font-weight:800;color:{{ color }};">{{ val }}</div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Right side 4 small cards -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        {% for bg,color,icon,title,desc in [
-          ('#f0fdf4','#16a34a','fas fa-bullseye','Financial Goals','Set savings targets and track progress with visual bars.'),
-          ('#fef2f2','#dc2626','fas fa-building-columns','Loan Tracker','Interest-accurate months remaining for all your loans.'),
-          ('#eff6ff','#2563eb','fas fa-credit-card','Credit Cards','Monitor utilization, due dates and pay directly from dashboard.'),
-          ('#f5f3ff','#7c3aed','fas fa-chart-bar','Analytics','Weekday vs weekend spending, trends and health score 0–100.'),
-        ] %}
-        <div class="feat-small">
-          <div class="feat-icon-sm" style="background:{{ bg }};color:{{ color }};"><i class="{{ icon }}"></i></div>
-          <h3>{{ title }}</h3>
-          <p>{{ desc }}</p>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Second row of features -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
-      {% for bg,color,icon,title,desc in [
-        ('#fff7ed','#ea580c','fas fa-rotate','Recurring Payments','Auto-track subscriptions and bills.'),
-        ('#ecfeff','#0891b2','fas fa-bell','Smart Alerts','7-day advance notifications before payments.'),
-        ('#fdf2f8','#db2777','fas fa-calculator','6 Calculators','Loan EMI, FD, retirement planner and more.'),
-        ('#f0fdf4','#16a34a','fas fa-file-pdf','PDF Reports','Download monthly financial summaries.'),
+    <div class="steps">
+      {% for num, icon, en, si_text, desc in [
+        (1,'fas fa-user-plus','Create Account','ගිණුමක් සාදන්න','Sign in with your Google account in one click. No passwords, no forms.'),
+        (2,'fas fa-wallet','Add Your Wallets','ඔබේ පසුම්බි එකතු කරන්න','Add your bank accounts, cash wallets and credit cards to get started.'),
+        (3,'fas fa-chart-line','Track & Grow','නිරීක්ෂණය කරන්න','Log expenses, set goals, and let AI guide you toward financial freedom.'),
       ] %}
-      <div class="feat-small">
-        <div class="feat-icon-sm" style="background:{{ bg }};color:{{ color }};"><i class="{{ icon }}"></i></div>
-        <h3>{{ title }}</h3>
+      <div class="step">
+        {% if not loop.last %}<div class="step-connector"><i class="fas fa-arrow-right"></i></div>{% endif %}
+        <div class="step-num">{{ num }}</div>
+        <h3>{{ en }}</h3>
+        <span class="si-label si">{{ si_text }}</span>
         <p>{{ desc }}</p>
       </div>
       {% endfor %}
@@ -471,109 +576,209 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
   </div>
 </section>
 
-<!-- ── ECOSYSTEM ── -->
-<section id="ecosystem" class="eco-section">
-  <div class="section-eyebrow">The Ecosystem</div>
-  <h2 class="section-heading">Everything connected</h2>
-  <p style="color:var(--muted);max-width:480px;margin:0 auto;line-height:1.7;">Every module in FinanceOS talks to each other. Add a loan payment — your wallet updates, net worth recalculates, dashboard refreshes.</p>
-  <div class="eco-grid">
-    {% for icon,label in [
-      ('fas fa-wallet','Wallets'),
-      ('fas fa-chart-pie','Dashboard'),
-      ('fas fa-credit-card','Credit Cards'),
-    ] %}
-    <div class="eco-item"><i class="{{ icon }}" style="color:var(--primary);"></i>{{ label }}</div>
-    {% endfor %}
-    <div class="eco-center-badge">💰 FinanceOS</div>
-    {% for icon,label in [
-      ('fas fa-building-columns','Loans'),
-      ('fas fa-bullseye','Goals'),
-      ('fas fa-rotate','Recurring'),
-    ] %}
-    <div class="eco-item" style="grid-column:{% if loop.index == 2 %}2{% endif %}"><i class="{{ icon }}" style="color:var(--primary);"></i>{{ label }}</div>
-    {% endfor %}
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="section-wrap">
+    <div style="text-align:center;margin-bottom:48px;">
+      <div class="section-eyebrow">Everything You Need · ඔබට අවශ්‍ය සියල්ල</div>
+      <h2 class="section-heading bilingual-head" style="text-align:center;">
+        <span class="en">One platform. Every financial tool.</span>
+        <span class="si">එක් වේදිකාවක්. සෑම මූල්‍ය මෙවලමක්ම.</span>
+      </h2>
+    </div>
+
+    <div class="bento">
+      <!-- Big feature: AI Advisor -->
+      <div class="bento-big">
+        <div>
+          <div class="bento-big-icon" style="background:rgba(99,102,241,0.2);">🧠</div>
+          <h3>AI Financial Advisor</h3>
+          <span style="display:block;font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:12px;" class="si">AI මූල්‍ය උපදේශක</span>
+          <p>Ask anything about your finances. "Can I afford a new phone?", "How long to reach my goal?", "Where am I overspending?" — Claude knows your real numbers.</p>
+          <div class="bento-badge"><i class="fas fa-robot"></i> Powered by Claude AI</div>
+        </div>
+      </div>
+
+      <!-- Small features -->
+      {% for icon, bg, color, en, si_text, desc in [
+        ('fas fa-chart-line','#eff6ff','#3b82f6','Smart Dashboard','ස්මාර්ට් උපකරණ පුවරුව','Net worth, savings rate, salary cycle, freedom score — all at a glance.'),
+        ('fas fa-gift','#fce7f3','#be185d','CC Offers Board','ණය කාඩ් දීමනා','Live Sri Lanka credit card deals — installment plans, cashback, discounts.'),
+        ('fas fa-chart-column','#f0fdf4','#16a34a','CSE Stocks Live','CSE කොටස් සජීවීව','Real-time Colombo Stock Exchange prices, top gainers and favourites.'),
+        ('fas fa-piggy-bank','#f5f3ff','#7c3aed','Savings Goals','ඉතිරි කිරීමේ ඉලක්ක','Set and track goals for emergency fund, house, car, education and more.'),
+      ] %}
+      <div class="bento-small">
+        <div class="bento-small-icon" style="background:{{ bg }};color:{{ color }};"><i class="{{ icon }}"></i></div>
+        <h3>{{ en }}</h3>
+        <span class="si-label si">{{ si_text }}</span>
+        <p>{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- More features grid -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px;">
+      {% for icon, bg, color, en, si_text in [
+        ('fas fa-money-bill-transfer','#ecfdf5','#10b981','Exchange Rates','විනිමය අනුපාත'),
+        ('fas fa-calculator','#fffbeb','#d97706','Financial Tools','මූල්‍ය මෙවලම්'),
+        ('fas fa-handshake','#fef2f2','#ef4444','Friend Debts','මිත්‍ර ණය'),
+        ('fas fa-file-pdf','#f5f3ff','#7c3aed','PDF Reports','PDF වාර්තා'),
+      ] %}
+      <div class="bento-small" style="padding:20px;">
+        <div class="bento-small-icon" style="background:{{ bg }};color:{{ color }};width:38px;height:38px;border-radius:10px;font-size:0.95rem;"><i class="{{ icon }}"></i></div>
+        <h3 style="font-size:0.85rem;margin-bottom:1px;">{{ en }}</h3>
+        <span class="si-label si" style="font-size:0.62rem;">{{ si_text }}</span>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
 <!-- ── AI SECTION ── -->
-<section class="ai-section">
-  <div class="ai-inner" style="max-width:980px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
+<section class="ai-section-wrap" id="ai">
+  <div class="ai-inner">
     <div>
-      <div class="coming-soon-badge">⚡ Coming Soon</div>
-      <div class="section-eyebrow">AI Features</div>
-      <h2 class="section-heading" style="font-size:2rem;">Your AI Financial Coach</h2>
-      <p style="color:var(--muted);line-height:1.75;margin-bottom:24px;">Get personalized financial guidance, spending insights and savings recommendations — powered by AI that knows your exact financial situation.</p>
-      <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;">
-        {% for item in ['Personalized spending insights','Smart savings recommendations','Affordability analysis for purchases','Loan payoff optimization'] %}
-        <li style="display:flex;align-items:center;gap:10px;font-size:0.875rem;color:var(--text);font-weight:600;">
-          <span style="width:22px;height:22px;background:#f0fdf4;border-radius:6px;display:grid;place-items:center;flex-shrink:0;"><i class="fas fa-check" style="font-size:0.65rem;color:var(--primary);"></i></span>
-          {{ item }}
-        </li>
+      <div class="section-eyebrow" style="color:#a5b4fc;">AI Financial Advisor · AI මූල්‍ය උපදේශක</div>
+      <h2 class="section-heading bilingual-head" style="color:white;">
+        <span class="en">Your personal finance coach, available 24/7</span>
+        <span class="si" style="color:rgba(255,255,255,0.35);">ඔබේ පෞද්ගලික මූල්‍ය පුහුණුකරු</span>
+      </h2>
+      <p style="color:rgba(255,255,255,0.55);line-height:1.75;margin:16px 0 24px;font-size:0.95rem;">
+        FinanceOS AI knows your actual wallet balances, spending patterns, loans and goals — giving you real, personalised advice in seconds.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        {% for en, si_text in [
+          ('Knows your real financial data','ඔබේ සැබෑ මූල්‍ය දත්ත දනී'),
+          ('Answers in English and Sinhala','සිංහල හා ඉංග්‍රීසි දෙකෙන්ම පිළිතුරු'),
+          ('Available any time, any day','ඕනෑම වේලාවක'),
+        ] %}
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:24px;height:24px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:50%;display:grid;place-items:center;flex-shrink:0;">
+            <i class="fas fa-check" style="font-size:0.6rem;color:#a5b4fc;"></i>
+          </div>
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.8);">{{ en }}</div>
+            <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);" class="si">{{ si_text }}</div>
+          </div>
+        </div>
         {% endfor %}
-      </ul>
+      </div>
     </div>
-    <div class="ai-chat-preview">
+
+    <!-- Chat preview -->
+    <div class="ai-chat-box">
       <div class="ai-chat-header">
-        <div class="ai-dot"></div>
+        <div style="width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:grid;place-items:center;font-size:1rem;">🧠</div>
         <div>
-          <div class="ai-chat-name">FinanceOS AI</div>
-          <div class="ai-chat-status">● Online</div>
+          <div class="ai-chat-name">FinanceOS Advisor</div>
+          <div style="display:flex;align-items:center;gap:4px;"><div class="ai-online-dot"></div><span class="ai-chat-sub">Online · සජීවී</span></div>
         </div>
       </div>
-      <div class="chat-msg chat-user">Can I afford a new car worth Rs. 4.5M?</div>
-      <div class="chat-msg chat-ai">Based on your current finances, you can comfortably afford a vehicle up to <strong>Rs. 4.5M</strong> on a 48-month plan at <strong>Rs. 93,750/mo</strong> — keeping your debt-to-income ratio at a healthy 34%.</div>
-      <div class="chat-msg chat-user">What about my emergency fund?</div>
-      <div class="chat-msg chat-ai">Your emergency fund will remain intact at <strong>Rs. 580,000</strong> (6.2 months coverage). You're in a strong position. 🎉</div>
+      <div class="ai-msg ai-msg-user">Can I afford a holiday to Maldives next month? 🌊</div>
+      <div class="ai-msg ai-msg-bot">Based on your finances:<br>• <strong>Available cash:</strong> LKR 47,054<br>• <strong>Upcoming payments:</strong> LKR 19,500<br>• After commitments: <strong>LKR 27,554</strong><br><br>A budget Maldives trip costs ~LKR 80-120K. I'd suggest saving for 2 more months first — your <strong>28% savings rate</strong> means you can get there by August! 🎯</div>
+      <div class="ai-msg ai-msg-user" style="font-size:0.75rem;color:#94a3b8;">මාලදිවයිනට යන්න හැකිද? 🏝️</div>
+      <div class="ai-input-preview">
+        <span>Ask about your finances... · ඔබේ මූල්‍ය ගැන අසන්න...</span>
+        <div class="ai-send"><i class="fas fa-paper-plane"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CC OFFERS ── -->
+<section class="offers-bg" id="offers">
+  <div class="section-wrap">
+    <div class="section-eyebrow">Sri Lanka Exclusive · ශ්‍රී ලංකා සඳහා</div>
+    <h2 class="section-heading bilingual-head">
+      <span class="en">Best credit card deals, right here</span>
+      <span class="si">හොඳම ණය කාඩ් දීමනා, මෙතනම</span>
+    </h2>
+    <p class="section-sub">Verified installment plans, cashback offers and discounts from Sri Lanka's top banks — updated regularly.</p>
+
+    <div class="offers-grid">
+      {% for bank, color, bg, type, type_bg, title, detail in [
+        ('Commercial Bank','#6366f1','#eff6ff','Installment','#ede9fe','0% Installment at Keells — 24 months','Min spend LKR 10,000 · Verified ✓'),
+        ('Sampath Bank','#10b981','#ecfdf5','Cashback','#dcfce7','5% Cashback on online purchases','Max LKR 2,500/month · Verified ✓'),
+        ('HNB','#f59e0b','#fffbeb','Special Rate','#fef3c7','0% Medical installment — Apollo Hospital','Up to 24 months · Verified ✓'),
+      ] %}
+      <div class="offer-card">
+        <div class="offer-bank" style="color:{{ color }};">{{ bank }}</div>
+        <div class="offer-title">{{ title }}</div>
+        <div style="font-size:0.72rem;color:var(--muted);">{{ detail }}</div>
+        <div class="offer-meta">
+          <span class="offer-chip" style="background:{{ bg }};color:{{ color }};">{{ type }}</span>
+          <span class="offer-chip" style="background:#f1f5f9;color:#64748b;"><i class="fas fa-thumbs-up" style="font-size:0.6rem;"></i> Verified</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="text-align:center;margin-top:28px;">
+      <a href="{{ url_for('auth_signup') }}" style="color:var(--indigo);font-size:0.875rem;font-weight:700;text-decoration:none;">
+        View all {{ '14+' }} offers after signing in → <span class="si" style="font-weight:400;color:var(--muted);">සියලු දීමනා බලන්න</span>
+      </a>
     </div>
   </div>
 </section>
 
 <!-- ── CTA ── -->
-<section class="cta-section">
-  <div class="cta-inner">
-    <h2>Ready to build a healthier<br>financial future?</h2>
-    <p>Join FinanceOS and start tracking your money smarter today.</p>
-    <a href="{{ url_for('auth_signup') }}" class="btn-cta-main"><i class="fas fa-rocket"></i> Create Free Account</a>
-    <div class="cta-note">No credit card · Free to start · Up in 60 seconds</div>
+<div class="cta-wrap">
+  <div class="cta-box">
+    <h2 class="cta-h">
+      Start managing your money<br>the smart way
+    </h2>
+    <div class="cta-h-si si">ස්මාර්ට් ක්‍රමයෙන් ඔබේ මුදල් කළමනාකරනය කරන්න</div>
+    <p class="cta-sub">Join hundreds of Sri Lankans taking control of their financial future with FinanceOS.</p>
+    <a href="{{ url_for('auth_signup') }}" class="btn-cta">
+      <i class="fas fa-rocket"></i> Get Started Free · නොමිලේ ආරම්භ කරන්න
+    </a>
+    <div class="cta-note">Free forever · ✓ No credit card · ✓ Google Sign-in · ✓ Your data is private</div>
+    <div class="cta-note si" style="margin-top:4px;">නොමිලේ · ණය කාඩ් අවශ්‍ය නැත · ගූගල් ලොගින් · ඔබේ දත්ත ආරක්ෂිතයි</div>
   </div>
-</section>
+</div>
 
 <!-- ── FOOTER ── -->
 <footer class="lp-footer">
-  <div class="lp-footer-inner">
+  <div class="footer-inner">
     <div class="footer-top">
       <div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <div style="width:34px;height:34px;background:var(--primary);border-radius:9px;display:grid;place-items:center;font-size:1rem;">💰</div>
-          <span style="font-size:1.05rem;font-weight:800;color:white;">FinanceOS</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:grid;place-items:center;color:white;font-size:0.85rem;font-weight:800;">F</div>
+          <div>
+            <div class="footer-logo-text">FinanceOS</div>
+            <span class="footer-logo-si si">ඔබේ පුද්ගලික මූල්‍ය පද්ධතිය</span>
+          </div>
         </div>
-        <p class="footer-brand-desc">Your complete personal finance command center. Track, plan and grow — all in one place.</p>
+        <p class="footer-desc">Sri Lanka's personal finance platform. Track, plan, and grow your wealth with AI-powered insights.</p>
+        <p class="footer-desc si" style="font-size:0.72rem;color:rgba(255,255,255,0.2);margin-top:4px;">ශ්‍රී ලංකාවේ පෞද්ගලික මූල්‍ය වේදිකාව</p>
       </div>
       <div class="footer-col">
-        <h4>Product</h4>
-        <a href="#features">Features</a>
-        <a href="#how-it-works">How it works</a>
-        <a href="{{ url_for('financial_tools') }}">Financial Tools</a>
-        <a href="{{ url_for('reports') }}">Reports</a>
+        <h4>Product · නිෂ්පාදන</h4>
+        <a href="#features">Features · විශේෂාංග</a>
+        <a href="#ai">AI Advisor · AI උපදේශක</a>
+        <a href="#offers">CC Offers · ණය දීමනා</a>
+        <a href="#how">How it Works</a>
       </div>
       <div class="footer-col">
-        <h4>Account</h4>
-        <a href="{{ url_for('auth_signup') }}">Sign Up Free</a>
-        <a href="{{ url_for('auth_login') }}">Sign In</a>
-        <a href="{{ url_for('settings') }}">Settings</a>
+        <h4>Finance · මූල්‍ය</h4>
+        <a href="{{ url_for('auth_signup') }}">Dashboard</a>
+        <a href="{{ url_for('auth_signup') }}">CSE Stocks · CSE කොටස්</a>
+        <a href="{{ url_for('auth_signup') }}">Exchange Rates · විනිමය</a>
+        <a href="{{ url_for('auth_signup') }}">Financial Tools</a>
       </div>
       <div class="footer-col">
-        <h4>Legal</h4>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
-        <a href="#">Security</a>
+        <h4>Account · ගිණුම</h4>
+        <a href="{{ url_for('auth_signup') }}">Sign Up Free · නොමිලේ</a>
+        <a href="{{ url_for('auth_login') }}">Sign In · ඇතුල් වන්න</a>
+        <a href="{{ url_for('privacy') }}">Privacy Policy · පෞද්ගලිකත්වය</a>
+        <a href="{{ url_for('terms') }}">Terms of Use · කොන්දේසි</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2026 FinanceOS. All rights reserved.</p>
-      <p style="display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.3);font-size:0.78rem;">
-        <i class="fas fa-shield-halved" style="color:var(--primary);"></i> Secured by Auth0 · Railway · Supabase PostgreSQL
-      </p>
+      <p>© 2026 FinanceOS. Buil in Sri Lanka 🇱🇰 ·</p>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="footer-lang-badge"><i class="fas fa-language"></i> English · සිංහල</div>
+        <div style="font-size:0.72rem;color:rgba(255,255,255,0.2);">v2.0</div>
+      </div>
     </div>
   </div>
 </footer>

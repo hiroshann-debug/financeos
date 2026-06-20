@@ -219,18 +219,18 @@
       <input type="month" value="{{ selected_month }}" style="background:rgba(26,31,55,0.08);border:none;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#1a1f37;font-family:var(--font);cursor:pointer;outline:none;" onchange="location='?month='+this.value">
     </div>
   </div>
-  <!-- Hero stats -->
+  <!-- Hero stats — quick summary -->
   <div style="display:flex;gap:12px;flex-wrap:wrap;position:relative;z-index:1;">
     <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:130px;">
       <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Net Worth</div>
       <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:{% if net_worth >= 0 %}#065f46{% else %}#991b1b{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(net_worth) }}</div>
     </div>
     <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:130px;">
-      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Available Cash</div>
-      <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:#1e3a8a;">{{ currency_symbol }} {{ "{:,.0f}".format(available_after_fixed) }}</div>
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Today Can Spend</div>
+      <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:{% if smart_today_remaining > 0 %}#065f46{% else %}#991b1b{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
     </div>
-    <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:110px;">
-      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Freedom Score</div>
+    <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:130px;">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Health Score</div>
       <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:{{ health.color }};">{{ health.score }}/100</div>
     </div>
   </div>
@@ -243,8 +243,8 @@
     <div class="ai-chip {% if savings_rate >= 20 %}good{% elif savings_rate >= 10 %}warn{% else %}bad{% endif %}">
       {% if savings_rate >= 20 %}✓ Savings {{ savings_rate }}% — excellent{% elif savings_rate >= 10 %}⚡ Savings {{ savings_rate }}% — on track{% else %}⚠ Savings rate low — {{ savings_rate }}%{% endif %}
     </div>
-    <div class="ai-chip {% if daily_budget_remaining > 0 %}good{% else %}bad{% endif %}">
-      {% if daily_budget_remaining > 0 %}💰 {{ currency_symbol }} {{ "{:,.0f}".format(daily_budget_remaining) }} daily budget{% else %}⚠ Daily budget exhausted{% endif %}
+    <div class="ai-chip {% if smart_today_remaining > 0 %}good{% else %}bad{% endif %}">
+      {% if smart_today_remaining > 0 %}💰 {{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }} to spend today{% else %}⚠ Today's budget exhausted{% endif %}
     </div>
     <div class="ai-chip {% if upcoming_payments|length > 3 %}warn{% else %}info{% endif %}">
       📅 {{ upcoming_payments|length }} payment{{ 's' if upcoming_payments|length != 1 }} pending
@@ -272,81 +272,81 @@
   </div>
   <div class="zp-g4">
     <div class="zp-tile" style="background:#fff1f2;">
-      <div class="zp-tile-label" style="color:#ef4444;">Fixed Committed</div>
+      <div class="zp-tile-label" style="color:#ef4444;">Bills & Loans</div>
       <div class="zp-tile-val" style="color:#dc2626;">{{ currency_symbol }} {{ "{:,.0f}".format(total_committed) }}</div>
-      <div style="font-size:0.65rem;color:#f87171;margin-top:3px;">loans + cards + fixed</div>
+      <div style="font-size:0.65rem;color:#f87171;margin-top:3px;">loans + cards + fixed monthly</div>
     </div>
     <div class="zp-tile" style="background:#f5f3ff;">
-      <div class="zp-tile-label" style="color:#7c3aed;">Truly Available</div>
+      <div class="zp-tile-label" style="color:#7c3aed;">Period Cash Left After Fixed</div>
       <div class="zp-tile-val" style="color:{% if truly_available > 0 %}#4c1d95{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(truly_available) }}</div>
-      <div style="font-size:0.65rem;color:#a78bfa;margin-top:3px;">income minus commitments</div>
+      <div style="font-size:0.65rem;color:#a78bfa;margin-top:3px;">income − bills, for this period</div>
     </div>
     <div class="zp-tile" style="background:#eff6ff;">
-      <div class="zp-tile-label" style="color:#3b82f6;">Today's Budget</div>
+      <div class="zp-tile-label" style="color:#3b82f6;">Spend Today</div>
       <div class="zp-tile-val" style="color:{% if smart_today_remaining > 0 %}#2563eb{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
       <div style="font-size:0.65rem;color:#93c5fd;margin-top:3px;">spent {{ currency_symbol }} {{ "{:,.0f}".format(today_variable_spent) }} today</div>
     </div>
     <div class="zp-tile" style="background:#f0fdf4;">
-      <div class="zp-tile-label" style="color:#10b981;">Days Remaining</div>
+      <div class="zp-tile-label" style="color:#10b981;">Days Left</div>
       <div class="zp-tile-val" style="color:{% if days_left_in_period <= 5 %}#dc2626{% elif days_left_in_period <= 10 %}#d97706{% else %}#059669{% endif %};">{{ days_left_in_period }}</div>
       <div style="font-size:0.65rem;color:#6ee7b7;margin-top:3px;">of {{ days_total_period }} day period</div>
     </div>
   </div>
 </div>
 
-<!-- ── PRIMARY KPIs — unique metrics not in hero ── -->
+<!-- ── KPIs ROW 1: The basics ── -->
 <div class="zp-g4" style="margin-bottom:14px;">
+  <a href="{{ url_for('income') }}" class="zp-stat" style="background:#f0fdf4;">
+    <div class="zp-stat-icon" style="background:#bbf7d0;color:#15803d;"><i class="fas fa-circle-down"></i></div>
+    <div class="zp-stat-val" style="color:#14532d;">{{ "{:,.0f}".format(total_income) }}</div>
+    <div class="zp-stat-label">Period Income</div>
+    <div class="zp-stat-change" style="color:#16a34a;">{{ currency_symbol }} · {{ period_start.strftime('%d %b') }} – {{ period_end.strftime('%d %b') }} →</div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:#fff1f2;">
+    <div class="zp-stat-icon" style="background:#fecdd3;color:#be123c;"><i class="fas fa-circle-up"></i></div>
+    <div class="zp-stat-val" style="color:#881337;">{{ "{:,.0f}".format(total_expense) }}</div>
+    <div class="zp-stat-label">Period Expenses</div>
+    <div class="zp-stat-change" style="color:#ef4444;">{{ currency_symbol }} this period →</div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:{% if balance >= 0 %}#f0fdf4{% else %}#fff1f2{% endif %};">
+    <div class="zp-stat-icon" style="background:{% if balance >= 0 %}#bbf7d0;color:#15803d{% else %}#fecdd3;color:#be123c{% endif %};"><i class="fas fa-scale-balanced"></i></div>
+    <div class="zp-stat-val" style="color:{% if balance >= 0 %}#14532d{% else %}#881337{% endif %};">{{ "{:,.0f}".format(balance) }}</div>
+    <div class="zp-stat-label">Net Balance</div>
+    <div class="zp-stat-change" style="color:{% if balance >= 0 %}#16a34a{% else %}#ef4444{% endif %};">Income − Expenses →</div>
+  </a>
+  <a href="{{ url_for('credit_cards') }}" class="zp-stat" style="background:#fffbeb;">
+    <div class="zp-stat-icon" style="background:#fde68a;color:#b45309;"><i class="fas fa-credit-card"></i></div>
+    <div class="zp-stat-val" style="color:#78350f;">{{ "{:,.0f}".format(total_used_credit) }}</div>
+    <div class="zp-stat-label">Credit Used</div>
+    <div class="zp-stat-change" style="color:#d97706;">of {{ "{:,.0f}".format(total_credit_limit) }} limit →</div>
+  </a>
+</div>
+
+<!-- ── KPIs ROW 2: Deeper metrics ── -->
+<div class="zp-g4" style="margin-bottom:20px;">
+  <a href="{{ url_for('wallets') }}" class="zp-stat" style="background:#f5f3ff;">
+    <div class="zp-stat-icon" style="background:#ddd6fe;color:#7c3aed;"><i class="fas fa-wallet"></i></div>
+    <div class="zp-stat-val" style="color:#4c1d95;">{{ "{:,.0f}".format(total_wallet_balance) }}</div>
+    <div class="zp-stat-label">Wallet Balance</div>
+    <div class="zp-stat-change" style="color:#7c3aed;">{{ wallets|length }} wallet{{ 's' if wallets|length != 1 }} →</div>
+  </a>
   <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fce7f3;">
     <div class="zp-stat-icon" style="background:#fbcfe8;color:#be185d;"><i class="fas fa-piggy-bank"></i></div>
     <div class="zp-stat-val" style="color:{% if savings_rate >= 20 %}#831843{% elif savings_rate >= 10 %}#9d174d{% else %}#dc2626{% endif %};">{{ savings_rate }}%</div>
     <div class="zp-stat-label">Savings Rate</div>
     <div class="zp-stat-change" style="color:#be185d;">of income saved →</div>
   </a>
-  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:#eff6ff;">
-    <div class="zp-stat-icon" style="background:#bfdbfe;color:#2563eb;"><i class="fas fa-scale-balanced"></i></div>
-    <div class="zp-stat-val" style="color:{% if balance >= 0 %}#1d4ed8{% else %}#dc2626{% endif %};">{{ "{:,.0f}".format(balance) }}</div>
-    <div class="zp-stat-label">Net Balance</div>
-    <div class="zp-stat-change" style="color:#3b82f6;">income − expenses →</div>
-  </a>
-  <a href="{{ url_for('investments') }}" class="zp-stat" style="background:#f0fdf4;">
-    <div class="zp-stat-icon" style="background:#bbf7d0;color:#15803d;"><i class="fas fa-chart-line"></i></div>
-    <div class="zp-stat-val" style="color:#14532d;">{{ "{:,.0f}".format(total_investments) }}</div>
+  <a href="{{ url_for('investments') }}" class="zp-stat" style="background:#eff6ff;">
+    <div class="zp-stat-icon" style="background:#bfdbfe;color:#2563eb;"><i class="fas fa-chart-line"></i></div>
+    <div class="zp-stat-val" style="color:#1d4ed8;">{{ "{:,.0f}".format(total_investments) }}</div>
     <div class="zp-stat-label">Investments</div>
-    <div class="zp-stat-change" style="color:#16a34a;">portfolio value →</div>
+    <div class="zp-stat-change" style="color:#3b82f6;">portfolio value →</div>
   </a>
   <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fef3c7;">
     <div class="zp-stat-icon" style="background:#fde68a;color:#d97706;"><i class="fas fa-heart-pulse"></i></div>
     <div class="zp-stat-val" style="color:#92400e;">{{ health.score }}</div>
-    <div class="zp-stat-label">Freedom Score</div>
+    <div class="zp-stat-label">Health Score</div>
     <div class="zp-stat-change" style="color:#d97706;">{{ health.label }} →</div>
-  </a>
-</div>
-
-<!-- ── SECONDARY KPIs ── -->
-<div class="zp-g4" style="margin-bottom:20px;">
-  <a href="{{ url_for('income') }}" class="zp-stat" style="background:#f0fdf4;">
-    <div class="zp-stat-icon" style="background:#bbf7d0;color:#15803d;"><i class="fas fa-arrow-down"></i></div>
-    <div class="zp-stat-val" style="color:#14532d;">{{ "{:,.0f}".format(total_income) }}</div>
-    <div class="zp-stat-label">Income</div>
-    <div class="zp-stat-change" style="color:#16a34a;">{{ currency_symbol }} this period →</div>
-  </a>
-  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:#fff1f2;">
-    <div class="zp-stat-icon" style="background:#fecdd3;color:#be123c;"><i class="fas fa-arrow-up"></i></div>
-    <div class="zp-stat-val" style="color:#881337;">{{ "{:,.0f}".format(total_expense) }}</div>
-    <div class="zp-stat-label">Expenses</div>
-    <div class="zp-stat-change" style="color:#ef4444;">{{ currency_symbol }} this period →</div>
-  </a>
-  <a href="{{ url_for('credit_cards') }}" class="zp-stat" style="background:#fffbeb;">
-    <div class="zp-stat-icon" style="background:#fde68a;color:#b45309;"><i class="fas fa-credit-card"></i></div>
-    <div class="zp-stat-val" style="color:#78350f;">{{ "{:,.0f}".format(total_used_credit) }}</div>
-    <div class="zp-stat-label">Credit Used</div>
-    <div class="zp-stat-change" style="color:#d97706;">of {{ "{:,.0f}".format(total_credit_limit) }} →</div>
-  </a>
-  <a href="{{ url_for('wallets') }}" class="zp-stat" style="background:#f5f3ff;">
-    <div class="zp-stat-icon" style="background:#ddd6fe;color:#7c3aed;"><i class="fas fa-coins"></i></div>
-    <div class="zp-stat-val" style="color:#4c1d95;">{{ "{:,.0f}".format(total_wallet_balance) }}</div>
-    <div class="zp-stat-label">Wallet Balance</div>
-    <div class="zp-stat-change" style="color:#7c3aed;">{{ wallets|length }} wallet{{ 's' if wallets|length != 1 }} →</div>
   </a>
 </div>
 

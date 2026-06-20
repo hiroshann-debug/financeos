@@ -28,6 +28,7 @@ def set_setting(key, value, user_id=None):
     else:
         s = AppSettings(key=key, value=str(value), user_id=user_id)
         db.session.add(s)
+    db.session.commit()
 
 
 # ─────────────────────────────────────────

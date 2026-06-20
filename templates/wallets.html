@@ -22,9 +22,9 @@
       <span style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:{{ w.color }};font-weight:600;">{{ w.wallet_type }}</span>
       <div class="flex gap-2">
         <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditWallet({{ w.id }},'{{ w.name }}','{{ w.wallet_type }}',{{ w.balance }},'{{ w.currency }}','{{ w.color }}')"><i class="fas fa-pen"></i></button>
-        <form method="POST" action="{{ url_for('delete_wallet', wallet_id=w.id) }}" onsubmit="return confirm('Delete wallet?')">
-          <button class="btn btn-danger btn-icon btn-sm"><i class="fas fa-trash"></i></button>
-        </form>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="openDeleteWallet({{ w.id }},'{{ w.name|e }}',{{ w.balance }})">
+          <i class="fas fa-trash"></i>
+        </button>
       </div>
     </div>
     <div style="font-size:1.8rem;font-weight:700;font-family:var(--mono);color:{{ w.color }};margin-bottom:6px;">
@@ -159,8 +159,49 @@
     </form>
   </div>
 </div>
+
+<!-- DELETE WALLET MODAL -->
+<div class="modal-overlay" id="deleteWalletModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" style="color:var(--red);">🗑️ Delete Wallet</div>
+    <p style="font-size:0.875rem;color:var(--text2);margin-bottom:12px;">
+      Delete wallet "<strong id="deleteWalletName"></strong>"?
+    </p>
+    <div id="deleteWalletBalanceWarn" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:14px;">
+      <div style="font-size:0.875rem;font-weight:600;color:var(--red);">⚠️ This wallet has a balance</div>
+      <div style="font-size:0.75rem;color:var(--text2);margin-top:4px;">Deleting it will not transfer the balance anywhere. Make sure to transfer funds first.</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:0.82rem;">
+        <input type="checkbox" id="forceDeleteCheck" style="accent-color:var(--red);">
+        I understand, delete anyway
+      </label>
+    </div>
+    <p style="font-size:0.78rem;color:var(--text3);">This cannot be undone.</p>
+    <form method="POST" id="deleteWalletForm">
+      <input type="hidden" name="force_delete" id="forceDeleteInput" value="no">
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('deleteWalletModal').classList.remove('open')">Cancel</button>
+        <button type="submit" id="deleteWalletBtn" class="btn btn-danger"><i class="fas fa-trash"></i> Delete Wallet</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
+<script>
+function openDeleteWallet(id, name, balance) {
+  document.getElementById('deleteWalletName').textContent = name;
+  document.getElementById('deleteWalletForm').action = '/wallets/delete/' + id;
+  document.getElementById('forceDeleteInput').value = 'no';
+  document.getElementById('forceDeleteCheck').checked = false;
+  const warn = document.getElementById('deleteWalletBalanceWarn');
+  warn.style.display = balance > 0 ? 'block' : 'none';
+  document.getElementById('deleteWalletModal').classList.add('open');
+}
+document.getElementById('forceDeleteCheck')?.addEventListener('change', function() {
+  document.getElementById('forceDeleteInput').value = this.checked ? 'yes' : 'no';
+});
+</script>
 <script>
 function openEditWallet(id, name, type, balance, currency, color) {
   document.getElementById('editWalletForm').action = `/edit_wallet/${id}`;

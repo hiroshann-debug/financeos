@@ -210,6 +210,21 @@
 
 </div>
 
+<!-- SIGNUP GATE MODAL -->
+<div class="modal-overlay" id="signupGateModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:340px; text-align:center; padding:28px 26px;">
+    <div style="width:44px;height:44px;border-radius:50%;background:#EAF3DE;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+      <i class="fab fa-bitcoin" style="font-size:20px;color:#3B6D11;"></i>
+    </div>
+    <p style="font-size:15px;color:var(--text);margin:0 0 6px;font-weight:600;">Sign up to unlock this</p>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin:0 0 18px;">
+      Create a free account to enable <span id="gateFeatureLabel">this feature</span> and track everything in one place.
+    </p>
+    <a href="{{ url_for('auth_signup') }}" class="btn btn-primary" style="width:100%;display:block;margin-bottom:8px;">Sign up free</a>
+    <button onclick="document.getElementById('signupGateModal').classList.remove('open')" class="btn btn-ghost" style="width:100%;">Keep browsing</button>
+  </div>
+</div>
+
 <!-- BUY CRYPTO MODAL -->
 <div class="modal-overlay" id="buyCryptoModal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" style="max-width:440px;">
@@ -278,6 +293,12 @@
 {% block scripts %}
 <script>
 const coinIds = {{ top_coins | map(attribute='id') | list | tojson }};
+const isLoggedIn = {{ 'true' if is_logged_in else 'false' }};
+
+function requireLogin(featureLabel) {
+  document.getElementById('gateFeatureLabel').textContent = featureLabel || 'this feature';
+  document.getElementById('signupGateModal').classList.add('open');
+}
 
 function switchCryptoTab(tab, btn) {
   ['market','search','portfolio'].forEach(t => {
@@ -361,6 +382,7 @@ function showCryptoResult(id, name, sym, price, chg) {
 
 // ── Buy Modal ──
 function openCryptoBuyModal(name, sym, price) {
+  if (!isLoggedIn) { requireLogin('adding crypto to your portfolio'); return; }
   document.getElementById('cryptoBuyName').value = name;
   document.getElementById('cryptoBuySymbol').value = sym;
   document.getElementById('cryptoBuyPrice').value = price;

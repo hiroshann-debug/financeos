@@ -8,6 +8,9 @@
     <p class="text-muted text-sm">Net: <strong class="font-mono {% if total >= 0 %}text-green{% else %}text-red{% endif %}">{{ "{:+,.0f}".format(total) }}</strong></p>
   </div>
   <div class="flex gap-2">
+    <a href="{{ url_for('import_statement') }}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-file-import"></i> Import Statement
+    </a>
     <a href="{{ url_for('export_transactions', start=start_date, end=end_date) }}" class="btn btn-ghost btn-sm">
       <i class="fas fa-download"></i> Export CSV
     </a>

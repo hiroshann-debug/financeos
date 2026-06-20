@@ -22,13 +22,18 @@
         <div style="font-weight:600;font-size:0.95rem;">{{ user.name or 'User' }}</div>
         <div style="font-size:0.82rem;color:var(--text2);">{{ user.email or '' }}</div>
         <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">
-          <i class="fas fa-lock" style="font-size:0.65rem;"></i> Managed by Auth0 — password changes via Google
+          <i class="fas fa-lock" style="font-size:0.65rem;"></i>
+          {% if user.provider == 'google-oauth2' %}
+            Signed in with Google — password managed by Google
+          {% else %}
+            Signed in with email & password via Auth0
+          {% endif %}
         </div>
       </div>
     </div>
     <div class="form-group" style="max-width:360px;">
       <label class="form-label">Preferred Name <span style="color:var(--text3);font-weight:400;">— shown in greetings</span></label>
-      <input type="text" name="preferred_name" class="form-control"
+      <input type="text" name="preferred_name" class="form-control" maxlength="30"
         value="{{ preferred_name }}" placeholder="e.g. Hiroshan">
     </div>
   </div>
@@ -64,15 +69,14 @@
   <div class="card mb-4">
     <div class="card-title">🎨 Appearance</div>
     <label class="form-label">Theme</label>
+    <div style="font-size:0.72rem;color:var(--text3);margin-bottom:8px;">Changes apply instantly — no need to save</div>
     <div style="display:flex;gap:10px;margin-top:6px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border:2px solid {% if not dark_mode %}var(--accent){% else %}var(--border2){% endif %};border-radius:8px;font-size:0.875rem;font-weight:600;transition:all 0.15s;background:{% if not dark_mode %}var(--accent-glow){% else %}transparent{% endif %};">
-        <input type="radio" name="dark_mode" value="off" {% if not dark_mode %}checked{% endif %} style="accent-color:var(--accent);">
+      <button type="button" id="themeLightBtn" onclick="setTheme(false)" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border:2px solid {% if not dark_mode %}var(--accent){% else %}var(--border2){% endif %};border-radius:8px;font-size:0.875rem;font-weight:600;transition:all 0.15s;background:{% if not dark_mode %}var(--accent-glow){% else %}transparent{% endif %};color:var(--text);font-family:var(--font);">
         ☀️ Light
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border:2px solid {% if dark_mode %}var(--accent){% else %}var(--border2){% endif %};border-radius:8px;font-size:0.875rem;font-weight:600;transition:all 0.15s;background:{% if dark_mode %}var(--accent-glow){% else %}transparent{% endif %};">
-        <input type="radio" name="dark_mode" value="on" {% if dark_mode %}checked{% endif %} style="accent-color:var(--accent);">
+      </button>
+      <button type="button" id="themeDarkBtn" onclick="setTheme(true)" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border:2px solid {% if dark_mode %}var(--accent){% else %}var(--border2){% endif %};border-radius:8px;font-size:0.875rem;font-weight:600;transition:all 0.15s;background:{% if dark_mode %}var(--accent-glow){% else %}transparent{% endif %};color:var(--text);font-family:var(--font);">
         🌙 Dark
-      </label>
+      </button>
     </div>
   </div>
 
@@ -114,7 +118,7 @@
       <div style="padding:14px 0;">
         <div style="font-size:0.875rem;font-weight:600;color:var(--text);margin-bottom:4px;">Test Monthly Summary</div>
         <div style="font-size:0.78rem;color:var(--text2);margin-bottom:10px;">Send yourself a sample monthly summary right now</div>
-        <a href="{{ url_for('trigger_monthly_summary') }}" class="btn btn-ghost btn-sm">
+        <a href="{{ url_for('trigger_monthly_summary') }}" class="btn btn-ghost btn-sm" id="testEmailBtn">
           <i class="fas fa-paper-plane"></i> Send Test Email
         </a>
       </div>
@@ -127,7 +131,7 @@
     <button type="submit" class="btn btn-primary">
       <i class="fas fa-save"></i> Save Settings
     </button>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">Cancel</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-ghost" id="cancelBtn">Cancel</a>
   </div>
 
 </form>
@@ -153,7 +157,9 @@
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);">
       <div>
         <div style="font-size:0.875rem;font-weight:600;">Authentication Provider</div>
-        <div style="font-size:0.78rem;color:var(--text2);">Auth0 via Google OAuth</div>
+        <div style="font-size:0.78rem;color:var(--text2);">
+          {% if user.provider == 'google-oauth2' %}Google OAuth via Auth0{% else %}Email & Password via Auth0{% endif %}
+        </div>
       </div>
       <span class="badge-pill badge-green">Active</span>
     </div>
@@ -202,4 +208,65 @@
 </div>
 
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function setTheme(toDark) {
+  const current = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (current === toDark) return; // already in this mode
+
+  fetch('/toggle-dark-mode', {method:'POST'})
+    .then(r => r.json())
+    .then(data => {
+      document.documentElement.setAttribute('data-theme', data.dark_mode ? 'dark' : 'light');
+      // Update sidebar icon/label too
+      const icon = document.getElementById('darkModeIcon');
+      const label = document.getElementById('darkModeLabel');
+      if (icon) icon.className = data.dark_mode ? 'fas fa-sun' : 'fas fa-moon';
+      if (label) label.textContent = data.dark_mode ? 'Light Mode' : 'Dark Mode';
+      // Update button states on this page
+      const lightBtn = document.getElementById('themeLightBtn');
+      const darkBtn = document.getElementById('themeDarkBtn');
+      if (lightBtn && darkBtn) {
+        lightBtn.style.borderColor = data.dark_mode ? 'var(--border2)' : 'var(--accent)';
+        lightBtn.style.background = data.dark_mode ? 'transparent' : 'var(--accent-glow)';
+        darkBtn.style.borderColor = data.dark_mode ? 'var(--accent)' : 'var(--border2)';
+        darkBtn.style.background = data.dark_mode ? 'var(--accent-glow)' : 'transparent';
+      }
+    });
+}
+
+// Test email button - show loading feedback
+document.getElementById('testEmailBtn')?.addEventListener('click', function(e) {
+  e.preventDefault();
+  const btn = this;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+  btn.style.pointerEvents = 'none';
+  fetch(btn.href)
+    .then(() => {
+      btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.pointerEvents = ''; }, 3000);
+    })
+    .catch(() => {
+      btn.innerHTML = '<i class="fas fa-xmark"></i> Failed';
+      btn.style.color = 'var(--red)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.pointerEvents = ''; }, 3000);
+    });
+});
+
+// Warn on unsaved changes — but not when user explicitly clicks Cancel
+let formChanged = false;
+let intentionalNav = false;
+document.querySelector('form')?.addEventListener('input', () => formChanged = true);
+document.querySelector('form')?.addEventListener('submit', () => formChanged = false);
+document.getElementById('cancelBtn')?.addEventListener('click', () => intentionalNav = true);
+window.addEventListener('beforeunload', function(e) {
+  if (formChanged && !intentionalNav) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+</script>
 {% endblock %}

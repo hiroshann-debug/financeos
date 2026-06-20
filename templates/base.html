@@ -725,7 +725,21 @@
       .content { padding-bottom: 80px; }
     }
 
-    /* ── AI CHAT BUBBLE ── */
+    /* ── AI ADVISOR SIDEBAR LINK ── */
+@keyframes aiGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.ai-advisor-link:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(139,92,246,0.45) !important;
+}
+.ai-advisor-link.active {
+  box-shadow: 0 4px 20px rgba(139,92,246,0.5) !important;
+}
+
+/* ── AI CHAT BUBBLE ── */
     .ai-bubble {
       position: fixed;
       bottom: 24px; right: 24px;
@@ -799,6 +813,12 @@
   </div>
 
   <nav class="sidebar-nav">
+    <a href="{{ url_for('advisor_page') }}" class="nav-link ai-advisor-link {% if request.endpoint == 'advisor_page' %}active{% endif %}" style="background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);background-size:200% 200%;animation:aiGradient 4s ease infinite;color:white !important;font-weight:700;margin-bottom:10px;box-shadow:0 4px 16px rgba(139,92,246,0.35);position:relative;overflow:hidden;">
+      <span class="nav-icon"><i class="fas fa-sparkles" style="color:white;"></i></span>
+      <span style="color:white;">AI Advisor</span>
+      <span style="margin-left:auto;background:rgba(255,255,255,0.25);color:white;padding:1px 7px;border-radius:999px;font-size:0.58rem;font-weight:800;letter-spacing:0.04em;">PRO</span>
+    </a>
+
     <div class="nav-section-label">Overview</div>
     <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-chart-pie"></i></span> Dashboard
@@ -871,10 +891,6 @@
     <a href="{{ url_for('card_offers') }}" class="nav-link nav-tools-mobile {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-gift"></i></span> CC Offers
     </a>
-    <a href="{{ url_for('advisor_page') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'advisor_page' %}active{% endif %}">
-      <span class="nav-icon"><i class="fas fa-robot"></i></span> AI Advisor
-      <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:1px 6px;border-radius:999px;font-size:0.58rem;font-weight:700;margin-left:auto;">AI</span>
-    </a>
     <a href="{{ url_for('exchange_rates') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-money-bill-transfer"></i></span> Exchange Rates
     </a>
@@ -942,9 +958,6 @@
       </a>
       <a href="{{ url_for('card_offers') }}" class="topbar-qlink {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
         <i class="fas fa-gift"></i> CC Offers
-      </a>
-      <a href="{{ url_for('advisor_page') }}" class="topbar-qlink {% if request.endpoint == 'advisor_page' %}active{% endif %}" style="{% if request.endpoint != 'advisor_page' %}background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));border:1px solid rgba(99,102,241,0.2);{% else %}{% endif %}">
-        <i class="fas fa-robot"></i> AI Advisor
       </a>
       <a href="{{ url_for('exchange_rates') }}" class="topbar-qlink {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
         <i class="fas fa-money-bill-transfer"></i> Rates

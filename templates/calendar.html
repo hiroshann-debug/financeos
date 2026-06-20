@@ -122,13 +122,13 @@
       <div class="cal-cell other-month"></div>
       {% endfor %}
 
+      {% set max_expense = daily_totals.values()|map(attribute='expense')|max if daily_totals else 1 %}
       {% for day in range(1, days_in_month + 1) %}
       {% set cell_date = month_start.replace(day=day) %}
       {% set is_today = (cell_date == today) %}
       {% set is_weekend = cell_date.weekday() in [5, 6] %}
       {% set day_data = daily_totals.get(day, {}) %}
       {% set has_txns = cal_data.get(day) %}
-      {% set max_expense = daily_totals.values()|map(attribute='expense')|max if daily_totals else 1 %}
 
       <div class="cal-cell {% if is_today %}today{% endif %} {% if is_weekend %}weekend-cell{% endif %}"
         onclick="showDayPanel({{ day }})"
@@ -224,7 +224,6 @@
 <script id="calData" type="application/json">
 {{ cal_data_json | tojson }}
 </script>
-{% endblock %}
 
 <!-- ADD EXPENSE MODAL -->
 <div class="modal-overlay" id="addExpenseModal" onclick="if(event.target===this)this.classList.remove('open')">
@@ -254,6 +253,8 @@
     </form>
   </div>
 </div>
+
+{% endblock %}
 
 {% block scripts %}
 <script>

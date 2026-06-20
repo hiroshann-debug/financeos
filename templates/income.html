@@ -7,21 +7,21 @@
 <!-- Summary stats -->
 <div class="stat-grid mb-6">
   <div class="stat-card">
-    <div class="stat-icon" style="background:#f0fff4;color:#276749;"><i class="fas fa-arrow-down"></i></div>
+    <div class="stat-icon" style="background:#f0fdf4;color:#15803d;"><i class="fas fa-circle-down"></i></div>
     <div class="stat-label">This Month</div>
-    <div class="stat-value" style="color:#276749;">{{ "{:,.0f}".format(this_month_income_total) }}</div>
+    <div class="stat-value" style="color:#15803d;">{{ "{:,.0f}".format(this_month_income_total) }}</div>
     <div class="stat-change">{{ currency_symbol }} · {{ this_month_income_list|length }} entries</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon" style="background:#ebf8ff;color:#2b6cb0;"><i class="fas fa-calendar-check"></i></div>
+    <div class="stat-icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-coins"></i></div>
     <div class="stat-label">Total All Time</div>
-    <div class="stat-value" style="color:#2b6cb0;">{{ "{:,.0f}".format(total_income) }}</div>
+    <div class="stat-value" style="color:#2563eb;">{{ "{:,.0f}".format(total_income) }}</div>
     <div class="stat-change">{{ income_list|length }} total entries</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon" style="background:#fffaf0;color:#c05621;"><i class="fas fa-wallet"></i></div>
+    <div class="stat-icon" style="background:#fefce8;color:#ca8a04;"><i class="fas fa-chart-bar"></i></div>
     <div class="stat-label">Avg per Entry</div>
-    <div class="stat-value" style="color:#c05621;">
+    <div class="stat-value" style="color:#ca8a04;">
       {{ "{:,.0f}".format(total_income / income_list|length) if income_list else '0' }}
     </div>
     <div class="stat-change">{{ currency_symbol }} average</div>
@@ -40,14 +40,14 @@
 <div class="card mb-4">
   <div class="flex items-center justify-between mb-4">
     <div class="card-title" style="margin-bottom:0;">This Month</div>
-    <span style="font-family:var(--mono);font-weight:700;color:#276749;font-size:0.9rem;">
+    <span class="font-mono" style="font-weight:700;color:#15803d;">
       {{ currency_symbol }} {{ "{:,.0f}".format(this_month_income_total) }}
     </span>
   </div>
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Date</th><th>Description</th><th>Category</th><th>Wallet</th><th>Amount</th><th></th></tr>
+        <tr><th>Date</th><th>Description</th><th>Category</th><th>Wallet</th><th style="text-align:right;">Amount</th><th></th></tr>
       </thead>
       <tbody>
         {% for t in this_month_income_list %}
@@ -56,14 +56,20 @@
           <td style="font-weight:500;">{{ t.description or '—' }}</td>
           <td><span class="badge-pill badge-green">{{ t.category or 'Income' }}</span></td>
           <td style="color:var(--text2);font-size:0.82rem;">
-            {% if t.wallet %}{{ t.wallet.name }}{% else %}—{% endif %}
+            {% if t.wallet_id %}
+              {% for w in wallets %}{% if w.id == t.wallet_id %}{{ w.name }}{% endif %}{% endfor %}
+            {% else %}—{% endif %}
           </td>
-          <td class="font-mono font-bold" style="color:#276749;">+{{ "{:,.0f}".format(t.amount) }}</td>
+          <td class="font-mono font-bold" style="color:#15803d;text-align:right;">+{{ currency_symbol }} {{ "{:,.0f}".format(t.amount) }}</td>
           <td>
-            <form method="POST" action="{{ url_for('delete_income', income_id=t.id) }}" style="display:inline;"
-              onsubmit="return confirm('Delete this income entry?')">
-              <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-            </form>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-sm btn-ghost"
+                onclick="openEditIncome({{ t.id }},'{{ t.description|e }}','{{ t.amount }}','{{ t.category or 'Income' }}','{{ t.date }}',{{ t.wallet_id or 'null' }})"
+                title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-sm btn-danger" onclick="openDeleteIncomeModal({{ t.id }}, '{{ t.description|e }}', {{ t.amount }}, '{{ currency_symbol }}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -73,7 +79,7 @@
 </div>
 {% endif %}
 
-<!-- All income -->
+<!-- All income history -->
 <div class="card">
   <div class="flex items-center justify-between mb-4">
     <div class="card-title" style="margin-bottom:0;">All Income History</div>
@@ -83,7 +89,7 @@
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Date</th><th>Description</th><th>Category</th><th>Wallet</th><th>Amount</th><th></th></tr>
+        <tr><th>Date</th><th>Description</th><th>Category</th><th>Wallet</th><th style="text-align:right;">Amount</th><th></th></tr>
       </thead>
       <tbody>
         {% for t in income_list %}
@@ -92,14 +98,20 @@
           <td style="font-weight:500;">{{ t.description or '—' }}</td>
           <td><span class="badge-pill badge-green">{{ t.category or 'Income' }}</span></td>
           <td style="color:var(--text2);font-size:0.82rem;">
-            {% if t.wallet %}{{ t.wallet.name }}{% else %}—{% endif %}
+            {% if t.wallet_id %}
+              {% for w in wallets %}{% if w.id == t.wallet_id %}{{ w.name }}{% endif %}{% endfor %}
+            {% else %}—{% endif %}
           </td>
-          <td class="font-mono font-bold" style="color:#276749;">+{{ "{:,.0f}".format(t.amount) }}</td>
+          <td class="font-mono font-bold" style="color:#15803d;text-align:right;">+{{ currency_symbol }} {{ "{:,.0f}".format(t.amount) }}</td>
           <td>
-            <form method="POST" action="{{ url_for('delete_income', income_id=t.id) }}" style="display:inline;"
-              onsubmit="return confirm('Delete this income entry?')">
-              <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-            </form>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-sm btn-ghost"
+                onclick="openEditIncome({{ t.id }},'{{ t.description|e }}','{{ t.amount }}','{{ t.category or 'Income' }}','{{ t.date }}',{{ t.wallet_id or 'null' }})"
+                title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-sm btn-danger" onclick="openDeleteIncomeModal({{ t.id }}, '{{ t.description|e }}', {{ t.amount }}, '{{ currency_symbol }}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -107,12 +119,13 @@
     </table>
   </div>
   {% else %}
-  <div style="text-align:center;padding:60px 0;">
-    <div style="font-size:3rem;margin-bottom:16px;">💰</div>
-    <h3 style="font-weight:500;margin-bottom:8px;">No income recorded yet</h3>
-    <p style="color:var(--text2);margin-bottom:20px;">Add your salary, freelance income or any other earnings.</p>
-    <button class="btn btn-primary" onclick="document.getElementById('addIncomeModal').classList.add('open')">
-      <i class="fas fa-plus"></i> Add First Income
+  <div style="text-align:center;padding:40px;color:var(--text2);">
+    <div style="font-size:2.5rem;margin-bottom:12px;">💰</div>
+    <div style="font-weight:600;margin-bottom:6px;">No income recorded yet</div>
+    <div style="font-size:0.82rem;">Add your salary, freelance or other income sources</div>
+    <button class="btn btn-primary btn-sm" style="margin-top:14px;"
+      onclick="document.getElementById('addIncomeModal').classList.add('open')">
+      <i class="fas fa-plus"></i> Add Income
     </button>
   </div>
   {% endif %}
@@ -121,56 +134,187 @@
 <!-- ADD INCOME MODAL -->
 <div class="modal-overlay" id="addIncomeModal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
-    <div class="modal-title"><i class="fas fa-plus-circle text-accent"></i> Add Income</div>
+    <div class="modal-title">💰 Add Income</div>
     <form method="POST" action="{{ url_for('income') }}">
       <div class="grid-2">
         <div class="form-group">
-          <label class="form-label">Amount</label>
-          <input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00" autofocus>
+          <label class="form-label">Amount ({{ currency_symbol }})</label>
+          <input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00">
         </div>
         <div class="form-group">
-          <label class="form-label">Date</label>
-          <input type="date" name="date" class="form-control" required value="{{ now().strftime('%Y-%m-%d') }}">
+          <label class="form-label">Category</label>
+          <select name="category" class="form-control">
+            <option value="Salary">Salary</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Business">Business</option>
+            <option value="Investment Income">Investment Income</option>
+            <option value="Rental">Rental</option>
+            <option value="Bonus">Bonus</option>
+            <option value="Gift">Gift</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">Description</label>
-        <input type="text" name="description" class="form-control" required placeholder="e.g. Monthly salary, Freelance payment">
+        <input type="text" name="description" class="form-control" required placeholder="e.g. Monthly salary">
       </div>
       <div class="grid-2">
         <div class="form-group">
-          <label class="form-label">Category</label>
-          <input type="text" name="category" class="form-control" value="Salary" list="income-cats">
-          <datalist id="income-cats">
-            <option value="Salary">
-            <option value="Freelance">
-            <option value="Business">
-            <option value="Investment Income">
-            <option value="Rental Income">
-            <option value="Bonus">
-            <option value="Other Income">
-          </datalist>
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" value="{{ now().strftime('%Y-%m-%d') }}">
         </div>
         <div class="form-group">
-          <label class="form-label">Add to Wallet</label>
+          <label class="form-label">Add to Wallet <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
           <select name="wallet_id" class="form-control">
-            <option value="">None (record only)</option>
+            <option value="">None — record only</option>
             {% for w in wallets %}
-            <option value="{{ w.id }}">{{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>
+            <option value="{{ w.id }}">{{ w.name }} — {{ currency_symbol }} {{ "{:,.0f}".format(w.balance) }}</option>
             {% endfor %}
           </select>
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Notes (optional)</label>
-        <textarea name="notes" class="form-control" rows="2" placeholder="Any extra details..."></textarea>
+        <label class="form-label">Notes <span style="font-weight:400;color:var(--text3);">(optional)</span></label>
+        <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes"></textarea>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="document.getElementById('addIncomeModal').classList.remove('open')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add Income</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Income</button>
       </div>
     </form>
   </div>
 </div>
 
+<!-- EDIT INCOME MODAL -->
+<div class="modal-overlay" id="editIncomeModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Income</div>
+    <form method="POST" id="editIncomeForm">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Amount ({{ currency_symbol }})</label>
+          <input type="number" step="0.01" name="amount" id="editIncomeAmount" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select name="category" id="editIncomeCategory" class="form-control">
+            <option value="Salary">Salary</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Business">Business</option>
+            <option value="Investment Income">Investment Income</option>
+            <option value="Rental">Rental</option>
+            <option value="Bonus">Bonus</option>
+            <option value="Gift">Gift</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" name="description" id="editIncomeDesc" class="form-control" required>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" id="editIncomeDate" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Wallet</label>
+          <select name="wallet_id" id="editIncomeWallet" class="form-control">
+            <option value="">None</option>
+            {% for w in wallets %}
+            <option value="{{ w.id }}">{{ w.name }} — {{ currency_symbol }} {{ "{:,.0f}".format(w.balance) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('editIncomeModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- DELETE INCOME MODAL -->
+<div class="modal-overlay" id="deleteIncomeModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title" style="color:var(--red);">🗑️ Delete Income</div>
+    <p style="font-size:0.875rem;color:var(--text2);margin-bottom:16px;">
+      Delete "<strong id="deleteIncomeName"></strong>" — <span class="font-mono" id="deleteIncomeAmount"></span>?
+    </p>
+
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="deleteRelatedCheck" style="margin-top:3px;accent-color:var(--red);">
+        <div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--text);">Also delete all entries with this description</div>
+          <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;">Removes all income records that share the same name (e.g. all "Monthly Salary" entries)</div>
+        </div>
+      </label>
+    </div>
+
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:0.82rem;font-weight:600;color:#92400e;margin-bottom:8px;">
+        <i class="fas fa-wallet"></i> Was this added to a wallet?
+      </div>
+      <div style="font-size:0.75rem;color:#78350f;margin-bottom:10px;">
+        If this income increased a wallet's balance, select it below to subtract the amount back. Leave as "None" if it wasn't added to any wallet.
+      </div>
+      <select id="deductWalletSelect" class="form-control" style="font-size:0.82rem;">
+        <option value="">None — don't touch any wallet</option>
+        {% for w in wallets %}
+        <option value="{{ w.id }}">{{ w.name }} (current: {{ currency_symbol }} {{ "{:,.0f}".format(w.balance) }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <form method="POST" id="deleteIncomeForm">
+      <input type="hidden" name="delete_related" id="deleteRelatedInput" value="no">
+      <input type="hidden" name="deduct_wallet_id" id="deductWalletInput" value="">
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('deleteIncomeModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openDeleteIncomeModal(id, name, amount, currencySym) {
+  document.getElementById('deleteIncomeName').textContent = name;
+  document.getElementById('deleteIncomeAmount').textContent = (currencySym || '') + ' ' + Number(amount).toLocaleString();
+  document.getElementById('deleteIncomeForm').action = '/delete_income/' + id;
+  document.getElementById('deleteRelatedCheck').checked = false;
+  document.getElementById('deleteRelatedInput').value = 'no';
+  document.getElementById('deductWalletSelect').value = '';
+  document.getElementById('deductWalletInput').value = '';
+  document.getElementById('deleteIncomeModal').classList.add('open');
+}
+
+document.getElementById('deleteRelatedCheck')?.addEventListener('change', function() {
+  document.getElementById('deleteRelatedInput').value = this.checked ? 'yes' : 'no';
+});
+
+document.getElementById('deductWalletSelect')?.addEventListener('change', function() {
+  document.getElementById('deductWalletInput').value = this.value;
+});
+
+function openEditIncome(id, desc, amount, category, date, walletId) {
+  document.getElementById('editIncomeForm').action = '/income/edit/' + id;
+  document.getElementById('editIncomeDesc').value = desc;
+  document.getElementById('editIncomeAmount').value = amount;
+  document.getElementById('editIncomeDate').value = date;
+  const catEl = document.getElementById('editIncomeCategory');
+  if (catEl) catEl.value = category;
+  const walletEl = document.getElementById('editIncomeWallet');
+  if (walletEl) walletEl.value = walletId || '';
+  document.getElementById('editIncomeModal').classList.add('open');
+}
+</script>
 {% endblock %}

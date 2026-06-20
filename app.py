@@ -10,7 +10,7 @@ from calendar import monthrange
 from datetime import datetime, date, timedelta, time
 from zoneinfo import ZoneInfo
 from dateutil.relativedelta import relativedelta
-import json, csv, io, os
+import json, csv, io, os, re
 from collections import defaultdict
 from flask_migrate import Migrate
 from pdf_report import generate_monthly_report
@@ -307,30 +307,26 @@ body{{margin:0;padding:0;background:#f0ebe3;font-family:'Segoe UI',Arial,sans-se
 def callback():
     token = auth0.authorize_access_token()
     userinfo = token.get('userinfo')
-
     # ── Use email as universal user ID ──
-    # Same person logging in via Google OR password → same data
     user_email = userinfo.get('email', '').lower().strip()
     if not user_email:
         flash("Could not retrieve email from login provider.", "danger")
         return redirect(url_for('landing'))
 
-    user_id = user_email  # email is the primary identifier
+    user_id = user_email
     user_name = userinfo.get('name', 'User').split()[0]
-    provider = userinfo.get('sub', '').split('|')[0]  # 'google-oauth2' or 'auth0'
+    provider = userinfo.get('sub', '').split('|')[0]
 
     session['user'] = {
         'id': user_id,
         'name': userinfo.get('name', 'User'),
         'email': user_email,
         'picture': userinfo.get('picture', ''),
-        'provider': provider
+        'provider': provider,
     }
 
-    # Save email to settings so scheduler can find it
     set_setting('email', user_email, user_id=user_id)
 
-    # Check if first time login — send welcome email
     with app.app_context():
         is_new = not AppSettings.query.filter_by(
             user_id=user_id, key='welcome_sent'
@@ -669,9 +665,13 @@ def dashboard():
     fixed_exp_total = sum(f.amount for f in FixedExpense.query.filter_by(user_id=uid()).all())
     recurring_total = sum(r.amount for r in RecurringPayment.query.filter_by(user_id=uid(), is_active=True).all())
 
+    # IMPORTANT — DO NOT PRORATE total_committed to the salary period.
+    # Loan EMIs, card minimum payments, and fixed bills are due in FULL
+    # regardless of how many days are in the current salary cycle.
+    # (e.g. a 25-day period still owes the full monthly EMI, not 25/30 of it)
     total_committed = loan_monthly + card_minimums + fixed_exp_total + recurring_total
 
-    # Truly available = income - all committed costs
+    # Free to Spend = period income - full committed costs
     truly_available = total_income - total_committed
     truly_available = max(0, truly_available)
 
@@ -920,9 +920,40 @@ def income():
 @app.route('/delete_income/<int:income_id>', methods=['POST'])
 def delete_income(income_id):
     income = Transaction.query.filter_by(id=income_id, user_id=uid()).first_or_404()
-    db.session.delete(income)
+
+    delete_all = request.form.get('delete_related') == 'yes'
+    deduct_wallet_id = request.form.get('deduct_wallet_id')
+
+    # Collect amount(s) to deduct before deleting
+    if delete_all:
+        matching = Transaction.query.filter_by(
+            user_id=uid(),
+            trans_type='income',
+            description=income.description
+        ).all()
+        total_amount = sum(t.amount for t in matching)
+        Transaction.query.filter_by(
+            user_id=uid(),
+            trans_type='income',
+            description=income.description
+        ).delete()
+    else:
+        total_amount = income.amount
+        db.session.delete(income)
+
+    # If user chose a wallet to deduct from, subtract the amount
+    if deduct_wallet_id:
+        wallet = Wallet.query.filter_by(id=int(deduct_wallet_id), user_id=uid()).first()
+        if wallet:
+            wallet.balance -= total_amount
+
     db.session.commit()
-    flash('Income deleted.', 'info')
+    update_networth_snapshot(user_id=uid())
+
+    if delete_all:
+        flash(f'All income entries for "{income.description}" deleted' + (f' and {total_amount:,.0f} deducted from wallet.' if deduct_wallet_id else '.'), 'info')
+    else:
+        flash('Income entry deleted' + (f' and {total_amount:,.0f} deducted from wallet.' if deduct_wallet_id else '.'), 'info')
     return redirect(url_for('income'))
 
 
@@ -972,9 +1003,21 @@ def edit_wallet(wallet_id):
 @app.route("/delete_wallet/<int:wallet_id>", methods=["POST"])
 def delete_wallet(wallet_id):
     wallet = Wallet.query.filter_by(id=wallet_id, user_id=uid()).first_or_404()
+    # Check if wallet has balance
+    if wallet.balance > 0:
+        force = request.form.get('force_delete') == 'yes'
+        if not force:
+            flash(f"Cannot delete {wallet.name} — it has a balance of {wallet.balance:,.0f}. Transfer the balance first or confirm deletion.", "danger")
+            return redirect(url_for("wallets"))
+    # Check if it's the only wallet
+    wallet_count = Wallet.query.filter_by(user_id=uid()).count()
+    if wallet_count <= 1:
+        flash("Cannot delete your only wallet. Add another wallet first.", "danger")
+        return redirect(url_for("wallets"))
     db.session.delete(wallet)
     db.session.commit()
-    flash("Wallet deleted!", "success")
+    update_networth_snapshot(user_id=uid())
+    flash(f"Wallet '{wallet.name}' deleted.", "success")
     return redirect(url_for("wallets"))
 
 
@@ -1969,6 +2012,8 @@ def analytics():
             "pct": round(actual / b.amount * 100) if b.amount > 0 else 0
         })
 
+    widgets = get_analytics_widgets(user_id=uid())
+
     return render_template(
         "analytics.html",
         insights=insights,
@@ -1988,6 +2033,7 @@ def analytics():
         fixed_committed=fixed_committed,
         largest_expenses=largest_expenses,
         budget_vs_actual=budget_vs_actual,
+        widgets=widgets,
     )
 
 
@@ -2052,8 +2098,8 @@ def settings():
         u = uid()
         set_setting("salary_cycle_day", request.form.get("salary_cycle_day", "25"), user_id=u)
         set_setting("currency_symbol", request.form.get("currency_symbol", "LKR"), user_id=u)
-        dark_mode_val = request.form.get("dark_mode", "off")
-        set_setting("dark_mode", "true" if dark_mode_val == "on" else "false", user_id=u)
+        # dark_mode is now toggled instantly via /toggle-dark-mode AJAX endpoint
+        # (no longer submitted as part of this form)
         preferred_name = request.form.get("preferred_name", "").strip()
         if preferred_name:
             set_setting("preferred_name", preferred_name, user_id=u)
@@ -2063,6 +2109,7 @@ def settings():
         # Monthly email preference
         monthly_email = request.form.get("monthly_email", "off")
         set_setting("monthly_email", "true" if monthly_email == "on" else "false", user_id=u)
+        db.session.commit()  # safety commit in case any setting wasn't auto-committed
         flash("Settings saved!", "success")
         return redirect(url_for("settings"))
 
@@ -2085,7 +2132,7 @@ def settings():
 def export_transactions():
     start_str = request.args.get("start")
     end_str = request.args.get("end")
-    query = Transaction.query
+    query = Transaction.query.filter_by(user_id=uid())
     if start_str:
         query = query.filter(Transaction.date >= datetime.strptime(start_str, "%Y-%m-%d"))
     if end_str:
@@ -2110,6 +2157,368 @@ def export_transactions():
 # ─────────────────────────────────────────
 #  Reports
 # ─────────────────────────────────────────
+# ─────────────────────────────────────────
+#  Bank Statement Import
+# ─────────────────────────────────────────
+@app.route("/import-statement", methods=["GET"])
+@login_required
+def import_statement():
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
+    loans = Loan.query.filter_by(user_id=uid(), loan_status="Active").all()
+    return render_template("import_statement.html", wallets=wallets, credit_cards=credit_cards, loans=loans)
+
+
+@app.route("/import-statement/preview", methods=["POST"])
+@login_required
+def import_statement_preview():
+    """Parse uploaded CSV and return a preview of detected transactions."""
+    file = request.files.get("statement_file")
+    if not file or not file.filename:
+        flash("Please choose a CSV file to upload.", "danger")
+        return redirect(url_for("import_statement"))
+
+    if not file.filename.lower().endswith(".csv"):
+        flash("Only CSV files are supported right now. Export your statement as CSV from your bank's online portal.", "danger")
+        return redirect(url_for("import_statement"))
+
+    try:
+        raw = file.read().decode("utf-8-sig", errors="replace")
+    except Exception:
+        flash("Could not read the file. Please make sure it's a valid CSV.", "danger")
+        return redirect(url_for("import_statement"))
+
+    rows = list(csv.reader(io.StringIO(raw)))
+    if len(rows) < 2:
+        flash("That file looks empty or has no data rows.", "danger")
+        return redirect(url_for("import_statement"))
+
+    # Some bank exports prefix the file with account/address metadata
+    # before the real header row (e.g. account number, statement period,
+    # "Transaction History" title). Scan the first 15 rows to find the
+    # row that actually looks like a header, instead of assuming row 0.
+    def row_looks_like_header(r):
+        joined = ",".join(r).strip().lower()
+        return "date" in joined and "description" in joined and (
+            "debit" in joined or "credit" in joined or "amount" in joined
+        )
+
+    header_row_idx = None
+    for i, r in enumerate(rows[:15]):
+        if row_looks_like_header(r):
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        # Fall back to the original assumption if nothing matched
+        header_row_idx = 0
+
+    header = [h.strip().lower() for h in rows[header_row_idx]]
+    data_rows = rows[header_row_idx + 1:]
+
+    # Auto-detect columns by common header names across Sri Lankan / international bank exports
+    def find_col(*candidates):
+        for cand in candidates:
+            for i, h in enumerate(header):
+                if cand in h:
+                    return i
+        return None
+
+    col_date = find_col("date", "txn date", "transaction date", "value date")
+    col_desc = find_col("description", "narration", "particulars", "details", "remarks")
+    col_debit = find_col("debit", "withdrawal", "dr")
+    col_credit = find_col("credit", "deposit", "cr")
+    col_amount = find_col("amount") if col_debit is None and col_credit is None else None
+
+    if col_date is None or col_desc is None or (col_debit is None and col_credit is None and col_amount is None):
+        flash(
+            f"Could not detect the right columns. Found headers: {', '.join(header)}. "
+            "Make sure your CSV has Date, Description, and Debit/Credit (or Amount) columns.",
+            "danger"
+        )
+        return redirect(url_for("import_statement"))
+
+    DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y", "%d.%m.%Y", "%Y/%m/%d"]
+
+    def parse_date_str(s):
+        s = (s or "").strip()
+        if not s:
+            return None
+
+        # Some bank exports truncate the year (e.g. "25/05/202" instead of
+        # "25/05/2026") when the statement is exported mid-page. If we see
+        # a 3-digit year fragment, try to complete it to a plausible 4-digit year.
+        parts = re.split(r"[/\-.]", s)
+        if len(parts) == 3 and len(parts[2]) == 3 and parts[2].isdigit():
+            base = parts[2]
+            today = date.today()
+            candidates = []
+            for last_digit in range(10):
+                y = int(base + str(last_digit))
+                if 2015 <= y <= today.year:
+                    candidates.append(y)
+            if candidates:
+                # Prefer the most recent plausible year (closest to, but not after, today)
+                best_year = max(candidates)
+                sep = "/" if "/" in s else ("-" if "-" in s else ".")
+                parts[2] = str(best_year)
+                s = sep.join(parts)
+
+        for fmt in DATE_FORMATS:
+            try:
+                return datetime.strptime(s, fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    def parse_amount_str(s):
+        s = (s or "").replace(",", "").replace("Rs.", "").replace("LKR", "").strip()
+        if not s or s in ("-", "\u2014"):
+            return 0.0
+        try:
+            return abs(float(s))
+        except ValueError:
+            return 0.0
+
+    def looks_like_header_row(row):
+        """Detect a repeated header row appearing mid-file (common in
+        multi-page bank statement exports)."""
+        joined = ",".join(row).strip().lower()
+        return "date" in joined and "description" in joined and ("debit" in joined or "credit" in joined)
+
+    def looks_like_metadata_row(row, date_col_idx):
+        """Detect address/account-info junk rows that banks sometimes
+        insert between statement pages (name, address, 'Page X of Y', etc)."""
+        if date_col_idx is None or date_col_idx >= len(row):
+            return True
+        date_field = (row[date_col_idx] or "").strip()
+        if not date_field:
+            return True
+        # A genuine transaction row's date field should contain digits;
+        # junk rows have plain text like "H DILRUKSHA WANNIARA" or labels
+        return not any(ch.isdigit() for ch in date_field)
+
+    preview_rows = []
+    skipped = 0
+    max_col = max(filter(lambda x: x is not None, [col_date, col_desc, col_debit, col_credit, col_amount]))
+
+    for idx, row in enumerate(data_rows):
+        if not row or len(row) <= max_col:
+            skipped += 1
+            continue
+
+        # Skip repeated header rows and address/metadata junk rows that
+        # multi-page bank statement CSVs often insert mid-file
+        if looks_like_header_row(row) or looks_like_metadata_row(row, col_date):
+            skipped += 1
+            continue
+
+        d = parse_date_str(row[col_date]) if col_date < len(row) else None
+        desc = row[col_desc].strip() if col_desc < len(row) else ""
+
+        if col_amount is not None:
+            raw_amt = row[col_amount].replace(",", "").strip()
+            amt = parse_amount_str(row[col_amount])
+            trans_type = "expense" if raw_amt.startswith("-") else "income"
+        else:
+            debit_val = parse_amount_str(row[col_debit]) if col_debit is not None and col_debit < len(row) else 0
+            credit_val = parse_amount_str(row[col_credit]) if col_credit is not None and col_credit < len(row) else 0
+            if debit_val > 0:
+                amt, trans_type = debit_val, "expense"
+            elif credit_val > 0:
+                amt, trans_type = credit_val, "income"
+            else:
+                skipped += 1
+                continue
+
+        if not d or amt <= 0 or not desc:
+            skipped += 1
+            continue
+
+        desc_lower = desc.lower()
+        category = "Other"
+        # Sri Lankan bank statement jargon codes (POS, ATM, EFT, CC payments etc.)
+        if any(k in desc_lower for k in ["atm wd", "atm fscash", "cash withdrawal"]):
+            category = "Cash Withdrawal"
+        elif any(k in desc_lower for k in ["cc pmt", "credit card pmt", "card pmt"]):
+            category = "Credit Card Payment"
+        elif any(k in desc_lower for k in ["service charge", "service fee", "ledger fee"]):
+            category = "Bank Fees"
+        elif any(k in desc_lower for k in ["witholding tax", "withholding tax", "wht"]):
+            category = "Tax"
+        elif any(k in desc_lower for k in ["interest account", "interest credit", "int. pay"]):
+            category = "Interest Income"
+        elif any(k in desc_lower for k in ["eft", "slips", "trf", "transfer", "remit"]):
+            category = "Transfer"
+        elif any(k in desc_lower for k in ["pos npb", "pos pb", "pos visa", "pos mastercard"]):
+            category = "Card Purchase"
+        elif any(k in desc_lower for k in ["bill pmt", "bill payment", "billpay"]):
+            category = "Bills"
+        elif any(k in desc_lower for k in ["just pay", "justpay"]):
+            category = "Bills"
+        elif any(k in desc_lower for k in ["salary", "payroll"]):
+            category = "Salary"
+        elif any(k in desc_lower for k in ["grocery", "supermarket", "keells", "cargills", "arpico"]):
+            category = "Groceries"
+        elif any(k in desc_lower for k in ["fuel", "petrol", "diesel", "ioc", "lanka filling"]):
+            category = "Transport"
+        elif any(k in desc_lower for k in ["restaurant", "cafe", "food", "kfc", "pizza"]):
+            category = "Dining"
+        elif any(k in desc_lower for k in ["electricity", "ceb", "water", "nwsdb", "internet", "dialog", "slt", "mobitel"]):
+            category = "Utilities"
+
+        preview_rows.append({
+            "row_index": idx,
+            "date": d.strftime("%Y-%m-%d"),
+            "description": desc,
+            "amount": amt,
+            "trans_type": trans_type,
+            "category": category,
+        })
+
+    if not preview_rows:
+        flash("No valid transactions could be parsed from this file.", "danger")
+        return redirect(url_for("import_statement"))
+
+    session["import_preview"] = preview_rows
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
+    loans = Loan.query.filter_by(user_id=uid(), loan_status="Active").all()
+
+    existing = Transaction.query.filter_by(user_id=uid()).all()
+    existing_keys = {
+        (t.date.strftime("%Y-%m-%d") if hasattr(t.date, "strftime") else str(t.date), round(t.amount, 2), (t.description or "").strip().lower())
+        for t in existing
+    }
+    for r in preview_rows:
+        key = (r["date"], round(r["amount"], 2), r["description"].strip().lower())
+        r["is_duplicate"] = key in existing_keys
+
+        # Suggest a destination per row based on the auto-guessed category.
+        # Only auto-suggest credit card / loan links when the user has
+        # exactly one of that type — otherwise default to "wallet" and
+        # let them pick manually (ambiguous when there are multiple cards).
+        if r["category"] == "Credit Card Payment" and len(credit_cards) == 1:
+            r["suggested_destination"] = f"cc_payment_{credit_cards[0].id}"
+        elif r["category"] == "Bank Fees" or r["category"] == "Tax" or r["category"] == "Interest Income":
+            r["suggested_destination"] = "none"
+        else:
+            r["suggested_destination"] = "wallet"
+
+    dup_count = sum(1 for r in preview_rows if r["is_duplicate"])
+
+    return render_template(
+        "import_statement.html",
+        wallets=wallets,
+        credit_cards=credit_cards,
+        loans=loans,
+        preview_rows=preview_rows,
+        skipped_count=skipped,
+        dup_count=dup_count,
+        show_preview=True,
+    )
+
+
+@app.route("/import-statement/confirm", methods=["POST"])
+@login_required
+def import_statement_confirm():
+    """Commit the previewed rows as real transactions, respecting each
+    row's chosen destination (wallet / credit card purchase / credit card
+    payment / loan / record-only)."""
+    preview_rows = session.get("import_preview")
+    if not preview_rows:
+        flash("Your import session expired. Please upload the file again.", "danger")
+        return redirect(url_for("import_statement"))
+
+    skip_duplicates = request.form.get("skip_duplicates") == "on"
+    default_wallet_id = request.form.get("wallet_id")
+    default_wallet_id = int(default_wallet_id) if default_wallet_id else None
+
+    selected_indices = {
+        int(k.split("_")[1]) for k in request.form.keys()
+        if k.startswith("row_")
+    }
+
+    existing = Transaction.query.filter_by(user_id=uid()).all()
+    existing_keys = {
+        (t.date.strftime("%Y-%m-%d") if hasattr(t.date, "strftime") else str(t.date), round(t.amount, 2), (t.description or "").strip().lower())
+        for t in existing
+    }
+
+    imported = 0
+    skipped_dupes = 0
+    cc_payments_applied = 0
+
+    for row in preview_rows:
+        if row["row_index"] not in selected_indices:
+            continue
+
+        key = (row["date"], round(row["amount"], 2), row["description"].strip().lower())
+        if skip_duplicates and key in existing_keys:
+            skipped_dupes += 1
+            continue
+
+        date_obj = datetime.strptime(row["date"], "%Y-%m-%d").date()
+
+        # Per-row destination: "wallet", "none", "cc_purchase_<id>", "cc_payment_<id>", "loan_<id>"
+        destination = request.form.get(f"dest_{row['row_index']}", "wallet")
+
+        wallet_id = None
+        linked_credit = None
+        linked_loan = None
+        card_for_payment = None
+
+        if destination == "wallet":
+            wallet_id = default_wallet_id
+        elif destination == "none":
+            pass
+        elif destination.startswith("cc_purchase_"):
+            linked_credit = int(destination.split("_")[-1])
+        elif destination.startswith("cc_payment_"):
+            card_id = int(destination.split("_")[-1])
+            wallet_id = default_wallet_id  # the payment still leaves your bank account
+            card_for_payment = CreditCard.query.filter_by(id=card_id, user_id=uid()).first()
+        elif destination.startswith("loan_"):
+            linked_loan = int(destination.split("_")[-1])
+
+        add_transaction(
+            amount=row["amount"],
+            description=row["description"],
+            trans_type=row["trans_type"],
+            wallet_id=wallet_id,
+            linked_credit=linked_credit,
+            linked_loan=linked_loan,
+            date_obj=date_obj,
+            category=row["category"],
+            notes="Imported from bank statement",
+            user_id=uid(),
+        )
+
+        # Credit card PAYMENT (not purchase) restores available balance,
+        # same as the dedicated pay_credit_card flow does.
+        if card_for_payment and row["trans_type"] == "expense":
+            card_for_payment.available_balance = min(
+                card_for_payment.credit_limit,
+                card_for_payment.available_balance + row["amount"]
+            )
+            cc_payments_applied += 1
+
+        imported += 1
+
+    if cc_payments_applied:
+        db.session.commit()
+        update_networth_snapshot(user_id=uid())
+
+    session.pop("import_preview", None)
+
+    msg = f"\u2705 Imported {imported} transaction{'s' if imported != 1 else ''}."
+    if cc_payments_applied:
+        msg += f" Updated {cc_payments_applied} credit card balance{'s' if cc_payments_applied != 1 else ''}."
+    if skipped_dupes:
+        msg += f" Skipped {skipped_dupes} duplicate{'s' if skipped_dupes != 1 else ''}."
+    flash(msg, "success")
+    return redirect(url_for("transactions"))
+
 @app.route("/reports")
 @login_required
 def reports():
@@ -2180,26 +2589,33 @@ def download_report():
 #  Financial Tools
 # ─────────────────────────────────────────
 @app.route("/tools")
-@login_required
 def financial_tools():
-    wallets = Wallet.query.filter_by(user_id=uid()).all()
-    cards = CreditCard.query.filter_by(user_id=uid()).all()
-    loans = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
-    total_monthly_commitments = (
-        sum(l.monthly_payment for l in loans) +
-        sum(c.minimum_payment for c in cards)
-    )
-    recent_income = Transaction.query.filter(
-        Transaction.user_id == uid(),
-        Transaction.trans_type == 'income',
-        Transaction.date >= (date.today() - relativedelta(months=3))
-    ).all()
-    monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
+    if uid():
+        wallets = Wallet.query.filter_by(user_id=uid()).all()
+        cards = CreditCard.query.filter_by(user_id=uid()).all()
+        loans = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
+        total_monthly_commitments = (
+            sum(l.monthly_payment for l in loans) +
+            sum(c.minimum_payment for c in cards)
+        )
+        recent_income = Transaction.query.filter(
+            Transaction.user_id == uid(),
+            Transaction.trans_type == 'income',
+            Transaction.date >= (date.today() - relativedelta(months=3))
+        ).all()
+        monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
+        total_savings = sum(w.balance for w in wallets)
+    else:
+        wallets, cards, loans = [], [], []
+        total_monthly_commitments = 0.0
+        monthly_income_avg = 0.0
+        total_savings = 0.0
     return render_template("financial_tools.html",
         wallets=wallets, cards=cards, loans=loans,
         total_monthly_commitments=total_monthly_commitments,
         monthly_income_avg=monthly_income_avg,
-        total_savings=sum(w.balance for w in wallets),
+        total_savings=total_savings,
+        is_logged_in=uid() is not None,
     )
 
 
@@ -2281,7 +2697,12 @@ def investments():
 @app.route("/investments/add", methods=["POST"])
 @login_required
 def add_investment():
-    name, err = validate_text(request.form.get('name'), "Investment name")
+    raw_name = request.form.get('name', '').strip()
+    if not raw_name:
+        institution = request.form.get('institution', '').strip()
+        asset_type = request.form.get('asset_type', 'Other')
+        raw_name = f"{institution} {asset_type}".strip() if institution else asset_type
+    name, err = validate_text(raw_name, "Investment name")
     if err: flash(err, "danger"); return redirect(url_for('investments'))
 
     units = float(request.form.get('units') or 0)
@@ -2508,54 +2929,82 @@ def delete_debt(debt_id):
 #  Exchange Rates
 # ─────────────────────────────────────────
 @app.route("/exchange-rates")
-@login_required
 def exchange_rates():
     import requests as http
+
+    # Fallback rates (approximate — used if API is down)
+    FALLBACK_RATES = {
+        "USD": {"flag": "🇺🇸", "name": "US Dollar",          "lkr_per_unit": 315.00},
+        "EUR": {"flag": "🇪🇺", "name": "Euro",               "lkr_per_unit": 341.00},
+        "GBP": {"flag": "🇬🇧", "name": "British Pound",      "lkr_per_unit": 399.00},
+        "AUD": {"flag": "🇦🇺", "name": "Australian Dollar",  "lkr_per_unit": 202.00},
+        "SGD": {"flag": "🇸🇬", "name": "Singapore Dollar",   "lkr_per_unit": 234.00},
+        "INR": {"flag": "🇮🇳", "name": "Indian Rupee",       "lkr_per_unit": 3.78},
+        "JPY": {"flag": "🇯🇵", "name": "Japanese Yen",       "lkr_per_unit": 2.09},
+        "CAD": {"flag": "🇨🇦", "name": "Canadian Dollar",    "lkr_per_unit": 230.00},
+        "CNY": {"flag": "🇨🇳", "name": "Chinese Yuan",       "lkr_per_unit": 43.40},
+        "AED": {"flag": "🇦🇪", "name": "UAE Dirham",         "lkr_per_unit": 85.75},
+        "SAR": {"flag": "🇸🇦", "name": "Saudi Riyal",        "lkr_per_unit": 84.00},
+        "MYR": {"flag": "🇲🇾", "name": "Malaysian Ringgit",  "lkr_per_unit": 67.00},
+        "THB": {"flag": "🇹🇭", "name": "Thai Baht",          "lkr_per_unit": 8.75},
+        "CHF": {"flag": "🇨🇭", "name": "Swiss Franc",        "lkr_per_unit": 354.00},
+        "NZD": {"flag": "🇳🇿", "name": "New Zealand Dollar", "lkr_per_unit": 188.00},
+    }
+
     rates = {}
     error = None
     last_updated = None
+    using_fallback = False
 
-    try:
-        resp = http.get(
-            "https://open.er-api.com/v6/latest/USD",
-            timeout=8,
-            headers={"User-Agent": "FinanceOS/1.0"}
-        )
-        data = resp.json()
-        if data.get("result") == "success":
-            r = data["rates"]
-            lkr = r.get("LKR", 1)
-            last_updated = data.get("time_last_update_utc", "")
-            # Build LKR per 1 unit of each currency
-            currencies = [
-                ("USD", "🇺🇸", "US Dollar"),
-                ("EUR", "🇪🇺", "Euro"),
-                ("GBP", "🇬🇧", "British Pound"),
-                ("AUD", "🇦🇺", "Australian Dollar"),
-                ("SGD", "🇸🇬", "Singapore Dollar"),
-                ("INR", "🇮🇳", "Indian Rupee"),
-                ("JPY", "🇯🇵", "Japanese Yen"),
-                ("CAD", "🇨🇦", "Canadian Dollar"),
-                ("CNY", "🇨🇳", "Chinese Yuan"),
-                ("AED", "🇦🇪", "UAE Dirham"),
-                ("SAR", "🇸🇦", "Saudi Riyal"),
-                ("MYR", "🇲🇾", "Malaysian Ringgit"),
-                ("THB", "🇹🇭", "Thai Baht"),
-                ("CHF", "🇨🇭", "Swiss Franc"),
-                ("NZD", "🇳🇿", "New Zealand Dollar"),
-            ]
-            for code, flag, name in currencies:
-                if code in r:
-                    rates[code] = {
-                        "flag": flag,
-                        "name": name,
-                        "lkr_per_unit": round(lkr / r[code], 2),
-                        "usd_per_unit": round(1 / r[code], 4) if r[code] else 0,
-                    }
-        else:
-            error = "Could not fetch rates. Try again later."
-    except Exception as e:
-        error = f"Service unavailable: {str(e)[:60]}"
+    CURRENCIES = [
+        ("USD", "🇺🇸", "US Dollar"), ("EUR", "🇪🇺", "Euro"),
+        ("GBP", "🇬🇧", "British Pound"), ("AUD", "🇦🇺", "Australian Dollar"),
+        ("SGD", "🇸🇬", "Singapore Dollar"), ("INR", "🇮🇳", "Indian Rupee"),
+        ("JPY", "🇯🇵", "Japanese Yen"), ("CAD", "🇨🇦", "Canadian Dollar"),
+        ("CNY", "🇨🇳", "Chinese Yuan"), ("AED", "🇦🇪", "UAE Dirham"),
+        ("SAR", "🇸🇦", "Saudi Riyal"), ("MYR", "🇲🇾", "Malaysian Ringgit"),
+        ("THB", "🇹🇭", "Thai Baht"), ("CHF", "🇨🇭", "Swiss Franc"),
+        ("NZD", "🇳🇿", "New Zealand Dollar"),
+    ]
+
+    # Try multiple APIs in order
+    api_urls = [
+        "https://api.exchangerate-api.com/v4/latest/USD",
+        "https://open.er-api.com/v6/latest/USD",
+        "https://api.frankfurter.app/latest?from=USD",
+    ]
+
+    for api_url in api_urls:
+        try:
+            resp = http.get(api_url, timeout=8, headers={"User-Agent": "FinanceOS/1.0"})
+            data = resp.json()
+
+            # Handle different API response formats
+            r = data.get("rates") or data.get("Rates") or {}
+            lkr = r.get("LKR") or r.get("lkr") or 315.0
+            last_updated = (data.get("time_last_update_utc")
+                           or data.get("date")
+                           or data.get("updated", ""))
+
+            if lkr and r:
+                for code, flag, name in CURRENCIES:
+                    rate_val = r.get(code) or r.get(code.lower())
+                    if rate_val:
+                        rates[code] = {
+                            "flag": flag,
+                            "name": name,
+                            "lkr_per_unit": round(lkr / rate_val, 2),
+                        }
+                if rates:
+                    break  # Success — stop trying other APIs
+        except Exception:
+            continue
+
+    # Use fallback if all APIs failed
+    if not rates:
+        rates = FALLBACK_RATES.copy()
+        using_fallback = True
+        error = "Live rates unavailable — showing approximate rates. Refresh to try again."
 
     currency_symbol = get_setting("currency_symbol", "LKR", user_id=uid())
     return render_template("exchange_rates.html",
@@ -2563,6 +3012,7 @@ def exchange_rates():
         error=error,
         last_updated=last_updated,
         currency_symbol=currency_symbol,
+        using_fallback=using_fallback,
     )
 
 
@@ -2570,7 +3020,6 @@ def exchange_rates():
 #  CSE Stock Prices
 # ─────────────────────────────────────────
 @app.route("/cse")
-@login_required
 def cse_stocks():
     import requests as http
     from datetime import datetime as dt
@@ -2655,7 +3104,7 @@ def cse_stocks():
     except Exception as e:
         error = "api_down"
 
-    favourites = FavouriteStock.query.filter_by(user_id=uid()).order_by(FavouriteStock.added_at).all()
+    favourites = FavouriteStock.query.filter_by(user_id=uid()).order_by(FavouriteStock.added_at).all() if uid() else []
     return render_template("cse_stocks.html",
         top_gainers=top_gainers,
         top_losers=top_losers,
@@ -2663,6 +3112,7 @@ def cse_stocks():
         favourites=favourites,
         error=error,
         market_open=market_open,
+        is_logged_in=uid() is not None,
     )
 
 
@@ -2847,7 +3297,6 @@ def favourite_stock_prices():
 #  Credit Card Offers
 # ─────────────────────────────────────────
 @app.route("/offers")
-@login_required
 def card_offers():
     # Get filter params
     bank = request.args.get("bank", "")
@@ -2857,10 +3306,10 @@ def card_offers():
 
     q = CardOffer.query.filter_by(status="approved", is_active=True)
 
-    # Filter by user's own cards if requested
+    # Filter by user's own cards if requested (logged-in only)
     user_card_banks = []
-    user_cards = CreditCard.query.filter_by(user_id=uid()).all()
-    if my_cards:
+    user_cards = CreditCard.query.filter_by(user_id=uid()).all() if uid() else []
+    if my_cards and uid():
         user_bank_names = [c.bank_name.lower() for c in user_cards]
         q = q.filter(db.func.lower(CardOffer.bank_name).in_(user_bank_names))
         user_card_banks = user_bank_names
@@ -2884,8 +3333,8 @@ def card_offers():
     active_offers = [o for o in offers if not o.valid_until or o.valid_until >= today]
     expired_offers = [o for o in offers if o.valid_until and o.valid_until < today]
 
-    # Get user upvotes
-    user_upvotes = {u.offer_id for u in OfferUpvote.query.filter_by(user_id=uid()).all()}
+    # Get user upvotes (logged-in only)
+    user_upvotes = {u.offer_id for u in OfferUpvote.query.filter_by(user_id=uid()).all()} if uid() else set()
 
     # Distinct filter values
     all_banks = sorted(set(o.bank_name for o in CardOffer.query.filter_by(status="approved").all()))
@@ -2913,6 +3362,7 @@ def card_offers():
         pending_count=pending_count,
         today=today,
         is_admin=_is_admin(),
+        is_logged_in=uid() is not None,
     )
 
 
@@ -3822,8 +4272,59 @@ def delete_notification(notif_id):
     db.session.delete(n)
     db.session.commit()
     return redirect(request.referrer or url_for("notifications"))
-@app.route("/crypto")
+
+
+# ─────────────────────────────────────────
+#  Analytics Dashboard Customization
+# ─────────────────────────────────────────
+
+ANALYTICS_WIDGETS_DEFAULT = [
+    {"id": "health",       "label": "Financial Health",       "visible": True,  "order": 1},
+    {"id": "stats",        "label": "Key Stats",              "visible": True,  "order": 2},
+    {"id": "monthly",      "label": "Monthly Trend Chart",    "visible": True,  "order": 3},
+    {"id": "savings",      "label": "Savings Trend",          "visible": True,  "order": 4},
+    {"id": "categories",   "label": "Top Categories",         "visible": True,  "order": 5},
+    {"id": "daily",        "label": "Daily Spending",         "visible": True,  "order": 6},
+    {"id": "income",       "label": "Income Sources",         "visible": True,  "order": 7},
+    {"id": "budget",       "label": "Budget vs Actual",       "visible": True,  "order": 8},
+    {"id": "largest",      "label": "Largest Expenses",       "visible": True,  "order": 9},
+    {"id": "weekday",      "label": "Weekday vs Weekend",     "visible": True,  "order": 10},
+    {"id": "heatmap",      "label": "Spending Heatmap",       "visible": True,  "order": 11},
+    {"id": "fixed",        "label": "Fixed Commitments",      "visible": True,  "order": 12},
+]
+
+def get_analytics_widgets(user_id):
+    import json
+    raw = get_setting("analytics_widgets", None, user_id=user_id)
+    if raw:
+        try:
+            saved = json.loads(raw)
+            # Merge with defaults to catch any new widgets added later
+            saved_ids = {w["id"] for w in saved}
+            for default in ANALYTICS_WIDGETS_DEFAULT:
+                if default["id"] not in saved_ids:
+                    saved.append({**default, "order": len(saved) + 1})
+            return sorted(saved, key=lambda x: x["order"])
+        except Exception:
+            pass
+    return ANALYTICS_WIDGETS_DEFAULT.copy()
+
+
+@app.route("/analytics/save-widgets", methods=["POST"])
 @login_required
+def save_analytics_widgets():
+    import json
+    data = request.get_json()
+    widgets = data.get("widgets", [])
+    set_setting("analytics_widgets", json.dumps(widgets), user_id=uid())
+    db.session.commit()
+    return jsonify({"saved": True})
+
+
+# ─────────────────────────────────────────
+#  Crypto
+# ─────────────────────────────────────────
+@app.route("/crypto")
 def crypto_page():
     import requests as http
     top_coins = []
@@ -3840,15 +4341,16 @@ def crypto_page():
             error = "api_down"
     except Exception:
         error = "api_down"
-    wallets_list = Wallet.query.filter_by(user_id=uid()).all()
-    crypto_investments = Investment.query.filter_by(user_id=uid(), asset_type="Crypto", status="active").all()
-    currency = get_setting("currency_symbol", "LKR", user_id=uid())
+    wallets_list = Wallet.query.filter_by(user_id=uid()).all() if uid() else []
+    crypto_investments = Investment.query.filter_by(user_id=uid(), asset_type="Crypto", status="active").all() if uid() else []
+    currency = get_setting("currency_symbol", "LKR", user_id=uid()) if uid() else "LKR"
     return render_template("crypto.html",
         top_coins=top_coins,
         crypto_investments=crypto_investments,
         error=error,
         currency_symbol=currency,
         wallets=wallets_list,
+        is_logged_in=uid() is not None,
     )
 
 
@@ -3878,49 +4380,118 @@ def crypto_prices():
 def crypto_update_portfolio_prices():
     import requests as http
     SYMBOL_TO_ID = {
-        'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','BNB':'binancecoin',
-        'XRP':'ripple','ADA':'cardano','DOGE':'dogecoin','DOT':'polkadot',
-        'MATIC':'matic-network','LINK':'chainlink','LTC':'litecoin',
-        'AVAX':'avalanche-2','ATOM':'cosmos','TRX':'tron','SHIB':'shiba-inu',
+        "BTC":"bitcoin","ETH":"ethereum","SOL":"solana","BNB":"binancecoin",
+        "XRP":"ripple","ADA":"cardano","DOGE":"dogecoin","DOT":"polkadot",
+        "MATIC":"matic-network","LINK":"chainlink","LTC":"litecoin",
+        "AVAX":"avalanche-2","ATOM":"cosmos","TRX":"tron","SHIB":"shiba-inu",
     }
-    investments = Investment.query.filter_by(user_id=uid(), asset_type='Crypto', status='active').all()
+    investments = Investment.query.filter_by(user_id=uid(), asset_type="Crypto", status="active").all()
     if not investments:
-        return jsonify({'updated': 0})
+        return jsonify({"updated": 0})
     id_to_inv = {}
     for inv in investments:
-        sym = (inv.symbol or '').upper()
-        coin_id = SYMBOL_TO_ID.get(sym) or inv.name.lower().replace(' ', '-')
+        sym = (inv.symbol or "").upper()
+        coin_id = SYMBOL_TO_ID.get(sym) or inv.name.lower().replace(" ", "-")
         id_to_inv[coin_id] = inv
     try:
         r = http.get(
-            'https://api.coingecko.com/api/v3/simple/price',
-            params={'ids':','.join(id_to_inv.keys()),'vs_currencies':'usd','include_24hr_change':'true'},
-            headers={'User-Agent':'FinanceOS/1.0'}, timeout=12,
+            "https://api.coingecko.com/api/v3/simple/price",
+            params={"ids":",".join(id_to_inv.keys()),"vs_currencies":"usd","include_24hr_change":"true"},
+            headers={"User-Agent":"FinanceOS/1.0"}, timeout=12,
         )
         if r.status_code != 200:
-            return jsonify({'error':'API unavailable','updated':0})
+            return jsonify({"error":"API unavailable","updated":0})
         prices = r.json()
         updated = 0
         result = {}
         for coin_id, inv in id_to_inv.items():
             info = prices.get(coin_id, {})
-            price = info.get('usd', 0)
-            chg = info.get('usd_24h_change', 0)
+            price = info.get("usd", 0)
+            chg = info.get("usd_24h_change", 0)
             if price and price > 0:
                 inv.current_price = price
                 updated += 1
-                result[inv.id] = {'price':price,'change':round(chg,2) if chg else 0,'value':round(inv.current_value,0)}
+                result[inv.id] = {"price":price,"change":round(chg,2) if chg else 0,"value":round(inv.current_value,0)}
         if updated > 0:
             db.session.commit()
             update_networth_snapshot(user_id=uid())
-        return jsonify({'updated':updated,'prices':result})
+        return jsonify({"updated":updated,"prices":result})
     except Exception as e:
-        return jsonify({'error':str(e),'updated':0})
+        return jsonify({"error":str(e),"updated":0})
 
 
-  
-    
-    
+@app.route("/investments/edit/<int:inv_id>", methods=["POST"])
+@login_required
+def edit_investment(inv_id):
+    inv = Investment.query.filter_by(id=inv_id, user_id=uid()).first_or_404()
+    inv.name = request.form.get("name", inv.name).strip()
+    inv.symbol = request.form.get("symbol", inv.symbol or "").strip().upper()
+    inv.institution = request.form.get("institution", inv.institution or "").strip()
+    inv.units = float(request.form.get("units") or inv.units)
+    inv.purchase_price = float(request.form.get("purchase_price") or inv.purchase_price)
+    inv.current_price = float(request.form.get("current_price") or inv.current_price)
+    inv.interest_rate = float(request.form.get("interest_rate") or inv.interest_rate or 0)
+    if request.form.get("purchase_date"):
+        inv.purchase_date = datetime.strptime(request.form["purchase_date"], "%Y-%m-%d").date()
+    if request.form.get("maturity_date"):
+        inv.maturity_date = datetime.strptime(request.form["maturity_date"], "%Y-%m-%d").date()
+    inv.notes = request.form.get("notes", inv.notes or "").strip()
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash(f"✅ {inv.name} updated.", "success")
+    return redirect(url_for("investments"))
+
+
+@app.route("/income/edit/<int:income_id>", methods=["POST"])
+@login_required
+def edit_income(income_id):
+    txn = Transaction.query.filter_by(id=income_id, user_id=uid(), trans_type='income').first_or_404()
+    old_amount = txn.amount
+    old_wallet_id = txn.wallet_id
+    new_amount = float(request.form.get('amount') or old_amount)
+    txn.description = request.form.get('description', txn.description).strip()
+    txn.category = request.form.get('category', txn.category)
+    txn.amount = new_amount
+    if request.form.get('date'):
+        txn.date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+    new_wallet_id = int(request.form['wallet_id']) if request.form.get('wallet_id') else None
+    if old_wallet_id:
+        old_wallet = Wallet.query.get(old_wallet_id)
+        if old_wallet:
+            old_wallet.balance -= old_amount
+    if new_wallet_id:
+        new_wallet = Wallet.query.get(new_wallet_id)
+        if new_wallet:
+            new_wallet.balance += new_amount
+    txn.wallet_id = new_wallet_id
+    db.session.commit()
+    update_networth_snapshot(user_id=uid())
+    flash('Income updated.', 'success')
+    return redirect(url_for('income'))
+
+
+@app.route("/migrate-to-email")
+def migrate_to_email():
+    email = "hiroshann@gmail.com"
+    old_ids = [
+        "auth0|6a1d58287f1bf67cfc7e872d",
+        "google-oauth2|103051075859000420599"
+    ]
+    models_list = [Transaction, Wallet, CreditCard, Loan, Goal,
+                   BudgetPlanner, FixedExpense, RecurringPayment,
+                   Investment, InvestmentIncome, Debt, AppSettings,
+                   Notification, NetWorthHistory, FavouriteStock]
+    total = 0
+    for old_id in old_ids:
+        for model in models_list:
+            try:
+                updated = model.query.filter_by(user_id=old_id).update({"user_id": email})
+                total += updated
+            except Exception:
+                pass
+    db.session.commit()
+    return f"✅ Migrated {total} records to {email}"
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
