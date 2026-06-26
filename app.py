@@ -3885,7 +3885,7 @@ def advisor_chat():
     if not messages:
         return jsonify({"error": "No messages"}), 400
 
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "sk-ant-api03-vwk5kXGe1khfV7q9-d4uNn8XhGzRov21VmIl6V69hphTKZi3JBk358uzRZsuY-ssHYEAWASBbLrjWW494WVjEw--i1FpAA")
     if not anthropic_key:
         return jsonify({"error": "AI Advisor isn't configured yet — ANTHROPIC_API_KEY is missing from the server environment."}), 500
 
