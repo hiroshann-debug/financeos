@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}FinanceOS{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,22 +30,21 @@
       --font:       'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     html { font-size: 14px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
-    body { font-family: 'Plus Jakarta Sans',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; font-weight: 400; }
+    body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; font-weight: 400; }
 
     /* NAV */
     .pub-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       padding: 0 40px; height: 64px;
       display: flex; align-items: center; justify-content: space-between;
-      background: rgba(10,11,15,0.85); backdrop-filter: blur(12px);
+      background: white;
       border-bottom: 1px solid var(--border);
     }
     .pub-nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .pub-nav-logo-icon {
       width: 34px; height: 34px; border-radius: 9px;
-      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      background: var(--accent);
       display: grid; place-items: center; font-size: 16px;
-      box-shadow: 0 0 16px var(--accent-glow);
     }
     .pub-nav-logo-text { font-size: 1rem; font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
     .pub-nav-links { display: flex; align-items: center; gap: 8px; }
@@ -55,14 +54,13 @@
       color: var(--text2); text-decoration: none;
       transition: all 0.2s;
     }
-    .pub-nav-link:hover { color: var(--text); background: var(--surface); }
+    .pub-nav-link:hover { color: var(--text); background: var(--surface2); }
     .pub-nav-cta {
       padding: 7px 16px; border-radius: 6px;
       background: var(--accent); color: white;
       font-size: 0.82rem; font-weight: 500;
       text-decoration: none;
-      box-shadow: 0 0 16px var(--accent-glow);
-      transition: all 0.2s;
+      transition: background 0.2s;
     }
     .pub-nav-cta:hover { background: var(--accent2); }
 
@@ -77,7 +75,7 @@
       cursor: pointer; border: none; text-decoration: none;
       transition: all 0.2s; white-space: nowrap;
     }
-    .btn-primary { background: var(--accent); color: white; box-shadow: 0 0 20px var(--accent-glow); }
+    .btn-primary { background: var(--accent); color: white; }
     .btn-primary:hover { background: var(--accent2); }
     .btn-ghost { background: var(--surface); color: var(--text2); border: 1px solid var(--border2); }
     .btn-ghost:hover { color: var(--text); background: var(--surface2); }
@@ -100,9 +98,21 @@
 </head>
 <body>
 
+{% block nav %}
+<nav class="pub-nav">
+  <a href="{{ url_for('landing') }}" class="pub-nav-logo">
+    <div class="pub-nav-logo-icon">💰</div>
+    <span class="pub-nav-logo-text">FinanceOS</span>
+  </a>
+  <div class="pub-nav-links">
+    <a href="{{ url_for('login') }}" class="pub-nav-link">Sign In</a>
+    <a href="{{ url_for('auth_signup') }}" class="pub-nav-cta">Get Started Free</a>
+  </div>
+</nav>
+{% endblock %}
 
-<div class="pub-content" style="padding-top:0;margin-top:0;">
-    {% with messages = get_flashed_messages(with_categories=true) %}
+<div class="{% block content_wrap_class %}pub-content{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div style="max-width:500px;margin:20px auto;padding:0 20px;">
       {% for category, message in messages %}
@@ -117,6 +127,11 @@
   {% block content %}{% endblock %}
 </div>
 
+{% block footer %}
+<footer class="pub-footer">
+  © 2025 FinanceOS · Built with ❤️
+</footer>
+{% endblock %}
 
 {% block scripts %}{% endblock %}
 </body>

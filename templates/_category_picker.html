@@ -1,0 +1,81 @@
+{# ─────────────────────────────────────────────────────────────────
+   Category Picker macro
+   Usage:  {% from "_category_picker.html" import category_picker %}
+           {{ category_picker('category', expense_categories, 'expense') }}
+
+   Renders a real <select>-backed picker (so it always submits a value),
+   but presented as an interactive icon grid with an inline
+   "+ Add new category" tile that creates the category via AJAX and
+   selects it immediately — no page reload, no free-text typos.
+───────────────────────────────────────────────────────────────────── #}
+{% macro category_picker(field_name, categories, kind, selected_id=none, instance_id=none) %}
+{% set iid = instance_id or (field_name ~ '_' ~ range(1000,9999)|random|string) %}
+<div class="cat-picker" id="catpicker-{{ iid }}" data-kind="{{ kind }}" data-field="{{ field_name }}">
+  <input type="hidden" name="{{ field_name }}_id" id="catpicker-{{ iid }}-hidden-id"
+         value="{{ selected_id or (categories[0].id if categories else '') }}">
+  <input type="hidden" name="{{ field_name }}" id="catpicker-{{ iid }}-hidden-name"
+         value="{{ (categories|selectattr('id','equalto',selected_id)|first).name if selected_id and categories else (categories[0].name if categories else '') }}">
+
+  <button type="button" class="cat-picker-trigger" id="catpicker-{{ iid }}-trigger"
+          onclick="catPickerToggle('{{ iid }}')">
+    <span class="cat-picker-trigger-icon" id="catpicker-{{ iid }}-trigger-icon">
+      {{ (categories|selectattr('id','equalto',selected_id)|first).icon if selected_id and categories else (categories[0].icon if categories else '🏷️') }}
+    </span>
+    <span class="cat-picker-trigger-text" id="catpicker-{{ iid }}-trigger-text">
+      {{ (categories|selectattr('id','equalto',selected_id)|first).name if selected_id and categories else (categories[0].name if categories else 'Select category') }}
+    </span>
+    <i class="fas fa-chevron-down" style="font-size:0.7rem;color:var(--text3);margin-left:auto;"></i>
+  </button>
+
+  <div class="cat-picker-popover" id="catpicker-{{ iid }}-popover">
+    <div class="cat-picker-grid" id="catpicker-{{ iid }}-grid">
+      {% for c in categories %}
+      <button type="button" class="cat-picker-item" data-id="{{ c.id }}" data-name="{{ c.name }}" data-icon="{{ c.icon }}"
+              onclick="catPickerSelect('{{ iid }}', {{ c.id }}, '{{ c.name|e }}', '{{ c.icon }}')"
+              style="--cat-color:{{ c.color }};">
+        <span class="cat-picker-item-icon">{{ c.icon }}</span>
+        <span class="cat-picker-item-name">{{ c.name }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="cat-picker-add-row" id="catpicker-{{ iid }}-add-row">
+      <button type="button" class="cat-picker-add-btn" onclick="catPickerShowAddForm('{{ iid }}')">
+        <i class="fas fa-plus"></i> Add new category
+      </button>
+    </div>
+
+    <div class="cat-picker-add-form" id="catpicker-{{ iid }}-add-form" style="display:none;">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="text" class="cat-picker-add-input" id="catpicker-{{ iid }}-add-name"
+               placeholder="e.g. Gym, Wi-Fi..." maxlength="40">
+        <select class="cat-picker-emoji-select" id="catpicker-{{ iid }}-add-icon">
+          <option value="🏷️">🏷️</option>
+          <option value="🏋️">🏋️ Gym</option>
+          <option value="📶">📶 Wi-Fi</option>
+          <option value="🐶">🐶 Pet</option>
+          <option value="✈️">✈️ Travel</option>
+          <option value="🎮">🎮 Gaming</option>
+          <option value="☕">☕ Coffee</option>
+          <option value="👶">👶 Kids</option>
+          <option value="🚗">🚗 Auto</option>
+          <option value="💅">💅 Beauty</option>
+          <option value="🎵">🎵 Music</option>
+          <option value="📦">📦 Other</option>
+        </select>
+      </div>
+      <div class="cat-picker-color-row" id="catpicker-{{ iid }}-colors">
+        {% for c in ['#6366f1','#ec4899','#f59e0b','#22c55e','#3b82f6','#ef4444','#14b8a6','#a855f7'] %}
+        <button type="button" class="cat-picker-color-dot {% if loop.first %}selected{% endif %}" style="background:{{ c }};" data-color="{{ c }}" onclick="catPickerPickColor('{{ iid }}', this)"></button>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="catPickerHideAddForm('{{ iid }}')">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="catPickerSaveNew('{{ iid }}')" style="flex:1;">
+          <i class="fas fa-check"></i> Create &amp; select
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}

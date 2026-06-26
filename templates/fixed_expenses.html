@@ -2,6 +2,7 @@
 {% block title %}Fixed Expenses{% endblock %}
 {% block page_title %}Fixed Expenses{% endblock %}
 {% block content %}
+{% from "_category_picker.html" import category_picker %}
 <div class="flex items-center justify-between mb-4">
   <h2 style="font-size:1.4rem;font-weight:700;">Payments</h2>
   <div class="flex gap-2">
@@ -45,7 +46,7 @@
 
 <div class="stat-grid mb-6">
   <div class="stat-card"><div class="stat-icon" style="background:var(--red-soft);color:var(--red)"><i class="fas fa-calendar-check"></i></div><div class="stat-label">This Month</div><div class="stat-value text-red">{{ "{:,.0f}".format(total_this_month) }}</div></div>
-  <div class="stat-card"><div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-rotate"></i></div><div class="stat-label">Monthly Recurring</div><div class="stat-value text-accent">{{ "{:,.0f}".format(total_monthly_repeats) }}</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:var(--accent-glow);color:var(--accent2)"><i class="fas fa-rotate"></i></div><div class="stat-label">Recurring Payments</div><div class="stat-value text-accent">{{ "{:,.0f}".format(total_recurring_monthly) }}</div></div>
   <div class="stat-card"><div class="stat-icon" style="background:var(--orange-soft);color:var(--orange)"><i class="fas fa-list"></i></div><div class="stat-label">Fixed Recurring</div><div class="stat-value" style="color:var(--orange)">{{ "{:,.0f}".format(total_repeat_until) }}</div></div>
 </div>
 
@@ -92,30 +93,51 @@
 
 <!-- TAB: RECURRING -->
 <div class="tab-pane" id="pane-recurring">
-<div class="text-muted text-sm mb-4">
-  Auto-repeating payments every month.
-  <strong class="font-mono" style="color:var(--accent2)">{{ currency_symbol }} {{ "{:,.0f}".format(total_monthly_repeats) }}</strong> monthly total.
+<div class="flex items-center justify-between mb-4">
+  <div class="text-muted text-sm">
+    Auto-repeating payments — subscriptions, memberships, bills.
+    <strong class="font-mono" style="color:var(--accent2)">{{ currency_symbol }} {{ "{:,.0f}".format(total_recurring_monthly) }}</strong> monthly total.
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addRecModal').classList.add('open')"><i class="fas fa-plus"></i> Add Recurring</button>
 </div>
 
-{% if repeating_expenses %}
+{% if recurring %}
 <div class="card mb-6">
-  <div class="card-title">Monthly Recurring</div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Name</th><th>Amount</th><th>Category</th><th>Next Due</th><th>Repeat Until</th></tr></thead>
+      <thead><tr><th>Name</th><th>Amount</th><th>Frequency</th><th>Category</th><th>Next Date</th><th>Auto</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
-        {% for exp in repeating_expenses %}
+        {% for r in recurring %}
         <tr>
-          <td style="font-weight:500;">{{ exp.name }}</td>
-          <td class="font-mono font-bold" style="color:var(--orange)">{{ "{:,.0f}".format(exp.amount) }}</td>
-          <td><span class="badge-pill badge-accent">{{ exp.category }}</span></td>
-          <td class="font-mono text-xs text-muted">{{ exp.date.strftime('%d %b %Y') if exp.date else '—' }}</td>
-          <td class="text-muted text-xs">{{ exp.repeat_until.strftime('%b %Y') if exp.repeat_until else 'Ongoing' }}</td>
+          <td style="font-weight:500;">{{ r.name }}</td>
+          <td class="font-mono font-bold" style="color:var(--orange)">{{ "{:,.0f}".format(r.amount) }}</td>
+          <td><span class="badge-pill badge-accent">{{ r.frequency.title() }}</span></td>
+          <td class="text-muted text-sm">{{ r.category }}</td>
+          <td class="font-mono text-xs {% if r.next_date <= today %}text-red{% else %}text-muted{% endif %}">{{ r.next_date.strftime('%d %b %Y') }}</td>
+          <td>{% if r.auto_apply %}<span class="badge-pill badge-green">Auto</span>{% else %}<span class="badge-pill" style="background:var(--surface2);color:var(--text2);">Manual</span>{% endif %}</td>
+          <td>{% if r.is_active %}<span class="badge-pill badge-green">Active</span>{% else %}<span class="badge-pill badge-red">Inactive</span>{% endif %}</td>
+          <td>
+            <div class="flex gap-2">
+              <form method="POST" action="{{ url_for('apply_recurring', rec_id=r.id) }}">
+                <button class="btn btn-primary btn-sm btn-icon" title="Apply now"><i class="fas fa-play"></i></button>
+              </form>
+              <form method="POST" action="{{ url_for('delete_recurring', rec_id=r.id) }}" onsubmit="return confirm('Delete?')">
+                <button class="btn btn-danger btn-icon btn-sm"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:48px;">
+  <div style="font-size:2.5rem;margin-bottom:12px;">🔄</div>
+  <h3 style="font-weight:700;margin-bottom:6px;">No recurring payments</h3>
+  <p style="color:var(--text2);font-size:0.875rem;margin-bottom:16px;">Netflix, Spotify, Gym, Insurance, Internet — anything that bills you automatically.</p>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('addRecModal').classList.add('open')"><i class="fas fa-plus"></i> Add First Recurring</button>
 </div>
 {% endif %}
 
@@ -124,29 +146,78 @@
 <!-- TAB: SCHEDULER -->
 <div class="tab-pane" id="pane-scheduler">
 <div class="text-muted text-sm mb-4">
-  Upcoming payments forecast for next period.
+  Everything due — fixed expenses, recurring payments, loan installments and credit card minimums, combined and sorted by date.
 </div>
 
-{% if next_month_expenses %}
-<div class="card">
-  <div class="card-title">Next Month Forecast</div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Name</th><th>Amount</th><th>Category</th><th>Date</th></tr></thead>
-      <tbody>
-        {% for exp in next_month_expenses %}
-        <tr>
-          <td style="font-weight:500;">{{ exp.name }}</td>
-          <td class="font-mono font-bold text-red">{{ "{:,.0f}".format(exp.amount) }}</td>
-          <td><span class="badge-pill badge-accent">{{ exp.category }}</span></td>
-          <td class="font-mono text-xs text-muted">{{ exp.date.strftime('%d %b %Y') if exp.date else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">This Month — All Due Payments</div>
+    {% if scheduler_this_month %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Category</th><th>Amount</th><th>Due Date</th></tr></thead>
+        <tbody>
+          {% for e in scheduler_this_month %}
+          <tr>
+            <td style="font-weight:500;">{{ e.name }}</td>
+            <td>
+              <span class="badge-pill
+                {% if e.category == 'Loan Payment' %}badge-red
+                {% elif e.category == 'Credit Card' %}badge-orange
+                {% else %}badge-accent{% endif %}">
+                {{ e.category }}
+              </span>
+            </td>
+            <td class="font-mono font-bold text-red">{{ currency_symbol }} {{ "{:,.0f}".format(e.amount) }}</td>
+            <td class="font-mono text-xs text-muted">{{ e.due_date.strftime('%d %b %Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-weight:700;">
+      <span>Total</span>
+      <span class="font-mono text-red">{{ currency_symbol }} {{ "{:,.0f}".format(scheduler_total_this_month) }}</span>
+    </div>
+    {% else %}
+    <p class="text-muted text-sm">Nothing scheduled this month.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Next Month — Forecast</div>
+    {% if scheduler_next_month %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Category</th><th>Amount</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for e in scheduler_next_month %}
+          <tr>
+            <td style="font-weight:500;">{{ e.name }}</td>
+            <td>
+              <span class="badge-pill
+                {% if e.category == 'Loan Payment' %}badge-red
+                {% elif e.category == 'Credit Card' %}badge-orange
+                {% else %}badge-accent{% endif %}">
+                {{ e.category }}
+              </span>
+            </td>
+            <td class="font-mono font-bold" style="color:var(--orange)">{{ currency_symbol }} {{ "{:,.0f}".format(e.amount) }}</td>
+            <td class="font-mono text-xs text-muted">{{ e.due_date.strftime('%d %b') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-weight:700;">
+      <span>Total</span>
+      <span class="font-mono" style="color:var(--orange)">{{ currency_symbol }} {{ "{:,.0f}".format(scheduler_total_next_month) }}</span>
+    </div>
+    {% else %}
+    <p class="text-muted text-sm">Nothing forecast for next month.</p>
+    {% endif %}
   </div>
 </div>
-{% endif %}
 
 </div><!-- end pane-scheduler -->
 
@@ -160,8 +231,7 @@
         <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required></div>
         <div class="form-group">
           <label class="form-label">Category</label>
-          <input type="text" name="category" class="form-control" list="fixed-cats">
-          <datalist id="fixed-cats"><option value="Rent"><option value="Utilities"><option value="Insurance"><option value="Subscription"><option value="Transport"><option value="Loan"><option value="Other"></datalist>
+          {{ category_picker('category', expense_categories, 'expense', instance_id='fixedexp') }}
         </div>
       </div>
       <div class="grid-2">
@@ -188,15 +258,60 @@
     <div class="modal-title" id="applyFixedTitle">Apply Expense</div>
     <form method="POST" id="applyFixedForm">
       <div class="form-group">
+        <label class="form-label">Date Paid</label>
+        <input type="date" name="date" id="applyFixedDate" class="form-control" required>
+      </div>
+      <div class="form-group">
         <label class="form-label">Payment Source</label>
         <select name="payment_method" class="form-control">
-          {% for w in wallets %}<option value="wallet_{{ w.id }}">{{ w.name }}</option>{% endfor %}
-          {% for c in credit_cards %}<option value="credit_{{ c.id }}">{{ c.bank_name }} Card</option>{% endfor %}
+          <option value="">None — record only</option>
+          {% for w in wallets %}<option value="wallet_{{ w.id }}">💼 {{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}
+          {% for c in credit_cards %}<option value="credit_{{ c.id }}">💳 {{ c.bank_name }} Card</option>{% endfor %}
         </select>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Choose "record only" if you're tracking this elsewhere and don't want a wallet/card balance affected.</div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="document.getElementById('applyFixedModal').classList.remove('open')">Cancel</button>
         <button type="submit" class="btn btn-primary">Apply as Expense</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- ADD RECURRING MODAL -->
+<div class="modal-overlay" id="addRecModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Add Recurring Payment</div>
+    <form method="POST" action="{{ url_for('recurring_payments') }}">
+      <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required placeholder="e.g. Netflix, Gym..."></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required></div>
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select name="frequency" class="form-control"><option value="weekly">Weekly</option><option value="biweekly">Bi-Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Next Date</label><input type="date" name="next_date" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">End Date (optional)</label><input type="date" name="end_date" class="form-control"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          {{ category_picker('category', expense_categories, 'expense', instance_id='recur') }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pay From (Wallet)</label>
+          <select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}</select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;">
+          <input type="checkbox" name="auto_apply" style="width:16px;height:16px;accent-color:var(--accent);"> Auto-apply on due date
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('addRecModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Recurring</button>
       </div>
     </form>
   </div>
@@ -207,6 +322,7 @@
 function openApplyFixed(id, name) {
   document.getElementById('applyFixedTitle').textContent = `Apply: ${name}`;
   document.getElementById('applyFixedForm').action = `/apply-fixed/${id}`;
+  document.getElementById('applyFixedDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('applyFixedModal').classList.add('open');
 }
 

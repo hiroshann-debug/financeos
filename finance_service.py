@@ -38,6 +38,9 @@ def set_setting(key, value, user_id=None):
 def add_transaction(amount, description, trans_type, wallet_id=None, linked_credit=None,
                     linked_loan=None, currency="LKR", date_obj=None, category=None,
                     notes=None, tags=None, user_id=None):
+    txn_date = date_obj or date.today()
+    is_due = txn_date <= date.today()
+
     txn = Transaction(
         amount=amount,
         description=description,
@@ -45,15 +48,16 @@ def add_transaction(amount, description, trans_type, wallet_id=None, linked_cred
         category=category or description,
         notes=notes,
         tags=tags,
-        date=date_obj or datetime.now().date(),
-        user_id=user_id
+        date=txn_date,
+        user_id=user_id,
+        wallet_id=wallet_id if is_due else None,
+        credit_card_id=linked_credit if is_due else None,
+        balance_applied=is_due,
+        loan_id=linked_loan if is_due else None,
     )
     db.session.add(txn)
 
     # Only affect balances for past/today transactions, not future
-    txn_date = txn.date if isinstance(txn.date, date) else txn.date.date()
-    is_due = txn_date <= date.today()
-
     if wallet_id and is_due:
         wallet = Wallet.query.get(wallet_id)
         if wallet:
@@ -80,6 +84,34 @@ def add_transaction(amount, description, trans_type, wallet_id=None, linked_cred
     check_and_create_notifications(user_id=user_id)
     db.session.commit()
     return txn
+
+
+def reverse_transaction_balance(txn):
+    """Undo whatever balance effect a transaction had — used when deleting
+    or editing a transaction, so wallet/card/loan balances stay correct.
+    Safe to call even if the transaction never touched a balance
+    (balance_applied=False, e.g. it was future-dated when created)."""
+    if not txn.balance_applied:
+        return
+
+    if txn.wallet_id:
+        wallet = Wallet.query.get(txn.wallet_id)
+        if wallet:
+            if txn.trans_type == "expense":
+                wallet.balance += txn.amount
+            elif txn.trans_type == "income":
+                wallet.balance -= txn.amount
+
+    if txn.credit_card_id:
+        card = CreditCard.query.get(txn.credit_card_id)
+        if card:
+            # Expense on a card reduced available_balance; reverse that.
+            card.available_balance = min(card.credit_limit, card.available_balance + txn.amount)
+
+    if txn.loan_id:
+        loan = Loan.query.get(txn.loan_id)
+        if loan:
+            loan.outstanding_balance += txn.amount
 
 
 # ─────────────────────────────────────────

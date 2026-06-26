@@ -236,7 +236,10 @@
       </div>
       <div class="form-group"><label class="form-label">Description</label><input type="text" name="description" class="form-control" required placeholder="What's this for?"></div>
       <div class="grid-2">
-        <div class="form-group"><label class="form-label">Category</label><input type="text" name="category" class="form-control" placeholder="Food, Transport..." list="cat-l"><datalist id="cat-l"><option value="Food & Dining"><option value="Transport"><option value="Utilities"><option value="Entertainment"><option value="Shopping"><option value="Health"><option value="Education"><option value="Rent"></datalist></div>
+        <div class="form-group"><label class="form-label">Category</label>
+          {% from "_category_picker.html" import category_picker %}
+          {{ category_picker('category', expense_categories, 'expense', instance_id='caladd') }}
+        </div>
         <div class="form-group"><label class="form-label">Currency</label><select name="currency" class="form-control"><option value="LKR">LKR</option><option value="USD">USD</option></select></div>
       </div>
       <div class="form-group"><label class="form-label">Payment Source</label>

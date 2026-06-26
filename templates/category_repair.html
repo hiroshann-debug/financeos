@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Fix Budget Mismatches{% endblock %}
+{% block page_title %}Fix Budget Mismatches{% endblock %}
+{% block content %}
+<div style="max-width:700px;">
+  <div class="flex items-center gap-3 mb-3">
+    <a href="{{ url_for('budget_planner') }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+    <h2 style="font-size:1.4rem;font-weight:700;">Fix Budget Mismatches</h2>
+  </div>
+  <p class="text-muted mb-6" style="font-size:0.875rem;">
+    Budgets and transactions are matched by category name. If your spending isn't tracking against
+    a budget, it usually means the category name typed for the budget doesn't exactly match the
+    category typed on your transactions — e.g. "Wi-Fi" vs "Wifi". Fix it below.
+  </p>
+
+  {% if not mismatches %}
+  <div class="card" style="text-align:center;padding:48px 24px;">
+    <i class="fas fa-circle-check" style="font-size:2.5rem;color:var(--green);margin-bottom:12px;display:block;"></i>
+    <h3 style="font-weight:700;margin-bottom:6px;">No mismatches found</h3>
+    <p class="text-muted" style="font-size:0.875rem;">Every budget this month is correctly matching its transactions.</p>
+  </div>
+  {% else %}
+
+  {% for m in mismatches %}
+  <div class="card mb-4" style="border-color:var(--orange);">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="fas fa-triangle-exclamation" style="color:var(--orange);"></i>
+      <strong>Budget "{{ m.budget_category }}"</strong>
+      <span class="text-muted" style="font-size:0.82rem;">has no matching transactions this month</span>
+    </div>
+
+    {% if m.suggestions %}
+    <p class="text-muted mb-3" style="font-size:0.82rem;">
+      Did you mean one of these existing transaction categories?
+      {% for s in m.suggestions %}<span class="badge-pill badge-accent" style="margin-right:4px;">{{ s }}</span>{% endfor %}
+    </p>
+
+    <div class="flex gap-2" style="flex-wrap:wrap;">
+      {% for s in m.suggestions %}
+      <form method="POST" action="{{ url_for('categories_repair_fix') }}" style="display:inline;">
+        <input type="hidden" name="budget_id" value="{{ m.budget_id }}">
+        <input type="hidden" name="target_category" value="{{ s }}">
+        <input type="hidden" name="action" value="rename_budget">
+        <button type="submit" class="btn btn-ghost btn-sm">
+          Rename budget to "{{ s }}"
+        </button>
+      </form>
+      <form method="POST" action="{{ url_for('categories_repair_fix') }}" style="display:inline;">
+        <input type="hidden" name="budget_id" value="{{ m.budget_id }}">
+        <input type="hidden" name="target_category" value="{{ s }}">
+        <input type="hidden" name="action" value="rename_transactions">
+        <button type="submit" class="btn btn-primary btn-sm">
+          Rename "{{ s }}" transactions to "{{ m.budget_category }}"
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted" style="font-size:0.82rem;">
+      No similar category found among your transactions. You may not have logged any
+      "{{ m.budget_category }}" expenses yet this month, or it's spelled very differently.
+      Go to <a href="{{ url_for('budget_planner') }}" style="color:var(--accent);">Budget Planner</a>
+      and edit the budget to pick from your real category list instead.
+    </p>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% endif %}
+
+  {% if txn_categories %}
+  <div class="card mt-6">
+    <div class="card-title">Your transaction categories this month</div>
+    <div class="flex gap-2" style="flex-wrap:wrap;">
+      {% for c in txn_categories %}
+      <span class="badge-pill badge-accent">{{ c }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

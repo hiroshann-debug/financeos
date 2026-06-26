@@ -549,85 +549,6 @@
     .sub-nav-link.active { color: var(--accent2); border-bottom-color: var(--accent2); }
     .sub-nav-link i { font-size: 0.78rem; opacity: 0.7; }
 
-    /* ── FINANCEOS HERO ── */
-    .financeos-hero {
-      background: linear-gradient(135deg, var(--sidebar-bg) 0%, #1e293b 50%, var(--sidebar-bg) 100%);
-      border-radius: 24px;
-      padding: 32px 36px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: white;
-      margin-bottom: 24px;
-      gap: 24px;
-      flex-wrap: wrap;
-      position: relative;
-      overflow: hidden;
-    }
-    .financeos-hero::before {
-      content: '';
-      position: absolute;
-      top: -60px; right: -60px;
-      width: 220px; height: 220px;
-      border-radius: 50%;
-      background: rgba(99,102,241,0.12);
-      pointer-events: none;
-    }
-    .financeos-hero::after {
-      content: '';
-      position: absolute;
-      bottom: -40px; left: 30%;
-      width: 160px; height: 160px;
-      border-radius: 50%;
-      background: rgba(139,92,246,0.08);
-      pointer-events: none;
-    }
-    .hero-badge {
-      display: inline-block;
-      padding: 5px 12px;
-      background: rgba(99,102,241,0.25);
-      border: 1px solid rgba(99,102,241,0.4);
-      border-radius: 999px;
-      font-size: 0.65rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      color: #a5b4fc;
-      margin-bottom: 10px;
-    }
-    .hero-left { flex: 1; min-width: 200px; position: relative; z-index: 1; }
-    .hero-right {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      position: relative;
-      z-index: 1;
-    }
-    .hero-stat {
-      padding: 16px 20px;
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      min-width: 130px;
-      transition: background 0.2s;
-    }
-    .hero-stat:hover { background: rgba(255,255,255,0.1); }
-    .hero-stat span {
-      display: block;
-      font-size: 0.68rem;
-      color: rgba(255,255,255,0.5);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 6px;
-    }
-    .hero-stat strong {
-      display: block;
-      font-family: var(--mono);
-      font-size: 1.15rem;
-      font-weight: 800;
-    }
-
     /* ── AI ADVISOR ── */
     .ai-card {
       background: var(--surface);
@@ -665,14 +586,10 @@
     @media (max-width: 900px) {
       .stat-grid-primary, .stat-grid-secondary { grid-template-columns: 1fr 1fr !important; }
       .ai-grid { grid-template-columns: 1fr 1fr !important; }
-      .financeos-hero { flex-direction: column; padding: 24px; }
-      .hero-right { width: 100%; }
-      .hero-stat { flex: 1; min-width: 100px; }
     }
     @media (max-width: 480px) {
       .stat-grid-primary, .stat-grid-secondary { grid-template-columns: 1fr !important; }
       .ai-grid { grid-template-columns: 1fr !important; }
-      .hero-right { flex-direction: column; }
     }
 
     /* ── BOTTOM MOBILE NAV ── */
@@ -793,6 +710,58 @@
     .tab-btn:hover:not(.active) { background: var(--surface2); color: var(--text); }
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
+
+    /* ── CATEGORY PICKER ── */
+    .cat-picker { position: relative; }
+    .cat-picker-trigger {
+      width: 100%; display: flex; align-items: center; gap: 8px;
+      padding: 9px 11px; background: var(--bg3); border: 0.5px solid var(--border2);
+      border-radius: 7px; font-family: var(--font); font-size: 0.82rem;
+      color: var(--text); cursor: pointer; transition: border-color 0.15s;
+    }
+    .cat-picker-trigger:hover { border-color: var(--accent); }
+    .cat-picker-trigger-icon { font-size: 1rem; }
+    .cat-picker-trigger-text { flex: 1; text-align: left; }
+    .cat-picker-popover {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 50;
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      padding: 10px; display: none; max-height: 320px; overflow-y: auto;
+    }
+    .cat-picker-popover.open { display: block; }
+    .cat-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+    .cat-picker-item {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 10px 6px; border-radius: 9px; border: 1.5px solid transparent;
+      background: var(--surface2); cursor: pointer; transition: all 0.15s;
+      font-family: var(--font);
+    }
+    .cat-picker-item:hover { border-color: var(--cat-color, var(--accent)); background: color-mix(in srgb, var(--cat-color, var(--accent)) 10%, var(--surface2)); }
+    .cat-picker-item-icon { font-size: 1.3rem; }
+    .cat-picker-item-name { font-size: 0.68rem; color: var(--text2); text-align: center; line-height: 1.2; font-weight: 500; }
+    .cat-picker-add-row { border-top: 1px solid var(--border); padding-top: 8px; }
+    .cat-picker-add-btn {
+      width: 100%; padding: 8px; border-radius: 8px; border: 1.5px dashed var(--border2);
+      background: transparent; color: var(--accent); font-family: var(--font);
+      font-size: 0.78rem; font-weight: 600; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 6px; transition: all 0.15s;
+    }
+    .cat-picker-add-btn:hover { background: var(--accent-glow); border-color: var(--accent); }
+    .cat-picker-add-form { border-top: 1px solid var(--border); padding-top: 10px; }
+    .cat-picker-add-input {
+      flex: 1; padding: 8px 10px; border-radius: 7px; border: 0.5px solid var(--border2);
+      background: var(--bg3); color: var(--text); font-family: var(--font); font-size: 0.8rem;
+    }
+    .cat-picker-emoji-select {
+      width: 60px; padding: 8px 6px; border-radius: 7px; border: 0.5px solid var(--border2);
+      background: var(--bg3); color: var(--text); font-family: var(--font); font-size: 0.9rem;
+    }
+    .cat-picker-color-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cat-picker-color-dot {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .cat-picker-color-dot.selected { border-color: var(--text); transform: scale(1.15); }
 
     {% block extra_style %}{% endblock %}
   </style>
@@ -1019,6 +988,85 @@ function fmt(n) {
 // Auto-dismiss alerts
 document.querySelectorAll('.alert').forEach(a => {
   setTimeout(() => { a.style.opacity = '0'; a.style.transition = 'opacity 0.5s'; setTimeout(() => a.remove(), 500); }, 5000);
+});
+
+// ── CATEGORY PICKER ──
+function catPickerToggle(iid) {
+  const popover = document.getElementById('catpicker-' + iid + '-popover');
+  const isOpen = popover.classList.contains('open');
+  // Close any other open pickers first
+  document.querySelectorAll('.cat-picker-popover.open').forEach(p => p.classList.remove('open'));
+  if (!isOpen) popover.classList.add('open');
+}
+
+function catPickerSelect(iid, id, name, icon) {
+  document.getElementById('catpicker-' + iid + '-hidden-id').value = id;
+  document.getElementById('catpicker-' + iid + '-hidden-name').value = name;
+  document.getElementById('catpicker-' + iid + '-trigger-icon').textContent = icon;
+  document.getElementById('catpicker-' + iid + '-trigger-text').textContent = name;
+  document.getElementById('catpicker-' + iid + '-popover').classList.remove('open');
+}
+
+function catPickerShowAddForm(iid) {
+  document.getElementById('catpicker-' + iid + '-add-row').style.display = 'none';
+  document.getElementById('catpicker-' + iid + '-add-form').style.display = 'block';
+  document.getElementById('catpicker-' + iid + '-add-name').focus();
+}
+
+function catPickerHideAddForm(iid) {
+  document.getElementById('catpicker-' + iid + '-add-form').style.display = 'none';
+  document.getElementById('catpicker-' + iid + '-add-row').style.display = 'block';
+}
+
+function catPickerPickColor(iid, btn) {
+  document.querySelectorAll('#catpicker-' + iid + '-colors .cat-picker-color-dot').forEach(d => d.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+async function catPickerSaveNew(iid) {
+  const nameInput = document.getElementById('catpicker-' + iid + '-add-name');
+  const iconSelect = document.getElementById('catpicker-' + iid + '-add-icon');
+  const colorBtn = document.querySelector('#catpicker-' + iid + '-colors .cat-picker-color-dot.selected');
+  const name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); return; }
+
+  const kind = document.getElementById('catpicker-' + iid).dataset.kind;
+  const icon = iconSelect.value;
+  const color = colorBtn ? colorBtn.dataset.color : '#6366f1';
+
+  try {
+    const res = await fetch('/categories/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `name=${encodeURIComponent(name)}&kind=${encodeURIComponent(kind)}&icon=${encodeURIComponent(icon)}&color=${encodeURIComponent(color)}`
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+
+    // Add the new category to the grid immediately, then select it
+    const grid = document.getElementById('catpicker-' + iid + '-grid');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cat-picker-item';
+    btn.dataset.id = data.id;
+    btn.style.setProperty('--cat-color', color);
+    btn.onclick = () => catPickerSelect(iid, data.id, data.name, data.icon);
+    btn.innerHTML = `<span class="cat-picker-item-icon">${data.icon}</span><span class="cat-picker-item-name">${data.name}</span>`;
+    grid.appendChild(btn);
+
+    catPickerSelect(iid, data.id, data.name, data.icon);
+    catPickerHideAddForm(iid);
+    nameInput.value = '';
+  } catch (e) {
+    alert('Could not create category. Please try again.');
+  }
+}
+
+// Close any open category picker popover when clicking outside it
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.cat-picker')) {
+    document.querySelectorAll('.cat-picker-popover.open').forEach(p => p.classList.remove('open'));
+  }
 });
 </script>
 

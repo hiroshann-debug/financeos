@@ -4,7 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 import atexit
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
-    Investment, InvestmentIncome, Debt, FavouriteStock, CardOffer, OfferUpvote
+    Investment, InvestmentIncome, Debt, FavouriteStock, CardOffer, OfferUpvote, Category
 import requests as req_lib
 from calendar import monthrange
 from datetime import datetime, date, timedelta, time
@@ -16,7 +16,7 @@ from flask_migrate import Migrate
 from pdf_report import generate_monthly_report
 from finance_service import (add_transaction, update_networth_snapshot, check_and_create_notifications,
                               apply_due_recurring_payments, get_spending_insights, get_financial_health_score,
-                              get_setting, set_setting)
+                              get_setting, set_setting, reverse_transaction_balance)
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
@@ -704,12 +704,14 @@ def dashboard():
 
     # Popup — show based on user setting
     show_daily_popup = get_setting('show_daily_popup', 'true', user_id=uid()) == 'true'
+    expense_categories = get_user_categories(uid(), "expense")
 
     return render_template(
         "dashboard.html",
         preferred_name=preferred_name,
         wallets=wallets,
         total_income=total_income,
+        expense_categories=expense_categories,
         total_expense=total_expense,
         balance=net_balance_period,
         net_worth=net_worth,
@@ -842,20 +844,31 @@ def add():
 
 
 @app.route('/delete_transaction/<int:transaction_id>', methods=['POST'])
+@login_required
 def delete_transaction(transaction_id):
     tr = Transaction.query.filter_by(id=transaction_id, user_id=uid()).first_or_404()
+    reverse_transaction_balance(tr)
+    desc = tr.description
     db.session.delete(tr)
     db.session.commit()
-    flash(f"Transaction '{tr.description}' deleted.", "success")
+    update_networth_snapshot(user_id=uid())
+    flash(f"Transaction '{desc}' deleted and balance restored.", "success")
     return redirect(request.referrer or url_for('dashboard'))
 
 
 @app.route('/edit_transaction/<int:transaction_id>', methods=['GET', 'POST'])
+@login_required
 def edit_transaction(transaction_id):
     tr = Transaction.query.filter_by(id=transaction_id, user_id=uid()).first_or_404()
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     cards = CreditCard.query.filter_by(user_id=uid()).all()
     if request.method == 'POST':
+        # Reverse whatever balance effect the OLD version of this
+        # transaction had, before applying the new values — otherwise
+        # changing the amount (or wallet) silently leaves wallet/card
+        # balances stale.
+        reverse_transaction_balance(tr)
+
         tr.description = request.form['description']
         tr.amount = float(request.form['amount'])
         tr.category = request.form.get('category', tr.category)
@@ -863,11 +876,35 @@ def edit_transaction(transaction_id):
         tr.notes = request.form.get('notes', '')
         date_str = request.form.get('date')
         if date_str:
-            tr.date = datetime.strptime(date_str, '%Y-%m-%d')
+            tr.date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        new_wallet_id = request.form.get('wallet_id')
+        new_wallet_id = int(new_wallet_id) if new_wallet_id else None
+        is_due = tr.date <= date.today()
+
+        tr.wallet_id = new_wallet_id if is_due else None
+        tr.balance_applied = is_due
+
+        if new_wallet_id and is_due:
+            wallet = Wallet.query.filter_by(id=new_wallet_id, user_id=uid()).first()
+            if wallet:
+                if tr.trans_type == "expense":
+                    wallet.balance -= tr.amount
+                elif tr.trans_type == "income":
+                    wallet.balance += tr.amount
+
         db.session.commit()
-        flash("Transaction updated.", "success")
+        update_networth_snapshot(user_id=uid())
+        flash("Transaction updated and balances adjusted.", "success")
         return redirect(url_for('transactions'))
-    return render_template('edit_transaction.html', transaction=tr, wallets=wallets, cards=cards)
+    expense_categories = get_user_categories(uid(), "expense")
+    income_categories = get_user_categories(uid(), "income")
+    relevant_categories = income_categories if tr.trans_type == "income" else expense_categories
+    matched = next((c for c in relevant_categories if c.name.lower() == (tr.category or "").strip().lower()), None)
+    selected_category_id = matched.id if matched else None
+    return render_template('edit_transaction.html', transaction=tr, wallets=wallets, cards=cards,
+                          expense_categories=expense_categories, income_categories=income_categories,
+                          selected_category_id=selected_category_id)
 
 
 # ─────────────────────────────────────────
@@ -905,6 +942,7 @@ def income():
     this_month_income_list = [i for i in income_list if i.date.strftime("%Y-%m") == this_month_str]
     this_month_income_total = sum(i.amount for i in this_month_income_list)
     wallets = Wallet.query.filter_by(user_id=uid()).all()
+    income_categories = get_user_categories(uid(), "income")
 
     return render_template(
         'income.html',
@@ -913,11 +951,13 @@ def income():
         this_month_income_list=this_month_income_list,
         this_month_income_total=this_month_income_total,
         wallets=wallets,
+        income_categories=income_categories,
         now=datetime.now
     )
 
 
 @app.route('/delete_income/<int:income_id>', methods=['POST'])
+@login_required
 def delete_income(income_id):
     income = Transaction.query.filter_by(id=income_id, user_id=uid()).first_or_404()
 
@@ -1058,8 +1098,107 @@ def transfer_wallet():
 
 
 # ─────────────────────────────────────────
-#  Fixed Expenses
+#  Payments — unified page: Fixed Expenses / Recurring / Scheduler
 # ─────────────────────────────────────────
+def get_combined_upcoming_payments(user_id, month_start, month_end):
+    """The single source of truth for 'what's due this period' — combines
+    FixedExpense (one-time + repeat_until items), RecurringPayment,
+    Loan installments and CreditCard minimums into one sorted list.
+    Used by both the Scheduler tab and (kept consistent) anywhere else
+    that needs a true 'all upcoming payments' view.
+
+    FixedExpense items that already have a matching paid Transaction
+    within this window are excluded — RecurringPayment/Loan/CreditCard
+    don't need this check since applying those advances their own
+    next_date/next_due_date, which already pushes them out of range."""
+    items = []
+
+    def next_occurrence(start_date, after_date):
+        d = start_date
+        while d < after_date:
+            d += relativedelta(months=1)
+        return d
+
+    # Names of FixedExpense items already paid within this window, so we
+    # don't show something the user already settled as still "due".
+    paid_in_window = {
+        t.description for t in Transaction.query.filter(
+            Transaction.user_id == user_id,
+            Transaction.trans_type == "expense",
+            Transaction.date >= month_start,
+            Transaction.date <= month_end,
+        ).all()
+    }
+
+    # Fixed expenses (one-time within range, or repeating within range)
+    for exp in FixedExpense.query.filter_by(user_id=user_id).all():
+        if exp.name in paid_in_window:
+            continue
+        repeat_until = exp.repeat_until or date.max
+        if exp.repeat:
+            due = next_occurrence(exp.date, month_start)
+            if month_start <= due <= month_end and due <= repeat_until:
+                items.append({
+                    "id": exp.id, "name": exp.name, "amount": exp.amount,
+                    "due_date": due, "category": exp.category or "Uncategorized",
+                    "source": "fixed_expense", "recurring": True,
+                })
+        elif month_start <= exp.date <= month_end:
+            items.append({
+                "id": exp.id, "name": exp.name, "amount": exp.amount,
+                "due_date": exp.date, "category": exp.category or "Uncategorized",
+                "source": "fixed_expense", "recurring": False,
+            })
+
+    # Recurring payments (the real model — wallet/card linked)
+    freq_days = {"weekly": 7, "biweekly": 14, "monthly": None, "quarterly": None, "yearly": None}
+    for rec in RecurringPayment.query.filter_by(user_id=user_id, is_active=True).all():
+        if rec.end_date and rec.end_date < month_start:
+            continue
+        due = rec.next_date
+        # Step the due date forward into the requested window if needed
+        guard = 0
+        while due < month_start and guard < 60:
+            if rec.frequency == "weekly":
+                due += timedelta(weeks=1)
+            elif rec.frequency == "biweekly":
+                due += timedelta(weeks=2)
+            elif rec.frequency == "quarterly":
+                due += relativedelta(months=3)
+            elif rec.frequency == "yearly":
+                due += relativedelta(years=1)
+            else:
+                due += relativedelta(months=1)
+            guard += 1
+        if month_start <= due <= month_end and (not rec.end_date or due <= rec.end_date):
+            items.append({
+                "id": rec.id, "name": rec.name, "amount": rec.amount,
+                "due_date": due, "category": rec.category or "Uncategorized",
+                "source": "recurring_payment", "recurring": True,
+            })
+
+    # Loan installments
+    for l in Loan.query.filter_by(user_id=user_id, loan_status="Active").all():
+        if l.next_due_date and month_start <= l.next_due_date <= month_end:
+            items.append({
+                "id": l.id, "name": f"Loan: {l.loan_name}", "amount": l.monthly_payment,
+                "due_date": l.next_due_date, "category": "Loan Payment",
+                "source": "loan", "recurring": True,
+            })
+
+    # Credit card minimum payments
+    for c in CreditCard.query.filter_by(user_id=user_id).all():
+        if c.due_date and month_start <= c.due_date <= month_end:
+            items.append({
+                "id": c.id, "name": f"{c.bank_name} Card", "amount": c.minimum_payment,
+                "due_date": c.due_date, "category": "Credit Card",
+                "source": "credit_card", "recurring": True,
+            })
+
+    items.sort(key=lambda x: x["due_date"])
+    return items
+
+
 @app.route('/fixed-expenses')
 @login_required
 def fixed_expenses():
@@ -1091,22 +1230,15 @@ def fixed_expenses():
     ).all()
     paid_names_fe = set(t.description for t in paid_txns)
 
+    # ── TAB 1: Fixed Expenses (FixedExpense model only) ──
     all_expenses = FixedExpense.query.filter_by(user_id=uid()).order_by(FixedExpense.date).all()
-    fixed_recurring, monthly_recurring, fixed_this_month, next_month_expenses = [], [], [], []
+    fixed_recurring, fixed_this_month = [], []
     fixed_chart_data = defaultdict(float)
 
     for exp in all_expenses:
         repeat_until = exp.repeat_until or date.max
         if not exp.repeat and exp.repeat_until:
             fixed_recurring.append(exp)
-        if exp.repeat:
-            next_occurrence = get_next_occurrence(exp.date, current_month_start)
-            if next_occurrence <= repeat_until:
-                monthly_recurring.append({
-                    "id": exp.id, "name": exp.name, "amount": exp.amount,
-                    "date": next_occurrence, "repeat": True,
-                    "repeat_until": exp.repeat_until, "category": exp.category or "Uncategorized"
-                })
         if (exp.repeat or exp.repeat_until) and repeat_until >= current_month_start:
             next_due = get_next_occurrence(exp.date, current_month_start)
             if current_month_start <= next_due <= current_month_end and next_due <= repeat_until:
@@ -1121,14 +1253,6 @@ def fixed_expenses():
                 "due_date": exp.date.strftime('%Y-%m-%d'), "repeat": False,
                 "paid": exp.name in paid_names_fe
             })
-        if (exp.repeat or exp.repeat_until) and repeat_until >= next_month_start:
-            next_due = get_next_occurrence(exp.date, next_month_start)
-            if next_month_start <= next_due <= next_month_end and next_due <= repeat_until:
-                next_month_expenses.append({
-                    "id": exp.id, "name": exp.name, "amount": exp.amount,
-                    "date": next_due, "repeat": exp.repeat,
-                    "repeat_until": exp.repeat_until, "category": exp.category or "Uncategorized"
-                })
         if exp.repeat:
             due = get_next_occurrence(exp.date, current_month_start)
             if current_month_start <= due <= current_month_end and due <= repeat_until:
@@ -1136,31 +1260,52 @@ def fixed_expenses():
         elif not exp.repeat and current_month_start <= exp.date <= current_month_end:
             fixed_chart_data[exp.category or "Uncategorized"] += exp.amount
 
+    # ── TAB 2: Recurring (real RecurringPayment model) ──
+    recurring_list = RecurringPayment.query.filter_by(user_id=uid()).order_by(RecurringPayment.next_date).all()
+    total_recurring_monthly = sum(
+        r.amount for r in recurring_list if r.is_active and r.frequency == "monthly"
+    )
+
+    # ── TAB 3: Scheduler (everything combined, this month + next month) ──
+    scheduler_this_month = get_combined_upcoming_payments(uid(), current_month_start, current_month_end)
+    scheduler_next_month = get_combined_upcoming_payments(uid(), next_month_start, next_month_end)
+
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
+    expense_categories = get_user_categories(uid(), "expense")
 
     return render_template(
         'fixed_expenses.html',
+        # Tab 1 — Fixed Expenses
         repeat_until_expenses=fixed_recurring,
-        repeating_expenses=monthly_recurring,
         upcoming_fixed=fixed_this_month,
-        next_month_expenses=next_month_expenses,
         selected_month=current_month_start.strftime("%Y-%m"),
         current_month=current_month_start,
         month_start=current_month_start,
         month_end=current_month_end,
         fixed_chart_data=dict(fixed_chart_data),
         total_repeat_until=sum(e.amount for e in fixed_recurring),
-        total_monthly_repeats=sum(e["amount"] for e in monthly_recurring),
         total_this_month=sum(e["amount"] for e in fixed_this_month),
         paid_this_month=paid_names_fe,
         relativedelta=relativedelta,
+        # Tab 2 — Recurring
+        recurring=recurring_list,
+        total_recurring_monthly=total_recurring_monthly,
+        today=today,
+        # Tab 3 — Scheduler
+        scheduler_this_month=scheduler_this_month,
+        scheduler_next_month=scheduler_next_month,
+        scheduler_total_this_month=sum(i["amount"] for i in scheduler_this_month),
+        scheduler_total_next_month=sum(i["amount"] for i in scheduler_next_month),
+        # Shared
         wallets=wallets,
         credit_cards=credit_cards,
+        expense_categories=expense_categories,
     )
 
 
 @app.route('/add-fixed', methods=['POST'])
+@login_required
 def add_fixed():
     name = request.form['name']
     category = request.form['category']
@@ -1195,9 +1340,19 @@ def add_fixed():
 
 
 @app.route("/apply-fixed/<int:expense_id>", methods=["POST"])
+@login_required
 def apply_fixed(expense_id):
     fixed_exp = FixedExpense.query.filter_by(id=expense_id, user_id=uid()).first_or_404()
     today = date.today()
+
+    date_str = request.form.get('date')
+    paid_date = today
+    if date_str:
+        try:
+            paid_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            paid_date = today
+
     period_start, _ = get_salary_period(today)
 
     already = Transaction.query.filter(
@@ -1209,7 +1364,7 @@ def apply_fixed(expense_id):
     ).first()
     if already:
         flash(f"⚠️ '{fixed_exp.name}' already paid this period on {already.date.strftime('%d %b')}. Delete that transaction first to re-apply.", "warning")
-        return redirect(request.referrer or url_for("dashboard"))
+        return redirect(request.referrer or url_for("fixed_expenses"))
 
     payment_method = request.form.get('payment_method')
     wallet_id, credit_id = None, None
@@ -1221,13 +1376,15 @@ def apply_fixed(expense_id):
     add_transaction(
         amount=fixed_exp.amount, description=fixed_exp.name,
         trans_type="expense", wallet_id=wallet_id, linked_credit=credit_id,
-        date_obj=today, category=fixed_exp.category, user_id=uid()
+        date_obj=paid_date, category=fixed_exp.category, user_id=uid()
     )
-    flash(f"✅ {fixed_exp.name} applied.", "success")
-    return redirect(request.referrer or url_for("dashboard"))
+    source_note = "record only" if not payment_method else None
+    flash(f"✅ {fixed_exp.name} applied" + (f" ({source_note})" if source_note else "") + ".", "success")
+    return redirect(request.referrer or url_for("fixed_expenses"))
 
 
 @app.route('/delete_fixed/<int:expense_id>', methods=['POST'])
+@login_required
 def delete_fixed(expense_id):
     expense = FixedExpense.query.filter_by(id=expense_id, user_id=uid()).first_or_404()
     db.session.delete(expense)
@@ -1237,12 +1394,14 @@ def delete_fixed(expense_id):
 
 
 @app.route("/mark-fixed-paid/<int:expense_id>", methods=["POST"])
+@login_required
 def mark_fixed_paid(expense_id):
     exp = FixedExpense.query.filter_by(id=expense_id, user_id=uid()).first_or_404()
     today = date.today()
     month_start = today.replace(day=1)
 
     already = Transaction.query.filter(
+        Transaction.user_id == uid(),
         Transaction.description == exp.name,
         Transaction.trans_type == "expense",
         Transaction.date >= month_start,
@@ -1250,103 +1409,188 @@ def mark_fixed_paid(expense_id):
     ).first()
     if already:
         flash(f"⚠️ '{exp.name}' already paid this month on {already.date.strftime('%d %b')}.", "warning")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("fixed_expenses"))
 
     add_transaction(
         amount=exp.amount, description=exp.name, trans_type="expense",
         date_obj=today, category=exp.category, user_id=uid()
     )
     flash(f"✅ {exp.name} marked as paid.", "success")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("fixed_expenses"))
 
 
 # ─────────────────────────────────────────
-#  Expense Scheduler
+#  Expense Scheduler — retired in favour of the unified Payments page's
+#  Scheduler tab, which combines FixedExpense + RecurringPayment + Loan
+#  + CreditCard correctly (this route previously omitted RecurringPayment
+#  entirely, which was one source of the data mismatches reported).
 # ─────────────────────────────────────────
 @app.route('/expense-scheduler')
 @login_required
 def expense_scheduler():
+    return redirect(url_for("fixed_expenses") + "?tab=scheduler")
+
+
+# ─────────────────────────────────────────
+#  Categories — shared, real list used everywhere
+# ─────────────────────────────────────────
+DEFAULT_EXPENSE_CATEGORIES = [
+    ("Food & Dining", "🍔", "#f59e0b"),
+    ("Transport", "🚗", "#3b82f6"),
+    ("Utilities", "💡", "#eab308"),
+    ("Entertainment", "🎬", "#ec4899"),
+    ("Shopping", "🛍️", "#8b5cf6"),
+    ("Health", "🏥", "#ef4444"),
+    ("Education", "📚", "#06b6d4"),
+    ("Rent", "🏠", "#64748b"),
+    ("Insurance", "🛡️", "#0ea5e9"),
+    ("Subscription", "📱", "#a855f7"),
+]
+DEFAULT_INCOME_CATEGORIES = [
+    ("Salary", "💼", "#22c55e"),
+    ("Freelance", "💻", "#14b8a6"),
+    ("Investment", "📈", "#6366f1"),
+    ("Gift", "🎁", "#ec4899"),
+    ("Other", "🏷️", "#64748b"),
+]
+
+
+def ensure_default_categories(user_id):
+    """Seed a user's default category list the first time they need it.
+    Safe to call repeatedly — does nothing if already seeded."""
+    if not user_id:
+        return
+    existing = Category.query.filter_by(user_id=user_id).first()
+    if existing:
+        return
+    for name, icon, color in DEFAULT_EXPENSE_CATEGORIES:
+        db.session.add(Category(user_id=user_id, name=name, kind="expense", icon=icon, color=color, is_default=True))
+    for name, icon, color in DEFAULT_INCOME_CATEGORIES:
+        db.session.add(Category(user_id=user_id, name=name, kind="income", icon=icon, color=color, is_default=True))
+    db.session.commit()
+
+
+def get_user_categories(user_id, kind="expense"):
+    ensure_default_categories(user_id)
+    return Category.query.filter_by(user_id=user_id, kind=kind).order_by(Category.name).all()
+
+
+@app.route("/categories/list")
+@login_required
+def categories_list():
+    """JSON list of the current user's categories, for populating dropdowns
+    and for the inline 'add new category' flow without a page reload."""
+    kind = request.args.get("kind", "expense")
+    cats = get_user_categories(uid(), kind)
+    return jsonify([
+        {"id": c.id, "name": c.name, "icon": c.icon, "color": c.color}
+        for c in cats
+    ])
+
+
+@app.route("/categories/add", methods=["POST"])
+@login_required
+def categories_add():
+    """Create a new category on the fly (used by the '+ Add category'
+    option inside the dropdown). Returns the new category as JSON so
+    the dropdown can immediately select it without reloading."""
+    name = (request.form.get("name") or "").strip()
+    kind = request.form.get("kind", "expense")
+    icon = (request.form.get("icon") or "🏷️").strip()
+    color = (request.form.get("color") or "#6366f1").strip()
+
+    if not name:
+        return jsonify({"error": "Category name is required"}), 400
+
+    existing = Category.query.filter_by(user_id=uid(), name=name, kind=kind).first()
+    if existing:
+        return jsonify({"id": existing.id, "name": existing.name, "icon": existing.icon, "color": existing.color})
+
+    cat = Category(user_id=uid(), name=name, kind=kind, icon=icon, color=color, is_default=False)
+    db.session.add(cat)
+    db.session.commit()
+    return jsonify({"id": cat.id, "name": cat.name, "icon": cat.icon, "color": cat.color})
+
+
+@app.route("/categories/delete/<int:cat_id>", methods=["POST"])
+@login_required
+def categories_delete(cat_id):
+    cat = Category.query.filter_by(id=cat_id, user_id=uid()).first_or_404()
+    if cat.is_default:
+        flash("Default categories can't be deleted.", "danger")
+        return redirect(request.referrer or url_for("dashboard"))
+    db.session.delete(cat)
+    db.session.commit()
+    flash(f"Category '{cat.name}' deleted.", "success")
+    return redirect(request.referrer or url_for("dashboard"))
+
+
+@app.route("/categories/repair-mismatches")
+@login_required
+def categories_repair_mismatches():
+    """One-time helper: finds budgets whose category name has zero
+    matching transactions this month, and transactions whose category
+    doesn't match any budget — surfaces them so the user can fix the
+    exact mismatch (e.g. budget says 'Wi-Fi', transaction says 'Wifi')."""
     today = date.today()
-    current_month_start = today.replace(day=1)
-    next_month_start = current_month_start + relativedelta(months=1)
-    next_month_end = next_month_start + relativedelta(months=1) - timedelta(days=1)
+    month_start = today.replace(day=1)
+    month_end = month_start + relativedelta(months=1) - timedelta(days=1)
 
-    all_expenses = FixedExpense.query.filter_by(user_id=uid()).order_by(FixedExpense.date).all()
+    budgets = BudgetPlanner.query.filter_by(user_id=uid(), month=today.strftime("%Y-%m")).all()
+    txns = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.trans_type == "expense",
+        Transaction.date >= month_start,
+        Transaction.date <= month_end,
+    ).all()
 
-    def get_next_occurrence(start_date, after_date):
-        next_date = start_date
-        while next_date < after_date:
-            next_date += relativedelta(months=1)
-        return next_date
+    txn_categories = {(t.category or "").strip().lower() for t in txns if t.category}
+    mismatches = []
+    for b in budgets:
+        b_cat_lower = (b.category or "").strip().lower()
+        if b_cat_lower not in txn_categories:
+            # Look for a close-ish match to suggest (same first word, etc.)
+            suggestions = [c for c in txn_categories if b_cat_lower.split()[0] in c or c.split()[0] in b_cat_lower] if b_cat_lower else []
+            mismatches.append({"budget_id": b.id, "budget_category": b.category, "suggestions": suggestions})
 
-    upcoming_fixed, next_month_expenses = [], []
-    month_end = current_month_start + relativedelta(months=1) - timedelta(days=1)
+    return render_template("category_repair.html", mismatches=mismatches, txn_categories=sorted(txn_categories))
 
-    for exp in all_expenses:
-        if exp.repeat_until and exp.repeat_until < exp.date:
-            continue
-        repeat_until = exp.repeat_until or date.max
-        if exp.repeat and repeat_until >= today:
-            next_occurrence = get_next_occurrence(exp.date, today)
-            if current_month_start <= next_occurrence <= month_end:
-                upcoming_fixed.append({
-                    "id": exp.id, "name": exp.name, "amount": exp.amount,
-                    "due_date": next_occurrence.strftime('%Y-%m-%d'),
-                    "repeat": True, "repeat_until": exp.repeat_until,
-                    "category": exp.category or "Uncategorized"
-                })
-            next_month_occurrence = get_next_occurrence(exp.date, next_month_start)
-            if next_month_start <= next_month_occurrence <= next_month_end and next_month_occurrence <= repeat_until:
-                next_month_expenses.append({
-                    "id": exp.id, "name": exp.name, "amount": exp.amount,
-                    "date": next_month_occurrence, "repeat": True,
-                    "repeat_until": exp.repeat_until, "category": exp.category or "Uncategorized"
-                })
-        else:
-            if current_month_start <= exp.date <= month_end:
-                upcoming_fixed.append({
-                    "id": exp.id, "name": exp.name, "amount": exp.amount,
-                    "due_date": exp.date.strftime('%Y-%m-%d'),
-                    "repeat": False, "repeat_until": exp.repeat_until,
-                    "category": exp.category or "Uncategorized"
-                })
-            if next_month_start <= exp.date <= next_month_end:
-                next_month_expenses.append({
-                    "id": exp.id, "name": exp.name, "amount": exp.amount,
-                    "date": exp.date, "repeat": False,
-                    "repeat_until": exp.repeat_until, "category": exp.category or "Uncategorized"
-                })
 
-    # Add loan + card installments to scheduler
-    loans_active = Loan.query.filter_by(user_id=uid(), loan_status='Active').all()
-    cards_active = CreditCard.query.filter_by(user_id=uid()).all()
-    for l in loans_active:
-        if l.next_due_date and current_month_start <= l.next_due_date <= month_end:
-            upcoming_fixed.append({
-                "id": l.id, "name": f"Loan: {l.loan_name}",
-                "amount": l.monthly_payment,
-                "due_date": l.next_due_date.strftime('%Y-%m-%d'),
-                "repeat": True, "category": "Loan Payment"
-            })
-    for c in cards_active:
-        if c.due_date and current_month_start <= c.due_date <= month_end:
-            upcoming_fixed.append({
-                "id": c.id, "name": f"{c.bank_name} Card",
-                "amount": c.minimum_payment,
-                "due_date": c.due_date.strftime('%Y-%m-%d'),
-                "repeat": True, "category": "Credit Card"
-            })
+@app.route("/categories/repair-mismatches/fix", methods=["POST"])
+@login_required
+def categories_repair_fix():
+    """Apply a fix chosen on the repair page: either rename the budget's
+    category to match an existing transaction category, or rename all
+    matching transactions to match the budget's category."""
+    budget_id = request.form.get("budget_id")
+    action = request.form.get("action")  # "rename_budget" or "rename_transactions"
+    target_category = (request.form.get("target_category") or "").strip()
 
-    total_this_month_all = sum(e["amount"] for e in upcoming_fixed)
-    total_next_month_all = sum(e["amount"] for e in next_month_expenses)
+    budget = BudgetPlanner.query.filter_by(id=budget_id, user_id=uid()).first_or_404()
 
-    return render_template(
-        'expense_scheduler.html',
-        upcoming_fixed=sorted(upcoming_fixed, key=lambda x: x["due_date"]),
-        next_month_expenses=sorted(next_month_expenses, key=lambda x: str(x.get("due_date", x.get("date", "")))),
-        total_this_month=total_this_month_all,
-        total_next_month=total_next_month_all,
-    )
+    if action == "rename_budget" and target_category:
+        old_name = budget.category
+        budget.category = target_category
+        db.session.commit()
+        flash(f"Budget category renamed from '{old_name}' to '{target_category}'.", "success")
+
+    elif action == "rename_transactions" and target_category:
+        # Rename every transaction this month whose category loosely
+        # matched the suggestion, to the budget's exact category name
+        today = date.today()
+        month_start = today.replace(day=1)
+        month_end = month_start + relativedelta(months=1) - timedelta(days=1)
+        updated = Transaction.query.filter(
+            Transaction.user_id == uid(),
+            Transaction.trans_type == "expense",
+            Transaction.date >= month_start,
+            Transaction.date <= month_end,
+            Transaction.category.ilike(target_category),
+        ).update({"category": budget.category}, synchronize_session=False)
+        db.session.commit()
+        flash(f"Renamed {updated} transaction(s) to '{budget.category}'.", "success")
+
+    return redirect(url_for("categories_repair_mismatches"))
 
 
 # ─────────────────────────────────────────
@@ -1382,6 +1626,7 @@ def budget_planner():
 
     budgets = BudgetPlanner.query.filter_by(month=current_month, user_id=uid()).all()
     transactions = Transaction.query.filter(
+        Transaction.user_id == uid(),
         Transaction.trans_type == "expense",
         Transaction.date >= month_start,
         Transaction.date <= month_end
@@ -1414,17 +1659,21 @@ def budget_planner():
     total_budgeted = sum(b.amount for b in budgets)
     total_spent = sum(s["spent"] for s in budget_summary)
 
+    expense_categories = get_user_categories(uid(), "expense")
+
     return render_template(
         "budget_planner.html",
         budget_summary=budget_summary,
         budgets=budgets,
         month=current_month,
         total_budgeted=total_budgeted,
-        total_spent=total_spent
+        total_spent=total_spent,
+        expense_categories=expense_categories,
     )
 
 
 @app.route("/delete_budget/<int:budget_id>", methods=["POST"])
+@login_required
 def delete_budget(budget_id):
     b = BudgetPlanner.query.filter_by(id=budget_id, user_id=uid()).first_or_404()
     db.session.delete(b)
@@ -1845,29 +2094,26 @@ def recurring_payments():
         db.session.add(rec)
         db.session.commit()
         flash("Recurring payment added!", "success")
-        return redirect(url_for("recurring_payments"))
+        return redirect(url_for("fixed_expenses") + "?tab=recurring")
 
-    recs = RecurringPayment.query.filter_by(user_id=uid()).order_by(RecurringPayment.next_date).all()
-    wallets = Wallet.query.filter_by(user_id=uid()).all()
-    cards = CreditCard.query.filter_by(user_id=uid()).all()
-    today = date.today()
-    total_monthly = sum(
-        r.amount for r in recs if r.is_active and r.frequency == "monthly"
-    )
-    return render_template("recurring.html", recurring=recs, wallets=wallets,
-                           cards=cards, today=today, total_monthly=total_monthly)
+    # GET /recurring now redirects into the unified Payments page —
+    # the standalone recurring.html view has been retired in favour of
+    # the "Recurring" tab there, which shows the exact same data.
+    return redirect(url_for("fixed_expenses") + "?tab=recurring")
 
 
 @app.route("/recurring/delete/<int:rec_id>", methods=["POST"])
+@login_required
 def delete_recurring(rec_id):
     rec = RecurringPayment.query.filter_by(id=rec_id, user_id=uid()).first_or_404()
     db.session.delete(rec)
     db.session.commit()
     flash("Recurring payment deleted.", "info")
-    return redirect(url_for("recurring_payments"))
+    return redirect(url_for("fixed_expenses") + "?tab=recurring")
 
 
 @app.route("/recurring/apply/<int:rec_id>", methods=["POST"])
+@login_required
 def apply_recurring(rec_id):
     rec = RecurringPayment.query.filter_by(id=rec_id, user_id=uid()).first_or_404()
     freq_map = {
@@ -1884,7 +2130,7 @@ def apply_recurring(rec_id):
     rec.next_date = rec.next_date + freq_map.get(rec.frequency, relativedelta(months=1))
     db.session.commit()
     flash(f"{rec.name} applied.", "success")
-    return redirect(url_for("recurring_payments"))
+    return redirect(url_for("fixed_expenses") + "?tab=recurring")
 
 
 # ─────────────────────────────────────────
@@ -3635,9 +3881,13 @@ def advisor_chat():
     import requests as http
     data = request.get_json()
     messages = data.get("messages", [])
-    
+
     if not messages:
         return jsonify({"error": "No messages"}), 400
+
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return jsonify({"error": "AI Advisor isn't configured yet — ANTHROPIC_API_KEY is missing from the server environment."}), 500
 
     # Build system context with real user data
     system_context = _build_financial_context(uid())
@@ -3651,6 +3901,7 @@ def advisor_chat():
             headers={
                 "Content-Type": "application/json",
                 "anthropic-version": "2023-06-01",
+                "x-api-key": anthropic_key,
             },
             json={
                 "model": "claude-sonnet-4-6",
@@ -3745,6 +3996,7 @@ def calendar_view():
 
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
+    expense_categories = get_user_categories(uid(), "expense")
 
     return render_template("calendar.html",
         month_start=month_start,
@@ -3764,6 +4016,7 @@ def calendar_view():
         currency_symbol=currency,
         wallets=wallets,
         credit_cards=credit_cards,
+        expense_categories=expense_categories,
     )
 
 

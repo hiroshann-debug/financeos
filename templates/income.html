@@ -144,14 +144,9 @@
         <div class="form-group">
           <label class="form-label">Category</label>
           <select name="category" class="form-control">
-            <option value="Salary">Salary</option>
-            <option value="Freelance">Freelance</option>
-            <option value="Business">Business</option>
-            <option value="Investment Income">Investment Income</option>
-            <option value="Rental">Rental</option>
-            <option value="Bonus">Bonus</option>
-            <option value="Gift">Gift</option>
-            <option value="Other">Other</option>
+            {% for c in income_categories %}
+            <option value="{{ c.name }}">{{ c.icon }} {{ c.name }}</option>
+            {% endfor %}
           </select>
         </div>
       </div>
@@ -199,14 +194,9 @@
         <div class="form-group">
           <label class="form-label">Category</label>
           <select name="category" id="editIncomeCategory" class="form-control">
-            <option value="Salary">Salary</option>
-            <option value="Freelance">Freelance</option>
-            <option value="Business">Business</option>
-            <option value="Investment Income">Investment Income</option>
-            <option value="Rental">Rental</option>
-            <option value="Bonus">Bonus</option>
-            <option value="Gift">Gift</option>
-            <option value="Other">Other</option>
+            {% for c in income_categories %}
+            <option value="{{ c.name }}">{{ c.icon }} {{ c.name }}</option>
+            {% endfor %}
           </select>
         </div>
       </div>

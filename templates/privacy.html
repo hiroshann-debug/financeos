@@ -1,11 +1,16 @@
 {% extends "base_public.html" %}
 {% block title %}Privacy Policy · පෞද්ගලිකත්ව ප්‍රතිපත්තිය — FinanceOS{% endblock %}
 
+{# This page brings its own nav + footer, suppress the base layout's defaults #}
+{% block nav %}{% endblock %}
+{% block content_wrap_class %}{% endblock %}
+{% block footer %}{% endblock %}
+
 {% block extra_style %}
 :root { --navy:#0f172a; --indigo:#6366f1; --text:#1a1f37; --muted:#64748b; --border:#e2e8f0; --green:#10b981; --font:'DM Sans',-apple-system,sans-serif; }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:var(--font); color:var(--text); background:#f0ebe3; -webkit-font-smoothing:antialiased; }
-.lp-nav { position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 60px;height:64px;display:flex;align-items:center;justify-content:space-between; }
+.lp-nav { position:sticky;top:0;z-index:100;background:#ffffff;border-bottom:1px solid var(--border);padding:0 60px;height:64px;display:flex;align-items:center;justify-content:space-between; }
 .nav-logo { display:flex;align-items:center;gap:10px;text-decoration:none; }
 .nav-logo-icon { width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:grid;place-items:center;color:white;font-size:0.85rem;font-weight:800; }
 .nav-logo-text { font-size:1.05rem;font-weight:800;color:var(--navy);letter-spacing:-0.02em; }
