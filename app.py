@@ -20,6 +20,7 @@ from finance_service import (add_transaction, update_networth_snapshot, check_an
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
+import requests as http
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -217,15 +218,25 @@ def auth_signup():
 # ─────────────────────────────────────────
 #  Email — Resend.com
 # ─────────────────────────────────────────
+import os
+import requests as http
+import logging
+
+logger = logging.getLogger(__name__)
+
 def send_email(to_email, subject, html_body):
-    import requests as http
-    import os
-    api_key = os.environ.get("RESEND_API_KEY", "")
+    api_key = os.environ.get("RESEND_API_KEY")
+
     if not api_key:
-        app.logger.warning("RESEND_API_KEY not set — email not sent")
+        logger.warning("RESEND_API_KEY not set — email not sent")
         return False
+
+    if not to_email or "@" not in to_email:
+        logger.warning("Invalid email address")
+        return False
+
     try:
-        r = http.post(
+        response = http.post(
             "https://api.resend.com/emails",
             headers={
                 "Authorization": f"Bearer {api_key}",
@@ -239,10 +250,16 @@ def send_email(to_email, subject, html_body):
             },
             timeout=10,
         )
-        return r.status_code in [200, 201]
+
+        if response.status_code not in (200, 201):
+            logger.error(f"Email failed: {response.text}")
+
+        return response.status_code in (200, 201)
+
     except Exception as e:
-        app.logger.error(f"Email error: {e}")
+        logger.error(f"Email error: {e}")
         return False
+
 
 
 def send_welcome_email(to_email, name):
@@ -3877,23 +3894,29 @@ def advisor_page():
 @app.route("/advisor/chat", methods=["POST"])
 @login_required
 def advisor_chat():
-    """Stream AI response with real financial context."""
-    import requests as http
+    import logging
+    logger = logging.getLogger(__name__)
+
     data = request.get_json()
     messages = data.get("messages", [])
 
     if not messages:
         return jsonify({"error": "No messages"}), 400
 
+<<<<<<< HEAD
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "sk-ant-api03-vwk5kXGe1khfV7q9-d4uNn8XhGzRov21VmIl6V69hphTKZi3JBk358uzRZsuY-ssHYEAWASBbLrjWW494WVjEw--i1FpAA")
+=======
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY","sk-ant-api03-vwk5kXGe1khfV7q9-d4uNn8XhGzRov21VmIl6V69hphTKZi3JBk358uzRZsuY-ssHYEAWASBbLrjWW494WVjEw--i1FpAA")
+>>>>>>> 476ba42 (full revam 6/26 2)
     if not anthropic_key:
-        return jsonify({"error": "AI Advisor isn't configured yet — ANTHROPIC_API_KEY is missing from the server environment."}), 500
+        return jsonify({"error": "ANTHROPIC_API_KEY missing"}), 500
 
-    # Build system context with real user data
     system_context = _build_financial_context(uid())
 
-    # Build API payload
-    api_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
+    api_messages = [
+        {"role": m["role"], "content": m["content"]}
+        for m in messages
+    ]
 
     try:
         resp = http.post(
@@ -3902,22 +3925,33 @@ def advisor_chat():
                 "Content-Type": "application/json",
                 "anthropic-version": "2023-06-01",
                 "x-api-key": anthropic_key,
-            },
-            json={
-                "model": "claude-sonnet-4-6",
-                "max_tokens": 1024,
-                "system": system_context,
-                "messages": api_messages,
-            },
-            timeout=30,
-        )
+        },
+        json={
+            "model": "claude-3-5-sonnet-latest",
+            "max_tokens": 1024,
+            "system": system_context,
+            "messages": api_messages,
+        },
+        timeout=30,
+    )
+
+        if resp.status_code != 200:
+            logger.error(f"Anthropic error: {resp.text}")
+        return jsonify({
+            "error": "AI API error",
+            "details": resp.text
+        }), 500
+
         result = resp.json()
-        if "content" in result and result["content"]:
+
+        text = ""
+        if result.get("content"):
             text = result["content"][0].get("text", "")
-            return jsonify({"response": text})
-        else:
-            return jsonify({"error": result.get("error", {}).get("message", "API error")}), 500
+
+        return jsonify({"response": text})
+
     except Exception as e:
+        logger.error(f"Advisor chat error: {e}")
         return jsonify({"error": str(e)}), 500
 
 
