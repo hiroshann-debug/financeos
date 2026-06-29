@@ -4,7 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 import atexit
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
-    Investment, InvestmentIncome, Debt, FavouriteStock, CardOffer, OfferUpvote, Category
+    Investment, InvestmentIncome, Debt, FavouriteStock, Bank, Category
 import requests as req_lib
 from calendar import monthrange
 from datetime import datetime, date, timedelta, time
@@ -392,33 +392,41 @@ def dashboard():
         except:
             pass
 
-    start_of_month = datetime.combine(today.replace(day=1), time.min)
-    end_of_today = datetime.combine(today, time.max)
-
-    # Show all transactions this period including future-dated ones
-    this_month_transactions = Transaction.query.filter(
-        Transaction.user_id == uid(),
-        Transaction.date >= start_of_month
-    ).order_by(Transaction.date.desc()).all()
-
-    # Separate future transactions for visual indicator
-    future_txn_ids = set(
-        t.id for t in this_month_transactions
-        if (t.date.date() if isinstance(t.date, datetime) else t.date) > today
-    )
-
+    # Single source of truth for this period's transactions — used both
+    # for display (includes future-dated rows, correctly flagged via
+    # future_txn_ids) and, via transactions_occurred below, for actual
+    # financial calculations (which must exclude anything not yet due).
+    #
+    # Previously this was TWO separate, differently-filtered queries
+    # (a calendar-month one feeding future_txn_ids, and a salary-period
+    # one feeding the actual displayed table) — their transaction IDs
+    # didn't reliably correspond to each other, so the "upcoming" badge
+    # in the Recent Transactions table could end up misapplied.
     transactions = Transaction.query.filter(
         Transaction.user_id == uid(),
         Transaction.date >= period_start,
         Transaction.date <= period_end
-    ).all()
+    ).order_by(Transaction.date.desc()).all()
+
+    future_txn_ids = set(
+        t.id for t in transactions
+        if (t.date.date() if isinstance(t.date, datetime) else t.date) > today
+    )
+
+    # Period ACTUALS should only reflect what's actually happened —
+    # a future-dated transaction within this period hasn't occurred
+    # yet, so it shouldn't count toward total_income/total_expense.
+    transactions_occurred = [
+        t for t in transactions
+        if (t.date.date() if isinstance(t.date, datetime) else t.date) <= today
+    ]
 
     income_by_category = defaultdict(float)
     expense_by_category = defaultdict(float)
     total_income = 0
     total_expense = 0
 
-    for t in transactions:
+    for t in transactions_occurred:
         category = t.category or t.description or "Other"
         if t.trans_type == "income":
             total_income += t.amount
@@ -427,9 +435,6 @@ def dashboard():
             total_expense += t.amount
             expense_by_category[category] += t.amount
 
-    previous_transactions = Transaction.query.filter(Transaction.user_id == uid(), Transaction.date < period_start).all()
-    carryover_balance = sum(t.amount if t.trans_type == "income" else -t.amount for t in previous_transactions)
-    current_balance = carryover_balance + total_income - total_expense
     # Total Wallet Balance = actual wallet balances (source of truth, independent of transaction calc)
     total_wallet_balance = sum(w.balance for w in wallets)
     # Net Balance = wallet balance is the real number; transaction-based is for period tracking
@@ -438,11 +443,13 @@ def dashboard():
     chart_data = {
         "income": dict(income_by_category),
         "expense": dict(expense_by_category),
-        "balance": current_balance
     }
 
     # Names already paid this period
-    paid_names_period = set(t.description for t in transactions if t.trans_type == 'expense')
+    # Only transactions that have ACTUALLY happened count as "paid" —
+    # a future-dated transaction within this period shouldn't mark a
+    # fixed expense/recurring payment as already paid before its date.
+    paid_names_period = set(t.description for t in transactions_occurred if t.trans_type == 'expense')
 
     upcoming_payments = []
 
@@ -609,27 +616,67 @@ def dashboard():
         elif not exp.repeat and next_period_start <= exp.date <= next_period_end:
             next_month_expenses.append({
                 "id": exp.id, "name": exp.name, "amount": exp.amount,
-                "date": exp.date, "repeat": False
+                "date": exp.date, "repeat": False, "category": exp.category or "Uncategorized"
             })
 
-    # Add loan installments to next period forecast
+    # Loan installments — only if the loan's actual next due date falls
+    # within next period (previously this added EVERY active loan
+    # unconditionally, which overstated the forecast).
     for l in Loan.query.filter_by(user_id=uid(), loan_status='Active').all():
-        next_month_expenses.append({
-            "id": l.id, "name": f"Loan: {l.loan_name}",
-            "amount": l.monthly_payment,
-            "date": next_period_start,
-            "repeat": True, "category": "Loan Payment"
-        })
-    # Add credit card minimum payments to next period forecast
+        if l.next_due_date:
+            next_due = l.next_due_date
+            # Step forward to the occurrence that actually falls next period
+            while next_due < next_period_start:
+                next_due += relativedelta(months=1)
+            if next_period_start <= next_due <= next_period_end:
+                next_month_expenses.append({
+                    "id": l.id, "name": f"Loan: {l.loan_name}",
+                    "amount": l.monthly_payment,
+                    "date": next_due,
+                    "repeat": True, "category": "Loan Payment"
+                })
+
+    # Credit card minimum payments — only if the due date actually
+    # falls within next period (previously this added EVERY card that
+    # merely had a due_date set, regardless of when it actually fell).
     for c in CreditCard.query.filter_by(user_id=uid()).all():
         if c.due_date:
+            next_due = c.due_date
+            while next_due < next_period_start:
+                next_due += relativedelta(months=1)
+            if next_period_start <= next_due <= next_period_end:
+                next_month_expenses.append({
+                    "id": c.id, "name": f"{c.bank_name} Card Min.",
+                    "amount": c.minimum_payment,
+                    "date": next_due,
+                    "repeat": True, "category": "Credit Card"
+                })
+
+    # Recurring payments — was completely missing from this forecast
+    # even though it's included in the current-period upcoming_payments
+    # list above, which made the two forecasts inconsistent.
+    for rec in RecurringPayment.query.filter_by(is_active=True, user_id=uid()).all():
+        next_due = rec.next_date
+        while next_due < next_period_start:
+            if rec.frequency == "weekly":
+                next_due += timedelta(weeks=1)
+            elif rec.frequency == "biweekly":
+                next_due += timedelta(weeks=2)
+            elif rec.frequency == "quarterly":
+                next_due += relativedelta(months=3)
+            elif rec.frequency == "yearly":
+                next_due += relativedelta(years=1)
+            else:
+                next_due += relativedelta(months=1)
+        if next_period_start <= next_due <= next_period_end and (not rec.end_date or next_due <= rec.end_date):
             next_month_expenses.append({
-                "id": c.id, "name": f"{c.bank_name} Card Min.",
-                "amount": c.minimum_payment,
-                "date": c.due_date,
-                "repeat": True, "category": "Credit Card"
+                "id": rec.id, "name": rec.name,
+                "amount": rec.amount,
+                "date": next_due,
+                "repeat": True, "category": rec.category or "Uncategorized"
             })
 
+    next_month_expenses.sort(key=lambda e: e["date"])
     next_month_total = sum(e["amount"] for e in next_month_expenses)
 
     calendar_expenses = defaultdict(list)
@@ -671,12 +718,10 @@ def dashboard():
     # 6. Active goals sorted by deadline then % complete
     active_goals_sorted = Goal.query.filter_by(status='active', user_id=uid()).order_by(Goal.target_date).limit(4).all()
 
-    # 7. Recent transactions use period dates not calendar month
-    period_transactions = Transaction.query.filter(
-        Transaction.user_id == uid(),
-        Transaction.date >= period_start,
-        Transaction.date <= period_end
-    ).order_by(Transaction.date.desc()).all()
+    # 7. Daily variable spend calc must only use transactions that have
+    # actually occurred — reuses transactions_occurred rather than
+    # re-querying the same data under a different name.
+    period_transactions = transactions_occurred
 
     # ── SMART DAILY BUDGET ──
     # Fixed committed = loan payments + card minimums + fixed expenses
@@ -743,7 +788,7 @@ def dashboard():
         chart_data=chart_data,
         fixed_chart_data=dict(fixed_chart_data),
         monthly_trends=json.dumps({"labels": monthly_labels, "expenses": monthly_values, "income": monthly_income_values}),
-        selected_month=today.strftime("%Y-%m"),
+        selected_month=(month_str if month_str else today.strftime("%Y-%m")),
         next_month_expenses=next_month_expenses,
         next_month_total=next_month_total,
         total_credit_limit=total_credit_limit,
@@ -756,7 +801,7 @@ def dashboard():
         month_end=period_end,
         period_start=period_start,
         period_end=period_end,
-        this_month_transactions=period_transactions,
+        this_month_transactions=transactions,
         future_txn_ids=future_txn_ids,
         total_wallet_balance=total_wallet_balance,
         salary_period=salary_period_str,
@@ -1286,9 +1331,20 @@ def fixed_expenses():
         r.amount for r in recurring_list if r.is_active and r.frequency == "monthly"
     )
 
-    # ── TAB 3: Scheduler (everything combined, this month + next month) ──
-    scheduler_this_month = get_combined_upcoming_payments(uid(), current_month_start, current_month_end)
-    scheduler_next_month = get_combined_upcoming_payments(uid(), next_month_start, next_month_end)
+    # ── TAB 3: Scheduler (everything combined, this period + next period) ──
+    # Uses the SALARY PERIOD (not calendar month) so this agrees with the
+    # Dashboard's "Next Period Forecast", which is also salary-period based.
+    # Previously this tab used calendar-month boundaries while the
+    # dashboard used the salary cycle — an item due near a period boundary
+    # (e.g. health insurance on the 27th, with a salary cycle starting the
+    # 25th) could appear here but be entirely absent from the dashboard's
+    # forecast, since the two pages disagreed on what "next period" meant.
+    sched_period_start, sched_period_end = get_salary_period(today)
+    sched_next_period_start = sched_period_start + relativedelta(months=1)
+    sched_next_period_end = sched_next_period_start + relativedelta(months=1) - timedelta(days=1)
+
+    scheduler_this_month = get_combined_upcoming_payments(uid(), sched_period_start, sched_period_end)
+    scheduler_next_month = get_combined_upcoming_payments(uid(), sched_next_period_start, sched_next_period_end)
 
     wallets = Wallet.query.filter_by(user_id=uid()).all()
     credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
@@ -3564,71 +3620,11 @@ def favourite_stock_prices():
 # ─────────────────────────────────────────
 @app.route("/offers")
 def card_offers():
-    # Get filter params
-    bank = request.args.get("bank", "")
-    offer_type = request.args.get("type", "")
-    category = request.args.get("category", "")
-    my_cards = request.args.get("my_cards", "")
-
-    q = CardOffer.query.filter_by(status="approved", is_active=True)
-
-    # Filter by user's own cards if requested (logged-in only)
-    user_card_banks = []
-    user_cards = CreditCard.query.filter_by(user_id=uid()).all() if uid() else []
-    if my_cards and uid():
-        user_bank_names = [c.bank_name.lower() for c in user_cards]
-        q = q.filter(db.func.lower(CardOffer.bank_name).in_(user_bank_names))
-        user_card_banks = user_bank_names
-
-    if bank:
-        q = q.filter(CardOffer.bank_name == bank)
-    if offer_type:
-        q = q.filter(CardOffer.offer_type == offer_type)
-    if category:
-        q = q.filter(CardOffer.category == category)
-
-    # Sort: verified first, then by upvotes, then by expiry
-    offers = q.order_by(
-        CardOffer.verified.desc(),
-        CardOffer.upvotes.desc(),
-        CardOffer.valid_until.asc()
-    ).all()
-
-    # Filter expired
-    today = date.today()
-    active_offers = [o for o in offers if not o.valid_until or o.valid_until >= today]
-    expired_offers = [o for o in offers if o.valid_until and o.valid_until < today]
-
-    # Get user upvotes (logged-in only)
-    user_upvotes = {u.offer_id for u in OfferUpvote.query.filter_by(user_id=uid()).all()} if uid() else set()
-
-    # Distinct filter values
-    all_banks = sorted(set(o.bank_name for o in CardOffer.query.filter_by(status="approved").all()))
-    all_types = sorted(set(o.offer_type for o in CardOffer.query.filter_by(status="approved").all()))
-    all_categories = sorted(set(o.category for o in CardOffer.query.filter_by(status="approved", is_active=True).all() if o.category))
-
-    # Stats
-    total_offers = CardOffer.query.filter_by(status="approved", is_active=True).count()
-    pending_count = CardOffer.query.filter_by(status="pending").count() if _is_admin() else 0
-
-    return render_template("card_offers.html",
-        offers=active_offers,
-        expired_offers=expired_offers,
-        user_cards=user_cards,
-        user_card_banks=user_card_banks,
-        user_upvotes=user_upvotes,
-        all_banks=all_banks,
-        all_types=all_types,
-        all_categories=all_categories,
-        selected_bank=bank,
-        selected_type=offer_type,
-        selected_category=category,
-        my_cards_filter=my_cards,
-        total_offers=total_offers,
-        pending_count=pending_count,
-        today=today,
+    banks = Bank.query.filter_by(is_active=True).order_by(Bank.sort_order, Bank.name).all()
+    return render_template(
+        "card_offers.html",
+        banks=banks,
         is_admin=_is_admin(),
-        is_logged_in=uid() is not None,
     )
 
 
@@ -3639,120 +3635,85 @@ def _is_admin():
     return user.get("email", "") in admin_emails
 
 
-@app.route("/offers/submit", methods=["GET", "POST"])
+@app.route("/offers/bank/add", methods=["POST"])
 @login_required
-def submit_offer():
-    if request.method == "POST":
-        bank = request.form.get("bank_name", "").strip()
-        title = request.form.get("title", "").strip()
-        if not bank or not title:
-            flash("Bank name and title are required.", "danger")
-            return redirect(url_for("submit_offer"))
-
-        valid_until = None
-        if request.form.get("valid_until"):
-            try:
-                valid_until = datetime.strptime(request.form["valid_until"], "%Y-%m-%d").date()
-            except ValueError:
-                pass
-
-        valid_from = None
-        if request.form.get("valid_from"):
-            try:
-                valid_from = datetime.strptime(request.form["valid_from"], "%Y-%m-%d").date()
-            except ValueError:
-                pass
-
-        offer = CardOffer(
-            bank_name=bank,
-            card_network=request.form.get("card_network", "All"),
-            offer_type=request.form.get("offer_type", "Installment"),
-            title=title,
-            description=request.form.get("description", ""),
-            merchant=request.form.get("merchant", ""),
-            category=request.form.get("category", ""),
-            discount_pct=float(request.form.get("discount_pct") or 0),
-            cashback_pct=float(request.form.get("cashback_pct") or 0),
-            installment_months=request.form.get("installment_months", ""),
-            interest_rate=float(request.form.get("interest_rate") or 0),
-            min_spend=float(request.form.get("min_spend") or 0),
-            valid_from=valid_from,
-            valid_until=valid_until,
-            source_url=request.form.get("source_url", ""),
-            submitted_by=uid(),
-            status="approved" if _is_admin() else "pending",
-            verified=_is_admin(),
-        )
-        db.session.add(offer)
-        db.session.commit()
-
-        if _is_admin():
-            flash("✅ Offer added and published!", "success")
-        else:
-            flash("✅ Offer submitted! It will appear after review.", "success")
-        return redirect(url_for("card_offers"))
-
-    return render_template("submit_offer.html", today=date.today())
-
-
-@app.route("/offers/upvote/<int:offer_id>", methods=["POST"])
-@login_required
-def upvote_offer(offer_id):
-    offer = CardOffer.query.get_or_404(offer_id)
-    existing = OfferUpvote.query.filter_by(offer_id=offer_id, user_id=uid()).first()
-    if existing:
-        # Remove upvote
-        db.session.delete(existing)
-        offer.upvotes = max(0, offer.upvotes - 1)
-        voted = False
-    else:
-        db.session.add(OfferUpvote(offer_id=offer_id, user_id=uid()))
-        offer.upvotes += 1
-        voted = True
-    db.session.commit()
-    return jsonify({"upvotes": offer.upvotes, "voted": voted})
-
-
-@app.route("/offers/delete/<int:offer_id>", methods=["POST"])
-@login_required
-def delete_offer(offer_id):
+def admin_bank_add():
     if not _is_admin():
         flash("Not authorised.", "danger")
         return redirect(url_for("card_offers"))
-    offer = CardOffer.query.get_or_404(offer_id)
-    db.session.delete(offer)
+
+    name = request.form.get("name", "").strip()
+    offers_url = request.form.get("offers_url", "").strip()
+    if not name or not offers_url:
+        flash("Bank name and offers URL are both required.", "danger")
+        return redirect(url_for("card_offers"))
+
+    existing = Bank.query.filter(db.func.lower(Bank.name) == name.lower()).first()
+    if existing:
+        flash(f"{name} is already in the directory.", "danger")
+        return redirect(url_for("card_offers"))
+
+    bank = Bank(
+        name=name,
+        short_code=(request.form.get("short_code", "").strip() or "".join(w[0] for w in name.split()[:2]).upper()),
+        logo_url=request.form.get("logo_url", "").strip() or None,
+        offers_url=offers_url,
+        color=request.form.get("color", "accent"),
+        sort_order=Bank.query.count(),
+    )
+    db.session.add(bank)
     db.session.commit()
-    flash("Offer deleted.", "success")
+    flash(f"✅ {name} added.", "success")
     return redirect(url_for("card_offers"))
 
 
-@app.route("/offers/approve/<int:offer_id>", methods=["POST"])
+@app.route("/offers/bank/edit/<int:bank_id>", methods=["POST"])
 @login_required
-def approve_offer(offer_id):
+def admin_bank_edit(bank_id):
     if not _is_admin():
         flash("Not authorised.", "danger")
         return redirect(url_for("card_offers"))
-    offer = CardOffer.query.get_or_404(offer_id)
-    offer.status = "approved"
-    offer.verified = True
+
+    bank = Bank.query.get_or_404(bank_id)
+    name = request.form.get("name", "").strip()
+    offers_url = request.form.get("offers_url", "").strip()
+    if not name or not offers_url:
+        flash("Bank name and offers URL are both required.", "danger")
+        return redirect(url_for("card_offers"))
+
+    bank.name = name
+    bank.short_code = request.form.get("short_code", "").strip() or bank.short_code
+    bank.logo_url = request.form.get("logo_url", "").strip() or None
+    bank.offers_url = offers_url
+    bank.color = request.form.get("color", bank.color)
     db.session.commit()
-    flash(f"✅ Offer approved: {offer.title}", "success")
-    return redirect(url_for("admin_offers"))
+    flash(f"✅ {bank.name} updated.", "success")
+    return redirect(url_for("card_offers"))
 
 
-@app.route("/admin/offers")
+@app.route("/offers/bank/delete/<int:bank_id>", methods=["POST"])
 @login_required
-def admin_offers():
+def admin_bank_delete(bank_id):
     if not _is_admin():
         flash("Not authorised.", "danger")
         return redirect(url_for("card_offers"))
-    pending = CardOffer.query.filter_by(status="pending").order_by(CardOffer.created_at.desc()).all()
-    all_offers = CardOffer.query.filter_by(status="approved").order_by(CardOffer.created_at.desc()).all()
-    return render_template("admin_offers.html",
-        pending=pending,
-        all_offers=all_offers,
-        today=date.today(),
-    )
+    bank = Bank.query.get_or_404(bank_id)
+    db.session.delete(bank)
+    db.session.commit()
+    flash(f"{bank.name} removed.", "success")
+    return redirect(url_for("card_offers"))
+
+
+@app.route("/offers/bank/toggle/<int:bank_id>", methods=["POST"])
+@login_required
+def admin_bank_toggle(bank_id):
+    if not _is_admin():
+        flash("Not authorised.", "danger")
+        return redirect(url_for("card_offers"))
+    bank = Bank.query.get_or_404(bank_id)
+    bank.is_active = not bank.is_active
+    db.session.commit()
+    return redirect(url_for("card_offers"))
 
 
 # ─────────────────────────────────────────

@@ -259,53 +259,23 @@ class FavouriteStock(db.Model):
     display_name = db.Column(db.String(100), nullable=True)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class CardOffer(db.Model):
-    """Sri Lanka credit card offers — installments, cashback, rewards, discounts."""
-    __tablename__ = 'card_offer'
+class Bank(db.Model):
+    """Simple directory of Sri Lankan banks for the CC Offers page —
+    just a logo and a link to the bank's own official offers page.
+    Replaces the old scraped/crowd-submitted offer system, which
+    testers repeatedly flagged as showing mismatched or stale deals.
+    Admin-managed only."""
+    __tablename__ = 'bank'
     id = db.Column(db.Integer, primary_key=True)
-
-    # Bank & Card
-    bank_name = db.Column(db.String(100), nullable=False)      # ComBank, Sampath, HNB, BOC, NTB, Seylan
-    card_network = db.Column(db.String(20), default='All')      # Visa, Mastercard, Amex, All
-    card_type = db.Column(db.String(50), default='All')         # Credit, Debit, All
-
-    # Offer details
-    offer_type = db.Column(db.String(30), nullable=False)       # Installment, Cashback, Discount, Reward, Special Rate
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    merchant = db.Column(db.String(100), nullable=True)         # Keells, Arpico, Dialog, Any
-    category = db.Column(db.String(50), nullable=True)          # Supermarket, Medical, Travel, Dining, Education, Shopping, Fuel, Online
-
-    # Values
-    discount_pct = db.Column(db.Float, default=0)              # e.g. 10 for 10%
-    cashback_pct = db.Column(db.Float, default=0)
-    installment_months = db.Column(db.String(50), nullable=True) # e.g. "3,6,12,24"
-    interest_rate = db.Column(db.Float, default=0)              # 0 for 0% plans
-    min_spend = db.Column(db.Float, default=0)                  # minimum purchase amount
-
-    # Validity
-    valid_from = db.Column(db.Date, nullable=True)
-    valid_until = db.Column(db.Date, nullable=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    short_code = db.Column(db.String(6), nullable=True)   # e.g. "CB", "HNB" — used as logo fallback
+    logo_url = db.Column(db.String(500), nullable=True)   # uploaded/hosted logo image
+    offers_url = db.Column(db.String(500), nullable=False)  # the bank's own CC offers page
+    color = db.Column(db.String(20), default="accent")    # CDS role used for the logo-fallback tile
     is_active = db.Column(db.Boolean, default=True)
-
-    # Source & Trust
-    source_url = db.Column(db.String(500), nullable=True)       # official bank page
-    submitted_by = db.Column(db.String(100), default='admin')   # user_id or 'admin'
-    status = db.Column(db.String(20), default='approved')       # pending, approved, rejected
-    verified = db.Column(db.Boolean, default=False)             # admin verified
-    upvotes = db.Column(db.Integer, default=0)
-
+    sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class OfferUpvote(db.Model):
-    """Track which users upvoted which offers."""
-    __tablename__ = 'offer_upvote'
-    id = db.Column(db.Integer, primary_key=True)
-    offer_id = db.Column(db.Integer, db.ForeignKey('card_offer.id'), nullable=False)
-    user_id = db.Column(db.String(100), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Category(db.Model):

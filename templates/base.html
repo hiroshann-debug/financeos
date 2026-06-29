@@ -857,7 +857,7 @@
       <span class="nav-icon"><i class="fab fa-bitcoin"></i></span> Crypto
       <span style="background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#78350f;padding:1px 6px;border-radius:999px;font-size:0.58rem;font-weight:700;margin-left:auto;">LIVE</span>
     </a>
-    <a href="{{ url_for('card_offers') }}" class="nav-link nav-tools-mobile {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
+    <a href="{{ url_for('card_offers') }}" class="nav-link nav-tools-mobile {% if request.endpoint in ['card_offers','admin_bank_add','admin_bank_edit'] %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-gift"></i></span> CC Offers
     </a>
     <a href="{{ url_for('exchange_rates') }}" class="nav-link nav-tools-mobile {% if request.endpoint == 'exchange_rates' %}active{% endif %}">
@@ -925,7 +925,7 @@
       <a href="{{ url_for('crypto_page') }}" class="topbar-qlink {% if request.endpoint == 'crypto_page' %}active{% endif %}">
         <i class="fab fa-bitcoin"></i> Crypto
       </a>
-      <a href="{{ url_for('card_offers') }}" class="topbar-qlink {% if request.endpoint in ['card_offers','submit_offer','admin_offers'] %}active{% endif %}">
+      <a href="{{ url_for('card_offers') }}" class="topbar-qlink {% if request.endpoint in ['card_offers','admin_bank_add','admin_bank_edit'] %}active{% endif %}">
         <i class="fas fa-gift"></i> CC Offers
       </a>
       <a href="{{ url_for('exchange_rates') }}" class="topbar-qlink {% if request.endpoint == 'exchange_rates' %}active{% endif %}">

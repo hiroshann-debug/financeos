@@ -243,8 +243,8 @@
     <div class="ai-chip {% if savings_rate >= 20 %}good{% elif savings_rate >= 10 %}warn{% else %}bad{% endif %}">
       {% if savings_rate >= 20 %}✓ Savings {{ savings_rate }}% — excellent{% elif savings_rate >= 10 %}⚡ Savings {{ savings_rate }}% — on track{% else %}⚠ Savings rate low — {{ savings_rate }}%{% endif %}
     </div>
-    <div class="ai-chip {% if smart_today_remaining > 0 %}good{% else %}bad{% endif %}">
-      {% if smart_today_remaining > 0 %}💰 {{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }} to spend today{% else %}⚠ Today's budget exhausted{% endif %}
+    <div class="ai-chip {% if total_committed > 0 and truly_available <= 0 %}bad{% elif days_left_in_period <= 5 %}warn{% else %}info{% endif %}">
+      {% if total_committed > 0 and truly_available <= 0 %}⚠ Bills exceed income this period{% else %}🗓️ {{ days_left_in_period }} day{{ 's' if days_left_in_period != 1 }} left in cycle{% endif %}
     </div>
     <div class="ai-chip {% if upcoming_payments|length > 3 %}warn{% else %}info{% endif %}">
       📅 {{ upcoming_payments|length }} payment{{ 's' if upcoming_payments|length != 1 }} pending
@@ -311,8 +311,8 @@
   <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:{% if balance >= 0 %}#f0fdf4{% else %}#fff1f2{% endif %};">
     <div class="zp-stat-icon" style="background:{% if balance >= 0 %}#bbf7d0;color:#15803d{% else %}#fecdd3;color:#be123c{% endif %};"><i class="fas fa-scale-balanced"></i></div>
     <div class="zp-stat-val" style="color:{% if balance >= 0 %}#14532d{% else %}#881337{% endif %};">{{ "{:,.0f}".format(balance) }}</div>
-    <div class="zp-stat-label">Period Balance</div>
-    <div class="zp-stat-change" style="color:{% if balance >= 0 %}#16a34a{% else %}#ef4444{% endif %};">Income − Expenses →</div>
+    <div class="zp-stat-label">Actual Net Result</div>
+    <div class="zp-stat-change" style="color:{% if balance >= 0 %}#16a34a{% else %}#ef4444{% endif %};">money in − money out so far →</div>
   </a>
   <a href="{{ url_for('credit_cards') }}" class="zp-stat" style="background:#fffbeb;">
     <div class="zp-stat-icon" style="background:#fde68a;color:#b45309;"><i class="fas fa-credit-card"></i></div>
@@ -502,7 +502,7 @@
       <table class="zp-table">
         <thead><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right;">Amount</th></tr></thead>
         <tbody>
-          {% for t in this_month_transactions[:12] %}
+          {% for t in this_month_transactions[:5] %}
           <tr>
             <td style="font-family:var(--mono);font-size:0.75rem;color:var(--text3);">{{ t.date.strftime('%d %b') if t.date else '—' }}</td>
             <td style="font-weight:500;">{{ t.description or '—' }}</td>
