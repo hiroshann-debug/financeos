@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -712,3 +713,707 @@ function openPayCard(id, name, amount) {
 function openPayLoan(id, name, amount, walletId) { window.location.href = '/loan'; }
 </script>
 {% endblock %}
+=======
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_style %}
+/* ── ZP ARTICLES INSPIRED DASHBOARD ── */
+.dash-wrap {
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 24px;
+  font-family: var(--font);
+}
+
+/* White card */
+.zp-card {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: none;
+}
+
+/* Hero banner — amber/yellow */
+.zp-hero {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 60%, #fcd34d 100%);
+  border-radius: 24px;
+  padding: 28px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.zp-hero::after {
+  content: '';
+  position: absolute;
+  right: 120px; top: -20px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+}
+.zp-hero-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #1a1f37;
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+.zp-hero-sub {
+  font-size: 0.875rem;
+  color: rgba(26,31,55,0.65);
+  margin-bottom: 18px;
+}
+.zp-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: #1a1f37;
+  color: white;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s;
+  margin-right: 8px;
+}
+.zp-hero-btn:hover { background: #2d3461; transform: translateY(-1px); }
+.zp-hero-btn.outline {
+  background: rgba(26,31,55,0.1);
+  color: #1a1f37;
+  border: 1.5px solid rgba(26,31,55,0.2);
+}
+
+/* Colored stat cards */
+.zp-stat {
+  border-radius: 20px;
+  padding: 20px;
+  display: block;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.zp-stat:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.zp-stat-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: grid; place-items: center;
+  font-size: 1rem;
+  margin-bottom: 14px;
+}
+.zp-stat-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1a1f37;
+  margin-bottom: 3px;
+}
+.zp-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(26,31,55,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.zp-stat-change {
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+/* Section title */
+.zp-section-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.zp-section-title a {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Salary bar */
+.zp-salary { background: var(--surface); border-radius: 20px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; }
+.zp-salary-track { height: 8px; background: #f1f5f9; border-radius: 999px; overflow: hidden; margin: 10px 0 14px; }
+.zp-salary-fill { height: 100%; border-radius: 999px; }
+
+/* Salary tiles */
+.zp-tile { border-radius: 14px; padding: 14px; }
+.zp-tile-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+.zp-tile-val { font-family: var(--mono); font-size: 1rem; font-weight: 800; }
+
+/* AI advisor */
+.zp-ai { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 20px; padding: 20px; margin-bottom: 20px; color: white; box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
+.ai-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 10px; font-size: 0.78rem; font-weight: 600; }
+.ai-chip.good  { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.ai-chip.warn  { background: rgba(251,191,36,0.2);  color: #fde68a; border: 1px solid rgba(251,191,36,0.3); }
+.ai-chip.bad   { background: rgba(239,68,68,0.2);   color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+.ai-chip.info  { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.2); }
+
+/* Table */
+.zp-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.zp-table th { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); padding: 6px 8px; border-bottom: 2px solid var(--border); text-align: left; }
+.zp-table td { padding: 11px 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+.zp-table tr:last-child td { border: none; }
+.zp-table tr:hover td { background: var(--surface2); }
+
+/* Payment row */
+.pay-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.pay-row:last-child { border: none; }
+.pay-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 0.85rem; flex-shrink: 0; }
+
+/* Category bar */
+.cat-bar { margin-bottom: 10px; }
+.cat-bar-top { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.78rem; }
+.cat-bar-track { height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+.cat-bar-fill { height: 100%; border-radius: 3px; }
+
+/* Progress */
+.zp-progress { height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin-top: 5px; }
+.zp-progress-fill { height: 100%; border-radius: 3px; }
+
+/* Grids */
+.zp-g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.zp-g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.zp-g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.zp-row { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+
+@media (max-width: 1100px) {
+  .zp-row { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 900px) {
+  .zp-g4 { grid-template-columns: 1fr 1fr !important; }
+  .zp-g3 { grid-template-columns: 1fr 1fr !important; }
+  .zp-hero { flex-direction: column; gap: 12px; }
+  .dash-wrap { padding: 14px; }
+}
+@media (max-width: 480px) {
+  .zp-g4, .zp-g3, .zp-g2 { grid-template-columns: 1fr !important; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="dash-wrap">
+
+{% if not wallets and total_income == 0 %}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+  <div style="font-size:2rem;">👋</div>
+  <div style="flex:1;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:4px;">Welcome to FinanceOS!</div><p style="font-size:0.82rem;color:#3b82f6;">Start by adding a wallet, then log your first income.</p></div>
+  <div style="display:flex;gap:8px;"><a href="{{ url_for('wallets') }}" class="btn btn-primary btn-sm">💼 Add Wallet</a><a href="{{ url_for('income') }}" class="btn btn-ghost btn-sm">💰 Add Income</a></div>
+</div>
+{% endif %}
+
+<!-- ── HERO BANNER ── -->
+<div class="zp-hero">
+  <div style="position:relative;z-index:1;">
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(26,31,55,0.5);margin-bottom:6px;">FINANCEOS</div>
+    <div class="zp-hero-title">
+      <span id="greeting">Good Day</span>, {{ preferred_name }}! 👋
+    </div>
+    <div class="zp-hero-sub">Your Financial Operating System · {{ salary_period }}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="zp-hero-btn" onclick="document.getElementById('addExpenseModal').classList.add('open')">
+        <i class="fas fa-plus"></i> Add Expense
+      </button>
+      <a href="{{ url_for('income') }}" class="zp-hero-btn outline">
+        <i class="fas fa-arrow-down"></i> Add Income
+      </a>
+      <input type="month" value="{{ selected_month }}" style="background:rgba(26,31,55,0.08);border:none;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#1a1f37;font-family:var(--font);cursor:pointer;outline:none;" onchange="location='?month='+this.value">
+    </div>
+  </div>
+  <!-- Hero stats — quick summary -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;position:relative;z-index:1;">
+    <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:130px;">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Net Worth</div>
+      <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:{% if net_worth >= 0 %}#065f46{% else %}#991b1b{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(net_worth) }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:130px;">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Today Can Spend</div>
+      <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:{% if smart_today_remaining > 0 %}#065f46{% else %}#991b1b{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.4);backdrop-filter:blur(10px);border-radius:16px;padding:16px 20px;min-width:130px;">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,31,55,0.55);margin-bottom:5px;">Health Score</div>
+      <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:{{ health.color }};">{{ health.score }}/100</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI ADVISOR ── -->
+<div class="zp-ai" style="margin-bottom:20px;">
+  <div style="font-size:0.82rem;font-weight:700;color:rgba(255,255,255,0.6);margin-bottom:12px;letter-spacing:0.05em;text-transform:uppercase;">🧠 FinanceOS Advisor</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <div class="ai-chip {% if savings_rate >= 20 %}good{% elif savings_rate >= 10 %}warn{% else %}bad{% endif %}">
+      {% if savings_rate >= 20 %}✓ Savings {{ savings_rate }}% — excellent{% elif savings_rate >= 10 %}⚡ Savings {{ savings_rate }}% — on track{% else %}⚠ Savings rate low — {{ savings_rate }}%{% endif %}
+    </div>
+    <div class="ai-chip {% if smart_today_remaining > 0 %}good{% else %}bad{% endif %}">
+      {% if smart_today_remaining > 0 %}💰 {{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }} to spend today{% else %}⚠ Today's budget exhausted{% endif %}
+    </div>
+    <div class="ai-chip {% if upcoming_payments|length > 3 %}warn{% else %}info{% endif %}">
+      📅 {{ upcoming_payments|length }} payment{{ 's' if upcoming_payments|length != 1 }} pending
+    </div>
+    <div class="ai-chip {% if net_worth >= 0 %}good{% else %}bad{% endif %}">
+      {% if net_worth >= 0 %}📈 Net worth positive{% else %}📉 Focus on debt reduction{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── SALARY CYCLE ── -->
+{% set pct = (days_elapsed / days_total_period * 100)|int if days_total_period > 0 else 0 %}
+<div class="zp-salary">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <div class="zp-section-title" style="margin-bottom:0;">📅 Salary Cycle</div>
+    <span style="font-size:0.82rem;font-weight:700;color:{% if days_left_in_period <= 5 %}#ef4444{% elif days_left_in_period <= 10 %}#f59e0b{% else %}var(--accent){% endif %};">{{ days_left_in_period }} days remaining</span>
+  </div>
+  <div class="zp-salary-track">
+    <div class="zp-salary-fill" style="width:{{ pct }}%;background:{% if pct > 80 %}linear-gradient(90deg,#ef4444,#f97316){% elif pct > 60 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#6366f1,#8b5cf6){% endif %};"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text3);margin-bottom:14px;">
+    <span>{{ period_start.strftime('%d %b') }}</span>
+    <span style="font-weight:600;color:var(--text2);">{{ pct }}% elapsed</span>
+    <span>{{ period_end.strftime('%d %b') }}</span>
+  </div>
+  <div class="zp-g4">
+    <div class="zp-tile" style="background:#fff1f2;">
+      <div class="zp-tile-label" style="color:#ef4444;">Bills & Loans</div>
+      <div class="zp-tile-val" style="color:#dc2626;">{{ currency_symbol }} {{ "{:,.0f}".format(total_committed) }}</div>
+      <div style="font-size:0.65rem;color:#f87171;margin-top:3px;">loans + cards + fixed monthly</div>
+    </div>
+    <div class="zp-tile" style="background:#f5f3ff;">
+      <div class="zp-tile-label" style="color:#7c3aed;">Period Cash Left After Fixed</div>
+      <div class="zp-tile-val" style="color:{% if truly_available > 0 %}#4c1d95{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(truly_available) }}</div>
+      <div style="font-size:0.65rem;color:#a78bfa;margin-top:3px;">income − bills, for this period</div>
+    </div>
+    <div class="zp-tile" style="background:#eff6ff;">
+      <div class="zp-tile-label" style="color:#3b82f6;">Spend Today</div>
+      <div class="zp-tile-val" style="color:{% if smart_today_remaining > 0 %}#2563eb{% else %}#dc2626{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
+      <div style="font-size:0.65rem;color:#93c5fd;margin-top:3px;">spent {{ currency_symbol }} {{ "{:,.0f}".format(today_variable_spent) }} today</div>
+    </div>
+    <div class="zp-tile" style="background:#f0fdf4;">
+      <div class="zp-tile-label" style="color:#10b981;">Days Left</div>
+      <div class="zp-tile-val" style="color:{% if days_left_in_period <= 5 %}#dc2626{% elif days_left_in_period <= 10 %}#d97706{% else %}#059669{% endif %};">{{ days_left_in_period }}</div>
+      <div style="font-size:0.65rem;color:#6ee7b7;margin-top:3px;">of {{ days_total_period }} day period</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── KPIs ROW 1: The basics ── -->
+<div class="zp-g4" style="margin-bottom:14px;">
+  <a href="{{ url_for('income') }}" class="zp-stat" style="background:#f0fdf4;">
+    <div class="zp-stat-icon" style="background:#bbf7d0;color:#15803d;"><i class="fas fa-circle-down"></i></div>
+    <div class="zp-stat-val" style="color:#14532d;">{{ "{:,.0f}".format(total_income) }}</div>
+    <div class="zp-stat-label">Period Income</div>
+    <div class="zp-stat-change" style="color:#16a34a;">{{ currency_symbol }} · {{ period_start.strftime('%d %b') }} – {{ period_end.strftime('%d %b') }} →</div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:#fff1f2;">
+    <div class="zp-stat-icon" style="background:#fecdd3;color:#be123c;"><i class="fas fa-circle-up"></i></div>
+    <div class="zp-stat-val" style="color:#881337;">{{ "{:,.0f}".format(total_expense) }}</div>
+    <div class="zp-stat-label">Period Expenses</div>
+    <div class="zp-stat-change" style="color:#ef4444;">{{ currency_symbol }} this period →</div>
+  </a>
+  <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:{% if balance >= 0 %}#f0fdf4{% else %}#fff1f2{% endif %};">
+    <div class="zp-stat-icon" style="background:{% if balance >= 0 %}#bbf7d0;color:#15803d{% else %}#fecdd3;color:#be123c{% endif %};"><i class="fas fa-scale-balanced"></i></div>
+    <div class="zp-stat-val" style="color:{% if balance >= 0 %}#14532d{% else %}#881337{% endif %};">{{ "{:,.0f}".format(balance) }}</div>
+    <div class="zp-stat-label">Net Balance</div>
+    <div class="zp-stat-change" style="color:{% if balance >= 0 %}#16a34a{% else %}#ef4444{% endif %};">Income − Expenses →</div>
+  </a>
+  <a href="{{ url_for('credit_cards') }}" class="zp-stat" style="background:#fffbeb;">
+    <div class="zp-stat-icon" style="background:#fde68a;color:#b45309;"><i class="fas fa-credit-card"></i></div>
+    <div class="zp-stat-val" style="color:#78350f;">{{ "{:,.0f}".format(total_used_credit) }}</div>
+    <div class="zp-stat-label">Credit Used</div>
+    <div class="zp-stat-change" style="color:#d97706;">of {{ "{:,.0f}".format(total_credit_limit) }} limit →</div>
+  </a>
+</div>
+
+<!-- ── KPIs ROW 2: Deeper metrics ── -->
+<div class="zp-g4" style="margin-bottom:20px;">
+  <a href="{{ url_for('wallets') }}" class="zp-stat" style="background:#f5f3ff;">
+    <div class="zp-stat-icon" style="background:#ddd6fe;color:#7c3aed;"><i class="fas fa-wallet"></i></div>
+    <div class="zp-stat-val" style="color:#4c1d95;">{{ "{:,.0f}".format(total_wallet_balance) }}</div>
+    <div class="zp-stat-label">Wallet Balance</div>
+    <div class="zp-stat-change" style="color:#7c3aed;">{{ wallets|length }} wallet{{ 's' if wallets|length != 1 }} →</div>
+  </a>
+  <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fce7f3;">
+    <div class="zp-stat-icon" style="background:#fbcfe8;color:#be185d;"><i class="fas fa-piggy-bank"></i></div>
+    <div class="zp-stat-val" style="color:{% if savings_rate >= 20 %}#831843{% elif savings_rate >= 10 %}#9d174d{% else %}#dc2626{% endif %};">{{ savings_rate }}%</div>
+    <div class="zp-stat-label">Savings Rate</div>
+    <div class="zp-stat-change" style="color:#be185d;">of income saved →</div>
+  </a>
+  <a href="{{ url_for('investments') }}" class="zp-stat" style="background:#eff6ff;">
+    <div class="zp-stat-icon" style="background:#bfdbfe;color:#2563eb;"><i class="fas fa-chart-line"></i></div>
+    <div class="zp-stat-val" style="color:#1d4ed8;">{{ "{:,.0f}".format(total_investments) }}</div>
+    <div class="zp-stat-label">Investments</div>
+    <div class="zp-stat-change" style="color:#3b82f6;">portfolio value →</div>
+  </a>
+  <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fef3c7;">
+    <div class="zp-stat-icon" style="background:#fde68a;color:#d97706;"><i class="fas fa-heart-pulse"></i></div>
+    <div class="zp-stat-val" style="color:#92400e;">{{ health.score }}</div>
+    <div class="zp-stat-label">Health Score</div>
+    <div class="zp-stat-change" style="color:#d97706;">{{ health.label }} →</div>
+  </a>
+</div>
+
+<!-- ── ROW: Trend + Upcoming ── -->
+<div class="zp-row" style="margin-bottom:16px;">
+  <div class="zp-card">
+    <div class="zp-section-title">
+      📈 6-Month Trend
+      <div style="display:flex;gap:14px;">
+        <span style="font-size:0.7rem;color:var(--text3);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:#6366f1;border-radius:2px;display:inline-block;"></span>Income</span>
+        <span style="font-size:0.7rem;color:var(--text3);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:#ef4444;border-radius:2px;display:inline-block;"></span>Expenses</span>
+      </div>
+    </div>
+    <div style="position:relative;height:220px;"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <div class="zp-card" style="display:flex;flex-direction:column;">
+    <div class="zp-section-title" style="margin-bottom:4px;">
+      ⏰ Upcoming Payments
+      {% if upcoming_payments %}<span style="background:#fef2f2;color:#ef4444;padding:2px 9px;border-radius:999px;font-size:0.7rem;font-weight:700;border:1px solid #fecaca;">{{ upcoming_payments|length }}</span>{% endif %}
+    </div>
+    <div style="font-size:0.72rem;color:var(--text3);margin-bottom:12px;">Cash commitments before next salary</div>
+    {% if upcoming_payments %}
+    <div style="overflow-y:auto;max-height:250px;flex:1;">
+      {% for p in upcoming_payments %}
+      <div class="pay-row">
+        <div class="pay-icon" style="{% if p.kind=='card' %}background:#fffbeb;color:#d97706;{% elif p.kind=='loan' %}background:#fef2f2;color:#ef4444;{% elif p.kind=='recurring' %}background:#eff6ff;color:#3b82f6;{% else %}background:#f5f3ff;color:#7c3aed;{% endif %}">
+          {% if p.kind=='card' %}<i class="fas fa-credit-card"></i>{% elif p.kind=='loan' %}<i class="fas fa-building-columns"></i>{% elif p.kind=='recurring' %}<i class="fas fa-rotate"></i>{% else %}<i class="fas fa-file-invoice"></i>{% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.type }}</div>
+          <div style="font-size:0.7rem;color:var(--text3);">{{ p.due_date }}{% if p.days_left < 0 %} <span style="color:#ef4444;font-weight:700;">· Overdue</span>{% elif p.days_left == 0 %} <span style="color:#ef4444;font-weight:700;">· Today</span>{% elif p.days_left <= 3 %} <span style="color:#f59e0b;font-weight:700;">· {{ p.days_left }}d</span>{% endif %}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-family:var(--mono);font-size:0.85rem;font-weight:700;{% if p.kind=='card' %}color:#d97706;{% elif p.kind=='loan' %}color:#ef4444;{% else %}color:var(--accent);{% endif %}">{{ currency_symbol }} {{ "{:,.0f}".format(p.amount) }}</div>
+          {% if p.kind=='card' %}<button class="btn btn-sm" style="font-size:0.62rem;padding:2px 8px;margin-top:2px;background:#fffbeb;color:#d97706;border:1px solid #fde68a;" onclick="openPayCard({{ p.id }},'{{ p.type }}',{{ p.amount }})">Pay</button>
+          {% elif p.kind=='loan' %}<button class="btn btn-sm" style="font-size:0.62rem;padding:2px 8px;margin-top:2px;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;" onclick="openPayLoan({{ p.id }},'{{ p.type }}',{{ p.amount }},null)">Pay</button>
+          {% elif p.kind=='recurring' %}<form method="POST" action="{{ url_for('apply_recurring', rec_id=p.id) }}" style="display:inline;"><button class="btn btn-sm" style="font-size:0.62rem;padding:2px 8px;margin-top:2px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;">Pay</button></form>
+          {% else %}<form method="POST" action="{{ url_for('mark_fixed_paid', expense_id=p.id) }}" style="display:inline;"><button class="btn btn-sm" style="font-size:0.62rem;padding:2px 8px;margin-top:2px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;">Pay</button></form>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:0.78rem;border-top:1px solid var(--border);margin-top:4px;">
+      <span style="color:var(--text3);">Total unpaid</span>
+      <span style="font-family:var(--mono);font-weight:800;color:#ef4444;">{{ currency_symbol }} {{ "{:,.0f}".format(unpaid_fixed_total) }}</span>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px 0;flex:1;">
+      <div style="font-size:2.5rem;margin-bottom:8px;">🎉</div>
+      <div style="font-size:0.9rem;font-weight:700;color:#10b981;">All clear!</div>
+      <div style="font-size:0.75rem;color:var(--text3);margin-top:3px;">No pending payments</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── ROW: Categories + Wallets + Cards + Goals ── -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px;" class="dashboard-row3">
+
+  <div class="zp-card">
+    <div class="zp-section-title">🏷️ Top Spending</div>
+    {% if chart_data.expense %}
+    {% set cats = chart_data.expense.items()|list|sort(attribute='1',reverse=True) %}
+    {% set max_v = cats[0][1] if cats else 1 %}
+    {% set bcolors = ['#6366f1','#ef4444','#f59e0b','#10b981','#3b82f6','#ec4899'] %}
+    {% for cat, amt in cats[:6] %}
+    <div class="cat-bar">
+      <div class="cat-bar-top">
+        <span style="color:var(--text);font-weight:600;font-size:0.75rem;">{{ cat }}</span>
+        <span style="font-family:var(--mono);font-size:0.72rem;font-weight:700;color:{{ bcolors[loop.index0 % 6] }};">{{ "{:,.0f}".format(amt) }}</span>
+      </div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:{{ (amt/max_v*100)|int }}%;background:{{ bcolors[loop.index0 % 6] }};"></div></div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:24px 0;color:var(--text3);font-size:0.82rem;">No expenses yet</div>
+    {% endif %}
+  </div>
+
+  <div class="zp-card">
+    <div class="zp-section-title">💼 Wallets <a href="{{ url_for('wallets') }}">Manage →</a></div>
+    {% if wallets %}
+    {% for w in wallets %}
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="width:8px;height:8px;border-radius:50%;background:{{ w.color }};flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ w.name }}</div>
+        <div style="font-size:0.68rem;color:var(--text3);">{{ w.wallet_type }}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent);">{{ "{:,.0f}".format(w.balance) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;">No wallets yet</div>
+    {% endif %}
+  </div>
+
+  <div class="zp-card">
+    <div class="zp-section-title">💳 Credit Cards <a href="{{ url_for('credit_cards') }}">Manage →</a></div>
+    {% if credit_cards %}
+    {% for c in credit_cards %}
+    {% set days_c = (c.due_date - today).days if c.due_date else 999 %}
+    {% set util = ((c.credit_limit - c.available_balance) / c.credit_limit * 100)|int if c.credit_limit > 0 else 0 %}
+    <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text);">{{ c.bank_name }}</div>
+        <div style="font-size:0.7rem;color:{% if days_c <= 3 %}#ef4444{% elif days_c <= 7 %}#f59e0b{% else %}var(--text3){% endif %};">{% if c.due_date %}{{ c.due_date.strftime('%d %b') }}{% endif %}</div>
+      </div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:{{ util }}%;background:{% if util > 80 %}#ef4444{% elif util > 60 %}#f59e0b{% else %}#6366f1{% endif %};"></div></div>
+      <div style="font-size:0.65rem;color:var(--text3);margin-top:2px;">{{ util }}% utilized</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;">No cards added</div>
+    {% endif %}
+  </div>
+
+  <div class="zp-card">
+    <div class="zp-section-title">🎯 Goals <a href="{{ url_for('goals') }}">Manage →</a></div>
+    {% if active_goals %}
+    {% for g in active_goals %}
+    {% set pct = [(g.current_amount / g.target_amount * 100)|int, 100]|min %}
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:0.78rem;font-weight:600;color:var(--text);">{{ g.icon }} {{ g.name }}</span>
+        <span style="font-size:0.7rem;color:var(--text3);">{{ pct }}%</span>
+      </div>
+      <div class="zp-progress"><div class="zp-progress-fill" style="width:{{ pct }}%;background:{{ g.color }};"></div></div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;">No goals yet</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── ROW: Transactions + Forecast ── -->
+<div class="zp-row">
+  <div class="zp-card">
+    <div class="zp-section-title">📋 Recent Transactions <a href="{{ url_for('transactions') }}">View All →</a></div>
+    {% if this_month_transactions %}
+    <div style="overflow-x:auto;">
+      <table class="zp-table">
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right;">Amount</th></tr></thead>
+        <tbody>
+          {% for t in this_month_transactions[:12] %}
+          <tr>
+            <td style="font-family:var(--mono);font-size:0.75rem;color:var(--text3);">{{ t.date.strftime('%d %b') if t.date else '—' }}</td>
+            <td style="font-weight:500;">{{ t.description or '—' }}</td>
+            <td><span style="padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;{% if t.trans_type=='income' %}background:#dcfce7;color:#15803d;{% else %}background:#ede9fe;color:#7c3aed;{% endif %}">{{ t.category or 'General' }}</span></td>
+            <td style="font-family:var(--mono);font-weight:700;text-align:right;color:{% if t.trans_type=='income' %}#16a34a{% else %}#ef4444{% endif %};">{{ '+' if t.trans_type=='income' else '-' }}{{ "{:,.0f}".format(t.amount) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:40px 0;">
+      <div style="font-size:2.5rem;margin-bottom:12px;">📋</div>
+      <div style="color:var(--text3);font-size:0.875rem;margin-bottom:16px;">No transactions this period</div>
+      <button class="zp-hero-btn" onclick="document.getElementById('addExpenseModal').classList.add('open')">Add First Transaction</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="zp-card" style="display:flex;flex-direction:column;">
+    <div class="zp-section-title">
+      🔮 Next Period Forecast
+      <span style="font-family:var(--mono);font-size:0.85rem;font-weight:800;color:#d97706;">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
+    </div>
+    {% if next_month_expenses %}
+    <div style="overflow-y:auto;max-height:260px;flex:1;">
+      {% for e in next_month_expenses %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ e.name }}</div>
+          <div style="font-size:0.7rem;color:var(--text3);">{{ e.date.strftime('%d %b') if e.date else '—' }}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:0.85rem;font-weight:700;color:#d97706;flex-shrink:0;margin-left:10px;">{{ currency_symbol }} {{ "{:,.0f}".format(e.amount) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:0.78rem;border-top:1px solid var(--border);margin-top:4px;">
+      <span style="color:var(--text3);">Total forecast</span>
+      <span style="font-family:var(--mono);font-weight:800;color:#d97706;">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px 0;flex:1;">
+      <div style="font-size:2.5rem;margin-bottom:8px;">📅</div>
+      <div style="color:var(--text3);font-size:0.82rem;">No upcoming scheduled payments</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+</div><!-- end dash-wrap -->
+
+<!-- DAILY BUDGET POPUP -->
+{% if show_daily_popup %}
+<div class="modal-overlay" id="dailyPopup" style="display:flex;z-index:500;">
+  <div class="modal" style="max-width:460px;border-radius:24px;padding:0;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:24px 28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);">FINANCEOS · DAILY BRIEF</div>
+        <div id="popupGreeting" style="font-size:0.72rem;color:rgba(255,255,255,0.4);"></div>
+      </div>
+      <div style="font-size:1.3rem;font-weight:800;color:white;letter-spacing:-0.02em;">{{ preferred_name }}, here's your financial snapshot</div>
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.4);margin-top:3px;">{{ period_start.strftime('%d %b') }} → {{ period_end.strftime('%d %b %Y') }} · {{ days_left_in_period }} days left</div>
+    </div>
+    <div style="padding:20px 28px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#15803d;margin-bottom:4px;">Income</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:#14532d;">{{ currency_symbol }} {{ "{:,.0f}".format(total_income) }}</div>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#dc2626;margin-bottom:4px;">Fixed Committed</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:#991b1b;">{{ currency_symbol }} {{ "{:,.0f}".format(total_committed) }}</div>
+          <div style="font-size:0.6rem;color:#f87171;margin-top:2px;">loans + cards + fixed</div>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.6);margin-bottom:4px;">Truly Available to Spend</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.5);">income minus all commitments</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:1.5rem;font-weight:800;color:white;">{{ currency_symbol }} {{ "{:,.0f}".format(truly_available) }}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2563eb;margin-bottom:4px;">Daily Budget</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:#1d4ed8;">{{ currency_symbol }} {{ "{:,.0f}".format(smart_daily_budget) }}</div>
+          <div style="font-size:0.6rem;color:#60a5fa;margin-top:2px;">available / {{ days_total_period }} days</div>
+        </div>
+        <div style="background:{% if smart_today_remaining > 0 %}#f0fdf4;border:1px solid #86efac{% else %}#fef2f2;border:1px solid #fca5a5{% endif %};border-radius:12px;padding:12px;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:{% if smart_today_remaining > 0 %}#15803d{% else %}#dc2626{% endif %};margin-bottom:4px;">Today You Can Spend</div>
+          <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:{% if smart_today_remaining > 0 %}#14532d{% else %}#991b1b{% endif %};">{{ currency_symbol }} {{ "{:,.0f}".format(smart_today_remaining) }}</div>
+          <div style="font-size:0.6rem;color:{% if smart_today_remaining > 0 %}#4ade80{% else %}#f87171{% endif %};margin-top:2px;">spent {{ currency_symbol }} {{ "{:,.0f}".format(today_variable_spent) }} today</div>
+        </div>
+      </div>
+      {% set spent_pct = [(total_variable_spent / truly_available * 100)|int, 100]|min if truly_available > 0 else 0 %}
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text2);margin-bottom:5px;">
+          <span>Period spending progress</span>
+          <span style="font-weight:700;color:{% if spent_pct > 80 %}#dc2626{% elif spent_pct > 60 %}#d97706{% else %}#6366f1{% endif %};">{{ spent_pct }}% used</span>
+        </div>
+        <div style="height:8px;background:#f1f5f9;border-radius:999px;overflow:hidden;">
+          <div style="height:8px;width:{{ spent_pct }}%;background:{% if spent_pct > 80 %}linear-gradient(90deg,#ef4444,#f97316){% elif spent_pct > 60 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#6366f1,#8b5cf6){% endif %};border-radius:999px;"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.78rem;color:var(--text2);">
+          <input type="checkbox" id="dontShowPopup" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer;">
+          Don't show this again
+        </label>
+        <button onclick="closeDailyPopup()" class="btn btn-primary btn-sm" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;padding:8px 20px;">
+          Let's go! 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- MODALS -->
+<div class="modal-overlay" id="addExpenseModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">➕ Add Expense</div>
+    <form method="POST" action="{{ url_for('add') }}">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00" autofocus></div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" name="date" class="form-control" required value="{{ today.strftime('%Y-%m-%d') }}"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><input type="text" name="description" class="form-control" required placeholder="What's this for?"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Category</label>
+          {% from "_category_picker.html" import category_picker %}
+          {{ category_picker('category', expense_categories, 'expense', instance_id='addexp') }}
+        </div>
+        <div class="form-group"><label class="form-label">Currency</label><select name="currency" class="form-control"><option value="LKR">LKR</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Payment Source</label><select name="payment_method" class="form-control" required><option value="">— Select wallet or card —</option>{% for w in wallets %}<option value="wallet_{{ w.id }}">💼 {{ w.name }} — {{ "{:,.0f}".format(w.balance) }}</option>{% endfor %}{% for c in credit_cards %}<option value="credit_{{ c.id }}">💳 {{ c.bank_name }} — {{ "{:,.0f}".format(c.available_balance) }} avail.</option>{% endfor %}</select></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="document.getElementById('addExpenseModal').classList.remove('open')">Cancel</button><button type="submit" class="btn btn-primary" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;">Add Expense</button></div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="payCardModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal"><div class="modal-title" id="payCardTitle">💳 Pay Credit Card</div>
+    <form method="POST" id="payCardForm">
+      <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" id="payCardAmount" class="form-control" required></div>
+      <div class="form-group"><label class="form-label">Pay From Wallet</label><select name="wallet_id" class="form-control"><option value="">None</option>{% for w in wallets %}<option value="{{ w.id }}">{{ w.name }} ({{ "{:,.0f}".format(w.balance) }})</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="document.getElementById('payCardModal').classList.remove('open')">Cancel</button><button type="submit" class="btn btn-primary">Record Payment</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Greeting
+const hr = new Date().getHours();
+const greetingText = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
+document.getElementById('greeting').textContent = greetingText;
+const pg = document.getElementById('popupGreeting');
+if (pg) pg.textContent = greetingText;
+
+// Daily popup
+function closeDailyPopup() {
+  const cb = document.getElementById('dontShowPopup');
+  if (cb && cb.checked) {
+    fetch('/toggle-popup', { method: 'POST' });
+  }
+  const popup = document.getElementById('dailyPopup');
+  if (popup) {
+    popup.style.opacity = '0';
+    popup.style.transition = 'opacity 0.3s';
+    setTimeout(() => popup.style.display = 'none', 300);
+  }
+}
+const dp = document.getElementById('dailyPopup');
+if (dp) dp.addEventListener('click', e => { if (e.target === dp) closeDailyPopup(); });
+
+const trends = {{ monthly_trends | safe }};
+new Chart(document.getElementById('trendChart'), {
+  type: 'bar',
+  data: {
+    labels: trends.labels,
+    datasets: [
+      { label: 'Income',   data: trends.income,   backgroundColor: 'rgba(99,102,241,0.15)', borderColor: '#6366f1', borderWidth: 2, borderRadius: 6 },
+      { label: 'Expenses', data: trends.expenses, backgroundColor: 'rgba(239,68,68,0.12)',  borderColor: '#ef4444', borderWidth: 2, borderRadius: 6 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#fff', borderColor: '#e5e7eb', borderWidth: 1, titleColor: '#6b7280', bodyColor: '#1f2937', padding: 12, cornerRadius: 8 } },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+      y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#9ca3af', font: { size: 10 }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
+    }
+  }
+});
+
+function openPayCard(id, name, amount) {
+  document.getElementById('payCardTitle').textContent = '💳 Pay: ' + name;
+  document.getElementById('payCardForm').action = '/pay-credit-card/' + id;
+  document.getElementById('payCardAmount').value = amount;
+  document.getElementById('payCardModal').classList.add('open');
+}
+function openPayLoan(id, name, amount, walletId) { window.location.href = '/loan'; }
+</script>
+{% endblock %}
+>>>>>>> fea06f6b18594eb2b8aefe441893283a4eca3fef

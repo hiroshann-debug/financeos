@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {% extends "base.html" %}
 {% block title %}Credit Card Offers{% endblock %}
 {% block page_title %}Credit Card Offers{% endblock %}
@@ -172,3 +173,313 @@ function deleteBankFromEdit() {
 }
 </script>
 {% endblock %}
+=======
+{% extends "base.html" %}
+{% block title %}Credit Card Offers{% endblock %}
+{% block page_title %}Credit Card Offers{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:10px;">
+  <div>
+    <h2 style="font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;">🎁 Credit Card Offers</h2>
+    <p style="font-size:0.82rem;color:var(--text2);margin-top:3px;">
+      Sri Lanka's best CC deals — installment plans, cashback & discounts
+      <span style="background:#dcfce7;color:#15803d;padding:1px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;margin-left:6px;">{{ total_offers }} active</span>
+      {% if pending_count > 0 %}
+      <a href="{{ url_for('admin_offers') }}" style="background:#fef3c7;color:#b45309;padding:1px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;margin-left:4px;text-decoration:none;">{{ pending_count }} pending review</a>
+      {% endif %}
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{{ url_for('submit_offer') }}" class="btn btn-primary btn-sm" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;">
+      <i class="fas fa-plus"></i> Submit Offer
+    </a>
+    {% if is_admin %}
+    <a href="{{ url_for('admin_offers') }}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-shield-halved"></i> Admin
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- My Cards Filter Banner -->
+{% if user_cards %}
+<div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <i class="fas fa-credit-card" style="color:#3b82f6;font-size:1.1rem;"></i>
+  <div style="flex:1;">
+    <div style="font-size:0.82rem;font-weight:700;color:#1d4ed8;">Your Cards:</div>
+    <div style="font-size:0.78rem;color:#3b82f6;">{{ user_cards|map(attribute='bank_name')|join(' · ') }}</div>
+  </div>
+  <a href="?my_cards=1" class="btn btn-sm {% if my_cards_filter %}btn-primary{% else %}btn-ghost{% endif %}"
+    style="{% if my_cards_filter %}background:#3b82f6;border-color:#3b82f6;{% endif %}font-size:0.78rem;">
+    {% if my_cards_filter %}<i class="fas fa-check"></i> My Cards Only{% else %}🎯 Show My Card Offers{% endif %}
+  </a>
+  {% if my_cards_filter %}
+  <a href="{{ url_for('card_offers') }}" class="btn btn-ghost btn-sm" style="font-size:0.78rem;">Clear</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div style="background:white;border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+  <span style="font-size:0.78rem;font-weight:600;color:var(--text2);">Filter:</span>
+
+  <select onchange="applyFilter('bank', this.value)" class="form-control" style="width:auto;padding:5px 10px;font-size:0.78rem;">
+    <option value="">All Banks</option>
+    {% for b in all_banks %}
+    <option value="{{ b }}" {% if selected_bank==b %}selected{% endif %}>{{ b }}</option>
+    {% endfor %}
+  </select>
+
+  <select onchange="applyFilter('type', this.value)" class="form-control" style="width:auto;padding:5px 10px;font-size:0.78rem;">
+    <option value="">All Types</option>
+    {% for t in all_types %}
+    <option value="{{ t }}" {% if selected_type==t %}selected{% endif %}>{{ t }}</option>
+    {% endfor %}
+  </select>
+
+  <select onchange="applyFilter('category', this.value)" class="form-control" style="width:auto;padding:5px 10px;font-size:0.78rem;">
+    <option value="">All Categories</option>
+    {% for c in all_categories %}
+    <option value="{{ c }}" {% if selected_category==c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+
+  {% if selected_bank or selected_type or selected_category %}
+  <a href="{{ url_for('card_offers') }}{% if my_cards_filter %}?my_cards=1{% endif %}" class="btn btn-ghost btn-sm" style="font-size:0.78rem;">
+    <i class="fas fa-times"></i> Clear Filters
+  </a>
+  {% endif %}
+</div>
+
+<!-- Offer type legend -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+  {% for type,color,bg,icon in [
+    ('Installment','#6366f1','#eff6ff','fas fa-layer-group'),
+    ('Cashback','#16a34a','#f0fdf4','fas fa-money-bill-wave'),
+    ('Discount','#f59e0b','#fffbeb','fas fa-percent'),
+    ('Reward','#8b5cf6','#f5f3ff','fas fa-gift'),
+    ('Special Rate','#ef4444','#fef2f2','fas fa-star'),
+  ] %}
+  <span style="display:inline-flex;align-items:center;gap:5px;background:{{ bg }};color:{{ color }};padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;">
+    <i class="{{ icon }}" style="font-size:0.65rem;"></i> {{ type }}
+  </span>
+  {% endfor %}
+</div>
+
+<!-- Offers Grid -->
+{% if offers %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:32px;">
+  {% for offer in offers %}
+  {% set type_colors = {
+    'Installment': ('#6366f1','#eff6ff','fas fa-layer-group'),
+    'Cashback': ('#16a34a','#f0fdf4','fas fa-money-bill-wave'),
+    'Discount': ('#f59e0b','#fffbeb','fas fa-percent'),
+    'Reward': ('#8b5cf6','#f5f3ff','fas fa-gift'),
+    'Special Rate': ('#ef4444','#fef2f2','fas fa-star'),
+  } %}
+  {% set tc = type_colors.get(offer.offer_type, ('#64748b','#f8fafc','fas fa-tag')) %}
+  {% set days_left = (offer.valid_until - today).days if offer.valid_until else 999 %}
+
+  <div class="card" style="border:1.5px solid {{ tc[0] }}30;transition:all 0.2s;position:relative;overflow:hidden;"
+    onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px {{ tc[0] }}20'"
+    onmouseout="this.style.transform='';this.style.boxShadow=''">
+
+    <!-- Verified badge -->
+    {% if offer.verified %}
+    <div style="position:absolute;top:12px;right:12px;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:999px;font-size:0.62rem;font-weight:700;">
+      ✓ Verified
+    </div>
+    {% endif %}
+
+    <!-- Card header -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:{{ tc[1] }};color:{{ tc[0] }};display:grid;place-items:center;font-size:1rem;flex-shrink:0;">
+        <i class="{{ tc[2] }}"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.72rem;font-weight:800;color:{{ tc[0] }};text-transform:uppercase;letter-spacing:0.06em;">{{ offer.offer_type }}</div>
+        <div style="font-size:0.9rem;font-weight:700;color:var(--text);line-height:1.3;">{{ offer.title }}</div>
+      </div>
+    </div>
+
+    <!-- Bank + network -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+      <span style="background:{{ tc[1] }};color:{{ tc[0] }};padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;">
+        {{ offer.bank_name }}
+      </span>
+      {% if offer.card_network and offer.card_network != 'All' %}
+      <span style="background:#f1f5f9;color:#64748b;padding:3px 8px;border-radius:999px;font-size:0.7rem;font-weight:600;">
+        {{ offer.card_network }}
+      </span>
+      {% endif %}
+      {% if offer.category %}
+      <span style="background:#f8fafc;color:#94a3b8;padding:3px 8px;border-radius:999px;font-size:0.68rem;">
+        {{ offer.category }}
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Key values -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      {% if offer.installment_months %}
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:6px 10px;text-align:center;">
+        <div style="font-size:0.6rem;color:#3b82f6;font-weight:700;text-transform:uppercase;">Months</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#1d4ed8;">{{ offer.installment_months }}</div>
+      </div>
+      {% endif %}
+      {% if offer.interest_rate == 0 and offer.installment_months %}
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 10px;text-align:center;">
+        <div style="font-size:0.6rem;color:#16a34a;font-weight:700;text-transform:uppercase;">Interest</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#15803d;">0%</div>
+      </div>
+      {% elif offer.interest_rate > 0 %}
+      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:6px 10px;text-align:center;">
+        <div style="font-size:0.6rem;color:#d97706;font-weight:700;text-transform:uppercase;">Rate</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#b45309;">{{ offer.interest_rate }}%</div>
+      </div>
+      {% endif %}
+      {% if offer.cashback_pct > 0 %}
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 10px;text-align:center;">
+        <div style="font-size:0.6rem;color:#16a34a;font-weight:700;text-transform:uppercase;">Cashback</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#15803d;">{{ offer.cashback_pct }}%</div>
+      </div>
+      {% endif %}
+      {% if offer.discount_pct > 0 %}
+      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:6px 10px;text-align:center;">
+        <div style="font-size:0.6rem;color:#d97706;font-weight:700;text-transform:uppercase;">Discount</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#b45309;">{{ offer.discount_pct }}%</div>
+      </div>
+      {% endif %}
+      {% if offer.min_spend > 0 %}
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;text-align:center;">
+        <div style="font-size:0.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Min. Spend</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#64748b;">{{ "{:,.0f}".format(offer.min_spend) }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Description -->
+    {% if offer.description %}
+    <p style="font-size:0.8rem;color:var(--text2);line-height:1.5;margin-bottom:10px;">{{ offer.description }}</p>
+    {% endif %}
+
+    <!-- Merchant -->
+    {% if offer.merchant and offer.merchant != 'Any' %}
+    <div style="font-size:0.75rem;color:var(--text2);margin-bottom:10px;">
+      <i class="fas fa-store" style="color:{{ tc[0] }};margin-right:4px;"></i>
+      <strong>At:</strong> {{ offer.merchant }}
+    </div>
+    {% endif %}
+
+    <!-- Footer: expiry + upvote + source -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #f1f5f9;flex-wrap:wrap;gap:6px;">
+      <div style="font-size:0.72rem;">
+        {% if offer.valid_until %}
+          {% if days_left <= 3 %}
+          <span style="color:#ef4444;font-weight:700;"><i class="fas fa-clock"></i> Expires in {{ days_left }}d!</span>
+          {% elif days_left <= 7 %}
+          <span style="color:#f97316;font-weight:700;"><i class="fas fa-clock"></i> {{ days_left }} days left</span>
+          {% elif days_left <= 30 %}
+          <span style="color:#d97706;"><i class="fas fa-calendar"></i> Until {{ offer.valid_until.strftime('%d %b %Y') }}</span>
+          {% else %}
+          <span style="color:#94a3b8;"><i class="fas fa-calendar"></i> Until {{ offer.valid_until.strftime('%d %b %Y') }}</span>
+          {% endif %}
+        {% else %}
+          <span style="color:#94a3b8;">No expiry date</span>
+        {% endif %}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        {% if offer.source_url %}
+        <a href="{{ offer.source_url }}" target="_blank" class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:3px 8px;" title="View on bank website">
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        {% endif %}
+        <button class="btn btn-sm upvote-btn" id="upvote-{{ offer.id }}"
+          onclick="upvoteOffer({{ offer.id }})"
+          style="font-size:0.7rem;padding:3px 10px;{% if offer.id in user_upvotes %}background:#eff6ff;color:#6366f1;border-color:#c7d2fe;{% endif %}">
+          <i class="fas fa-thumbs-up"></i>
+          <span id="upvote-count-{{ offer.id }}">{{ offer.upvotes }}</span>
+        </button>
+        {% if is_admin %}
+        <form method="POST" action="{{ url_for('delete_offer', offer_id=offer.id) }}" style="display:inline;" onsubmit="return confirm('Delete this offer?')">
+          <button class="btn btn-sm btn-danger" style="font-size:0.7rem;padding:3px 8px;"><i class="fas fa-trash"></i></button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card" style="text-align:center;padding:60px;">
+  <div style="font-size:3rem;margin-bottom:16px;">🎁</div>
+  <h3 style="font-weight:700;margin-bottom:8px;">No offers found</h3>
+  <p style="color:var(--text2);margin-bottom:20px;">
+    {% if selected_bank or selected_type or selected_category %}
+    Try clearing the filters to see all offers.
+    {% else %}
+    Be the first to add a credit card offer!
+    {% endif %}
+  </p>
+  <a href="{{ url_for('submit_offer') }}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Add First Offer
+  </a>
+</div>
+{% endif %}
+
+<!-- Expired section (collapsed) -->
+{% if expired_offers %}
+<details style="margin-top:8px;">
+  <summary style="cursor:pointer;font-size:0.82rem;color:var(--text2);padding:8px 0;font-weight:600;">
+    <i class="fas fa-clock" style="color:#94a3b8;"></i> {{ expired_offers|length }} expired offer{{ 's' if expired_offers|length != 1 }}
+  </summary>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px;opacity:0.6;">
+    {% for offer in expired_offers[:6] %}
+    <div class="card" style="border:1px dashed var(--border2);">
+      <div style="font-size:0.72rem;color:#94a3b8;font-weight:700;margin-bottom:4px;">{{ offer.offer_type }} · {{ offer.bank_name }}</div>
+      <div style="font-size:0.85rem;font-weight:600;color:var(--text2);">{{ offer.title }}</div>
+      <div style="font-size:0.7rem;color:#ef4444;margin-top:6px;">Expired {{ offer.valid_until.strftime('%d %b %Y') }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</details>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function applyFilter(key, value) {
+  const url = new URL(window.location);
+  if (value) url.searchParams.set(key, value);
+  else url.searchParams.delete(key);
+  window.location = url;
+}
+
+function upvoteOffer(id) {
+  const btn = document.getElementById('upvote-' + id);
+  const countEl = document.getElementById('upvote-count-' + id);
+  fetch('/offers/upvote/' + id, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    countEl.textContent = data.upvotes;
+    if (data.voted) {
+      btn.style.background = '#eff6ff';
+      btn.style.color = '#6366f1';
+      btn.style.borderColor = '#c7d2fe';
+    } else {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }
+  });
+}
+</script>
+{% endblock %}
+>>>>>>> fea06f6b18594eb2b8aefe441893283a4eca3fef
