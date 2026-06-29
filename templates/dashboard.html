@@ -311,7 +311,7 @@
   <a href="{{ url_for('transactions') }}" class="zp-stat" style="background:{% if balance >= 0 %}#f0fdf4{% else %}#fff1f2{% endif %};">
     <div class="zp-stat-icon" style="background:{% if balance >= 0 %}#bbf7d0;color:#15803d{% else %}#fecdd3;color:#be123c{% endif %};"><i class="fas fa-scale-balanced"></i></div>
     <div class="zp-stat-val" style="color:{% if balance >= 0 %}#14532d{% else %}#881337{% endif %};">{{ "{:,.0f}".format(balance) }}</div>
-    <div class="zp-stat-label">Net Balance</div>
+    <div class="zp-stat-label">Period Balance</div>
     <div class="zp-stat-change" style="color:{% if balance >= 0 %}#16a34a{% else %}#ef4444{% endif %};">Income − Expenses →</div>
   </a>
   <a href="{{ url_for('credit_cards') }}" class="zp-stat" style="background:#fffbeb;">
@@ -342,11 +342,11 @@
     <div class="zp-stat-label">Investments</div>
     <div class="zp-stat-change" style="color:#3b82f6;">portfolio value →</div>
   </a>
-  <a href="{{ url_for('analytics') }}" class="zp-stat" style="background:#fef3c7;">
-    <div class="zp-stat-icon" style="background:#fde68a;color:#d97706;"><i class="fas fa-heart-pulse"></i></div>
-    <div class="zp-stat-val" style="color:#92400e;">{{ health.score }}</div>
-    <div class="zp-stat-label">Health Score</div>
-    <div class="zp-stat-change" style="color:#d97706;">{{ health.label }} →</div>
+  <a href="{{ url_for('debts') }}" class="zp-stat" style="background:{% if owed_to_me - i_owe >= 0 %}#fef3c7{% else %}#fff1f2{% endif %};">
+    <div class="zp-stat-icon" style="background:{% if owed_to_me - i_owe >= 0 %}#fde68a;color:#d97706{% else %}#fecdd3;color:#be123c{% endif %};"><i class="fas fa-handshake"></i></div>
+    <div class="zp-stat-val" style="color:{% if owed_to_me - i_owe >= 0 %}#92400e{% else %}#881337{% endif %};">{{ "{:,.0f}".format(owed_to_me - i_owe) }}</div>
+    <div class="zp-stat-label">Friend Debts (Net)</div>
+    <div class="zp-stat-change" style="color:{% if owed_to_me - i_owe >= 0 %}#d97706{% else %}#ef4444{% endif %};">owed {{ "{:,.0f}".format(owed_to_me) }} · owe {{ "{:,.0f}".format(i_owe) }} →</div>
   </a>
 </div>
 
@@ -377,7 +377,7 @@
           {% if p.kind=='card' %}<i class="fas fa-credit-card"></i>{% elif p.kind=='loan' %}<i class="fas fa-building-columns"></i>{% elif p.kind=='recurring' %}<i class="fas fa-rotate"></i>{% else %}<i class="fas fa-file-invoice"></i>{% endif %}
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.type }}</div>
+          <a href="{% if p.kind=='card' %}{{ url_for('credit_cards') }}{% elif p.kind=='loan' %}{{ url_for('loan_list') }}{% elif p.kind=='recurring' %}{{ url_for('recurring_payments') }}{% else %}{{ url_for('fixed_expenses') }}{% endif %}" style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;text-decoration:none;">{{ p.type }}</a>
           <div style="font-size:0.7rem;color:var(--text3);">{{ p.due_date }}{% if p.days_left < 0 %} <span style="color:#ef4444;font-weight:700;">· Overdue</span>{% elif p.days_left == 0 %} <span style="color:#ef4444;font-weight:700;">· Today</span>{% elif p.days_left <= 3 %} <span style="color:#f59e0b;font-weight:700;">· {{ p.days_left }}d</span>{% endif %}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
@@ -414,13 +414,13 @@
     {% set max_v = cats[0][1] if cats else 1 %}
     {% set bcolors = ['#6366f1','#ef4444','#f59e0b','#10b981','#3b82f6','#ec4899'] %}
     {% for cat, amt in cats[:6] %}
-    <div class="cat-bar">
+    <a href="{{ url_for('transactions', category=cat) }}" class="cat-bar" style="display:block;text-decoration:none;">
       <div class="cat-bar-top">
         <span style="color:var(--text);font-weight:600;font-size:0.75rem;">{{ cat }}</span>
         <span style="font-family:var(--mono);font-size:0.72rem;font-weight:700;color:{{ bcolors[loop.index0 % 6] }};">{{ "{:,.0f}".format(amt) }}</span>
       </div>
       <div class="cat-bar-track"><div class="cat-bar-fill" style="width:{{ (amt/max_v*100)|int }}%;background:{{ bcolors[loop.index0 % 6] }};"></div></div>
-    </div>
+    </a>
     {% endfor %}
     {% else %}
     <div style="text-align:center;padding:24px 0;color:var(--text3);font-size:0.82rem;">No expenses yet</div>
@@ -441,7 +441,10 @@
     </div>
     {% endfor %}
     {% else %}
-    <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;">No wallets yet</div>
+    <div style="text-align:center;padding:20px 0;">
+      <div style="color:var(--text3);font-size:0.82rem;margin-bottom:10px;">No wallets yet</div>
+      <a href="{{ url_for('wallets') }}" class="btn btn-primary btn-sm">+ Add Wallet</a>
+    </div>
     {% endif %}
   </div>
 
@@ -461,7 +464,10 @@
     </div>
     {% endfor %}
     {% else %}
-    <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;">No cards added</div>
+    <div style="text-align:center;padding:20px 0;">
+      <div style="color:var(--text3);font-size:0.82rem;margin-bottom:10px;">No cards added</div>
+      <a href="{{ url_for('credit_cards') }}" class="btn btn-primary btn-sm">+ Add Card</a>
+    </div>
     {% endif %}
   </div>
 
@@ -479,7 +485,10 @@
     </div>
     {% endfor %}
     {% else %}
-    <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:0.82rem;">No goals yet</div>
+    <div style="text-align:center;padding:20px 0;">
+      <div style="color:var(--text3);font-size:0.82rem;margin-bottom:10px;">No goals yet</div>
+      <a href="{{ url_for('goals') }}" class="btn btn-primary btn-sm">+ Add Goal</a>
+    </div>
     {% endif %}
   </div>
 </div>
@@ -516,7 +525,10 @@
   <div class="zp-card" style="display:flex;flex-direction:column;">
     <div class="zp-section-title">
       🔮 Next Period Forecast
-      <span style="font-family:var(--mono);font-size:0.85rem;font-weight:800;color:#d97706;">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a href="{{ url_for('fixed_expenses') }}">Manage →</a>
+        <span style="font-family:var(--mono);font-size:0.85rem;font-weight:800;color:#d97706;">{{ currency_symbol }} {{ "{:,.0f}".format(next_month_total) }}</span>
+      </div>
     </div>
     {% if next_month_expenses %}
     <div style="overflow-y:auto;max-height:260px;flex:1;">

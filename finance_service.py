@@ -1,6 +1,7 @@
 from datetime import datetime, date, timedelta, time
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
+from flask import g
 from models import (db, Transaction, Wallet, CreditCard, Loan, NetWorthHistory,
                     Notification, Goal, RecurringPayment, AppSettings,
                     BudgetPlanner, Investment)
@@ -9,13 +10,43 @@ from models import (db, Transaction, Wallet, CreditCard, Loan, NetWorthHistory,
 # ─────────────────────────────────────────
 #  Settings helpers
 # ─────────────────────────────────────────
+# get_setting is called many times per request (context processor, currency
+# formatting, etc). Each call is a remote DB round-trip, so cache results in
+# Flask's request-scoped `g` to avoid re-querying the same key repeatedly.
 
 def get_setting(key, default=None, user_id=None):
+    cache = g.setdefault('_settings_cache', {})
+    cache_key = (key, user_id)
+    if cache_key in cache:
+        return cache[cache_key] if cache[cache_key] is not None else default
+
     q = AppSettings.query.filter_by(key=key)
     if user_id:
         q = q.filter_by(user_id=user_id)
     s = q.first()
-    return s.value if s else default
+    value = s.value if s else None
+    cache[cache_key] = value
+    return value if value is not None else default
+
+
+def get_settings(keys, defaults=None, user_id=None):
+    """Fetch multiple setting keys in a single query. defaults is a dict keyed by setting key."""
+    defaults = defaults or {}
+    cache = g.setdefault('_settings_cache', {})
+    missing = [k for k in keys if (k, user_id) not in cache]
+
+    if missing:
+        q = AppSettings.query.filter(AppSettings.key.in_(missing))
+        if user_id:
+            q = q.filter_by(user_id=user_id)
+        rows = {row.key: row.value for row in q.all()}
+        for k in missing:
+            cache[(k, user_id)] = rows.get(k)
+
+    return {
+        k: (cache[(k, user_id)] if cache[(k, user_id)] is not None else defaults.get(k))
+        for k in keys
+    }
 
 
 def set_setting(key, value, user_id=None):
@@ -29,6 +60,9 @@ def set_setting(key, value, user_id=None):
         s = AppSettings(key=key, value=str(value), user_id=user_id)
         db.session.add(s)
     db.session.commit()
+
+    cache = g.setdefault('_settings_cache', {})
+    cache[(key, user_id)] = str(value)
 
 
 # ─────────────────────────────────────────

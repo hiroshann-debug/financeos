@@ -16,7 +16,7 @@ from flask_migrate import Migrate
 from pdf_report import generate_monthly_report
 from finance_service import (add_transaction, update_networth_snapshot, check_and_create_notifications,
                               apply_due_recurring_payments, get_spending_insights, get_financial_health_score,
-                              get_setting, set_setting, reverse_transaction_balance)
+                              get_setting, get_settings, set_setting, reverse_transaction_balance)
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from functools import wraps
@@ -162,12 +162,15 @@ def inject_globals():
     user = session.get('user')
     user_id = user['id'] if user else None
     unread_count = Notification.query.filter_by(is_read=False, user_id=user_id).count() if user_id else 0
-    dark_mode = get_setting("dark_mode", "false", user_id=user_id) == "true"
-    currency_symbol = get_setting("currency_symbol", "LKR", user_id=user_id)
+    settings = get_settings(
+        ["dark_mode", "currency_symbol"],
+        defaults={"dark_mode": "false", "currency_symbol": "LKR"},
+        user_id=user_id,
+    )
     return dict(
         unread_notifications=unread_count,
-        dark_mode=dark_mode,
-        currency_symbol=currency_symbol,
+        dark_mode=settings["dark_mode"] == "true",
+        currency_symbol=settings["currency_symbol"],
         current_user=user
     )
 
@@ -3903,11 +3906,10 @@ def advisor_chat():
     if not messages:
         return jsonify({"error": "No messages"}), 400
 
-<<<<<<< HEAD
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "sk-ant-api03-vwk5kXGe1khfV7q9-d4uNn8XhGzRov21VmIl6V69hphTKZi3JBk358uzRZsuY-ssHYEAWASBbLrjWW494WVjEw--i1FpAA")
-=======
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY","sk-ant-api03-vwk5kXGe1khfV7q9-d4uNn8XhGzRov21VmIl6V69hphTKZi3JBk358uzRZsuY-ssHYEAWASBbLrjWW494WVjEw--i1FpAA")
->>>>>>> 476ba42 (full revam 6/26 2)
+
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+
+
     if not anthropic_key:
         return jsonify({"error": "ANTHROPIC_API_KEY missing"}), 500
 
