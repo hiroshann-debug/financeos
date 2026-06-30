@@ -2925,7 +2925,14 @@ def financial_tools():
             Transaction.trans_type == 'income',
             Transaction.date >= (date.today() - relativedelta(months=3))
         ).all()
-        monthly_income_avg = sum(t.amount for t in recent_income) / 3 if recent_income else 0.0
+        # Divide by actual months that had income, not always 3
+        income_months = len(set(
+            (t.date.year, t.date.month)
+            if isinstance(t.date, date)
+            else (t.date.date().year, t.date.date().month)
+            for t in recent_income
+        )) or 1
+        monthly_income_avg = sum(t.amount for t in recent_income) / income_months if recent_income else 0.0
         total_savings = sum(w.balance for w in wallets)
     else:
         wallets, cards, loans = [], [], []
@@ -4716,28 +4723,6 @@ def edit_income(income_id):
     flash('Income updated.', 'success')
     return redirect(url_for('income'))
 
-
-@app.route("/migrate-to-email")
-def migrate_to_email():
-    email = "hiroshann@gmail.com"
-    old_ids = [
-        "auth0|6a1d58287f1bf67cfc7e872d",
-        "google-oauth2|103051075859000420599"
-    ]
-    models_list = [Transaction, Wallet, CreditCard, Loan, Goal,
-                   BudgetPlanner, FixedExpense, RecurringPayment,
-                   Investment, InvestmentIncome, Debt, AppSettings,
-                   Notification, NetWorthHistory, FavouriteStock]
-    total = 0
-    for old_id in old_ids:
-        for model in models_list:
-            try:
-                updated = model.query.filter_by(user_id=old_id).update({"user_id": email})
-                total += updated
-            except Exception:
-                pass
-    db.session.commit()
-    return f"✅ Migrated {total} records to {email}"
 
 if __name__ == '__main__':
     with app.app_context():
