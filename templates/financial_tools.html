@@ -328,7 +328,7 @@
 <script>
 const CUR = '{{ currency_symbol }}';
 const COMMIT = {{ total_monthly_commitments|int }};
-const fmt = n => CUR + ' ' + Math.round(n).toLocaleString();
+const fmtMoney = n => CUR + ' ' + Math.round(n).toLocaleString();
 
 function showTool(name, btn) {
   document.querySelectorAll('.tool-pane').forEach(p => p.classList.remove('active'));
@@ -346,9 +346,9 @@ function calcLoan() {
   const emi = r === 0 ? P/n : P * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1);
   const totalPay = emi * n;
   const interest = totalPay - P;
-  document.getElementById('lc_emi').textContent = fmt(emi);
-  document.getElementById('lc_total').textContent = fmt(totalPay);
-  document.getElementById('lc_interest').textContent = fmt(interest);
+  document.getElementById('lc_emi').textContent = fmtMoney(emi);
+  document.getElementById('lc_total').textContent = fmtMoney(totalPay);
+  document.getElementById('lc_interest').textContent = fmtMoney(interest);
   document.getElementById('lc_ratio').textContent = ((interest/P)*100).toFixed(1) + '%';
   if (window.lc_chartObj) window.lc_chartObj.destroy();
   window.lc_chartObj = new Chart(document.getElementById('lc_chart'), {
@@ -376,10 +376,10 @@ function calcCC() {
   const monthly = rate === 0 ? finance/months : finance * rate * Math.pow(1+rate,months) / (Math.pow(1+rate,months)-1);
   const totalOut = COMMIT + monthly;
   const pct = totalOut / income * 100;
-  document.getElementById('cc_finance').textContent = fmt(finance);
-  document.getElementById('cc_monthly').textContent = fmt(monthly);
-  document.getElementById('cc_commit').textContent = fmt(COMMIT);
-  document.getElementById('cc_outflow').textContent = fmt(totalOut);
+  document.getElementById('cc_finance').textContent = fmtMoney(finance);
+  document.getElementById('cc_monthly').textContent = fmtMoney(monthly);
+  document.getElementById('cc_commit').textContent = fmtMoney(COMMIT);
+  document.getElementById('cc_outflow').textContent = fmtMoney(totalOut);
   const pctEl = document.getElementById('cc_pct');
   pctEl.textContent = pct.toFixed(1) + '% of income';
   pctEl.style.color = pct > 50 ? 'var(--red)' : pct > 35 ? 'var(--orange)' : 'var(--green)';
@@ -400,8 +400,8 @@ function calcFD() {
   const maturity = P * Math.pow(1 + r/n, n*t);
   const interest = maturity - P;
   const ear = Math.pow(1 + r/n, n) - 1;
-  document.getElementById('fd_maturity').textContent = fmt(maturity);
-  document.getElementById('fd_interest').textContent = fmt(interest);
+  document.getElementById('fd_maturity').textContent = fmtMoney(maturity);
+  document.getElementById('fd_interest').textContent = fmtMoney(interest);
   document.getElementById('fd_ear').textContent = (ear*100).toFixed(2) + '%';
   document.getElementById('fd_return').textContent = ((interest/P)*100).toFixed(1) + '%';
   if (window.fd_chartObj) window.fd_chartObj.destroy();
@@ -423,16 +423,16 @@ function calcEF() {
   const gap = Math.max(0, target - saved);
   const pct = Math.min(100, saved / target * 100);
   const monthsNeeded = monthly > 0 ? Math.ceil(gap / monthly) : 0;
-  document.getElementById('ef_target').textContent = fmt(target) + ' (' + months + ' months of expenses)';
-  document.getElementById('ef_have').textContent = fmt(saved);
+  document.getElementById('ef_target').textContent = fmtMoney(target) + ' (' + months + ' months of expenses)';
+  document.getElementById('ef_have').textContent = fmtMoney(saved);
   const gEl = document.getElementById('ef_gap');
-  gEl.textContent = gap > 0 ? fmt(gap) + ' to go' : '✅ Fully covered!';
+  gEl.textContent = gap > 0 ? fmtMoney(gap) + ' to go' : '✅ Fully covered!';
   gEl.style.color = gap > 0 ? 'var(--red)' : 'var(--green)';
   document.getElementById('ef_coverage').textContent = pct.toFixed(0) + '% covered';
   document.getElementById('ef_months').textContent = monthsNeeded ? monthsNeeded + ' months' : (gap === 0 ? '✅ Already there!' : 'Enter monthly amount above');
   document.getElementById('ef_bar').style.width = pct + '%';
   document.getElementById('ef_msg').textContent = gap > 0 && monthly > 0
-    ? `Saving ${fmt(monthly)}/mo → you'll hit your goal in ${monthsNeeded} months`
+    ? `Saving ${fmtMoney(monthly)}/mo → you'll hit your goal in ${monthsNeeded} months`
     : gap === 0 ? '🎉 Emergency fund fully funded! You can sleep easy.'
     : 'Enter how much you can save each month to see your timeline';
 }
@@ -464,13 +464,13 @@ function calcRP() {
     : 0;
 
   document.getElementById('rp_years').textContent = yearsToRetire + ' years from now';
-  document.getElementById('rp_corpus').textContent = fmt(corpus);
-  document.getElementById('rp_fv').textContent = fmt(fv);
+  document.getElementById('rp_corpus').textContent = fmtMoney(corpus);
+  document.getElementById('rp_fv').textContent = fmtMoney(fv);
   const gEl = document.getElementById('rp_gap');
-  gEl.textContent = gap > 0 ? fmt(gap) + ' short' : '✅ Already on track!';
+  gEl.textContent = gap > 0 ? fmtMoney(gap) + ' short' : '✅ Already on track!';
   gEl.style.color = gap > 0 ? 'var(--red)' : 'var(--green)';
   const mEl = document.getElementById('rp_monthly');
-  mEl.textContent = pmt > 0 ? fmt(pmt) + '/mo' : '✅ Already funded';
+  mEl.textContent = pmt > 0 ? fmtMoney(pmt) + '/mo' : '✅ Already funded';
   mEl.style.color = pmt > 0 ? 'var(--accent)' : 'var(--green)';
 }
 
@@ -512,10 +512,10 @@ function calcAfford() {
   const efOk = remaining >= income * 3;
 
   const rEl = document.getElementById('ca_remaining');
-  rEl.textContent = fmt(remaining);
+  rEl.textContent = fmtMoney(remaining);
   rEl.style.color = remaining < 0 ? 'var(--red)' : 'var(--green)';
-  document.getElementById('ca_installment').textContent = installment > 0 ? fmt(installment) + '/mo' : 'Nothing (paying cash)';
-  document.getElementById('ca_total_monthly').textContent = fmt(totalMonthly);
+  document.getElementById('ca_installment').textContent = installment > 0 ? fmtMoney(installment) + '/mo' : 'Nothing (paying cash)';
+  document.getElementById('ca_total_monthly').textContent = fmtMoney(totalMonthly);
   const dtiEl = document.getElementById('ca_dti');
   dtiEl.textContent = dti.toFixed(1) + '%';
   dtiEl.style.color = dti > 50 ? 'var(--red)' : dti > 35 ? 'var(--orange)' : 'var(--green)';
@@ -535,7 +535,7 @@ function calcAfford() {
   vEl.style.color = verdict.startsWith('❌') ? 'var(--red)' : verdict.startsWith('⚠️') ? 'var(--orange)' : 'var(--green)';
 
   document.getElementById('ca_advice').textContent = dti > 35
-    ? `💡 Try a bigger upfront payment or longer repayment period to keep your monthly total below ${fmt(income * 0.35)} (35% of income is generally the safe limit).`
+    ? `💡 Try a bigger upfront payment or longer repayment period to keep your monthly total below ${fmtMoney(income * 0.35)} (35% of income is generally the safe limit).`
     : `💡 Your debt-to-income ratio looks healthy at ${dti.toFixed(0)}%. Just make sure you don't drain your emergency fund to make this purchase.`;
 }
 
