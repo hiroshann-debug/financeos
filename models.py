@@ -278,6 +278,25 @@ class Bank(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class Category(db.Model):
+    """User's shared, authoritative category list — used by expenses,
+    income, budgets, fixed expenses and recurring payments alike, so
+    a single name always means the same thing everywhere."""
+    __tablename__ = 'category'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=True, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    kind = db.Column(db.String(10), default="expense")  # "expense" or "income"
+    icon = db.Column(db.String(10), default="🏷️")
+    color = db.Column(db.String(20), default="#6366f1")
+    is_default = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'name', 'kind', name='uq_category_user_name_kind'),
+    )
+
+
 class DailyTemplate(db.Model):
     """A named daily expense template — e.g. 'Weekday' with items like
     Tuktuk 400, Breakfast 150, Lunch 300. One tap applies the whole list
