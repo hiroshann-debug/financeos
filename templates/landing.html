@@ -1,12 +1,100 @@
-{% extends "base_public.html" %}
-{% block title %}FinanceOS — ඔබේ පුද්ගලික මූල්‍ය පද්ධතිය | Your Personal Finance OS{% endblock %}
 
-{# landing.html brings its own nav + footer, so suppress the base layout's defaults #}
-{% block nav %}{% endblock %}
-{% block content_wrap_class %}{% endblock %}
-{% block footer %}{% endblock %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceOS — ඔබේ පුද්ගලික මූල්‍ය පද්ධතිය | Your Personal Finance OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #f7f7f4;
+      --bg2:        #f0f0ec;
+      --surface:    #ffffff;
+      --surface2:   #f7f7f4;
+      --border:     rgba(0,0,0,0.08);
+      --border2:    rgba(0,0,0,0.13);
+      --text:       #1c1c1a;
+      --text2:      #6b6b63;
+      --text3:      #a0a098;
+      --accent:     #2563eb;
+      --accent2:    #1d4ed8;
+      --accent-glow:rgba(37,99,235,0.1);
+      --green:      #16a34a;
+      --red:        #dc2626;
+      --orange:     #d97706;
+      --radius:     8px;
+      --radius-lg:  12px;
+      --font:       'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    html { font-size: 14px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; font-weight: 400; }
 
-{% block extra_style %}
+    /* NAV */
+    .pub-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 40px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: white;
+      border-bottom: 1px solid var(--border);
+    }
+    .pub-nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .pub-nav-logo-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--accent);
+      display: grid; place-items: center; font-size: 16px;
+    }
+    .pub-nav-logo-text { font-size: 1rem; font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
+    .pub-nav-links { display: flex; align-items: center; gap: 8px; }
+    .pub-nav-link {
+      padding: 8px 16px; border-radius: 9px;
+      font-size: 0.875rem; font-weight: 500;
+      color: var(--text2); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .pub-nav-link:hover { color: var(--text); background: var(--surface2); }
+    .pub-nav-cta {
+      padding: 7px 16px; border-radius: 6px;
+      background: var(--accent); color: white;
+      font-size: 0.82rem; font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .pub-nav-cta:hover { background: var(--accent2); }
+
+    /* CONTENT */
+    .pub-content { padding-top: 64px; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 10px;
+      font-family: var(--font); font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; border: none; text-decoration: none;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-ghost { background: var(--surface); color: var(--text2); border: 1px solid var(--border2); }
+    .btn-ghost:hover { color: var(--text); background: var(--surface2); }
+
+    /* ALERTS */
+    .alert { padding: 12px 16px; border-radius: 10px; font-size: 0.875rem; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+    .alert-success { background: rgba(0,214,143,0.12); color: #00d68f; border: 1px solid rgba(0,214,143,0.2); }
+    .alert-danger { background: rgba(255,77,109,0.12); color: #ff4d6d; border: 1px solid rgba(255,77,109,0.2); }
+    .alert-warning { background: rgba(255,149,0,0.12); color: #ff9500; border: 1px solid rgba(255,149,0,0.2); }
+
+    /* FOOTER */
+    .pub-footer {
+      text-align: center; padding: 40px 20px;
+      border-top: 1px solid var(--border);
+      color: var(--text3); font-size: 0.8rem;
+    }
+
+    
 /* ── TOKENS ── */
 :root {
   --navy:    #0f172a;
@@ -342,15 +430,25 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
   .stats-bar-inner { grid-template-columns: 1fr 1fr; }
   .footer-top { grid-template-columns: 1fr; }
 }
-{% endblock %}
 
-{% block content %}
+  </style>
+</head>
+<body>
+
+
+
+<div class="">
+  
+    
+  
+
+  
 <!-- Load Sinhala font -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
 
 <!-- ── NAV ── -->
 <nav class="lp-nav">
-  <a href="{{ url_for('landing') }}" class="nav-logo">
+  <a href="/landing" class="nav-logo">
     <div class="nav-logo-icon">F</div>
     <div>
       <span class="nav-logo-text">FinanceOS</span>
@@ -358,15 +456,15 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
     </div>
   </a>
   <div class="nav-links">
-    <a href="{{ url_for('cse_stocks') }}">CSE Stocks</a>
-    <a href="{{ url_for('crypto_page') }}">Crypto</a>
-    <a href="{{ url_for('exchange_rates') }}">Exchange Rates</a>
-    <a href="{{ url_for('card_offers') }}">CC Offers</a>
-    <a href="{{ url_for('financial_tools') }}">Tools</a>
+    <a href="/cse">CSE Stocks</a>
+    <a href="/crypto">Crypto</a>
+    <a href="/exchange-rates">Exchange Rates</a>
+    <a href="/offers">CC Offers</a>
+    <a href="/tools">Tools</a>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
-    <a href="{{ url_for('auth_login') }}" class="btn-nav-login">Sign In</a>
-    <a href="{{ url_for('auth_signup') }}" class="btn-nav-signup">
+    <a href="/auth/login" class="btn-nav-login">Sign In</a>
+    <a href="/auth/signup" class="btn-nav-signup">
       Get Started Free →
     </a>
   </div>
@@ -395,10 +493,10 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
   </p>
 
   <div class="hero-ctas">
-    <a href="{{ url_for('auth_signup') }}" class="btn-hero-primary">
+    <a href="/auth/signup" class="btn-hero-primary">
       <i class="fas fa-rocket"></i> Start Free — නොමිලේ ආරම්භ කරන්න
     </a>
-    <a href="{{ url_for('auth_login') }}" class="btn-hero-secondary">
+    <a href="/auth/login" class="btn-hero-secondary">
       <i class="fas fa-sign-in-alt"></i> Sign In · ඇතුල් වන්න
     </a>
   </div>
@@ -412,22 +510,22 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
 
   <!-- Public tools — no login needed, crawlable -->
   <div class="hero-public-tools">
-    <a href="{{ url_for('cse_stocks') }}" class="public-tool-card">
+    <a href="/cse" class="public-tool-card">
       <i class="fas fa-chart-candlestick"></i>
       <span>CSE live prices</span>
       <small>280+ listed stocks</small>
     </a>
-    <a href="{{ url_for('crypto_page') }}" class="public-tool-card">
+    <a href="/crypto" class="public-tool-card">
       <i class="fab fa-bitcoin"></i>
       <span>Crypto market</span>
       <small>BTC, ETH & top coins</small>
     </a>
-    <a href="{{ url_for('exchange_rates') }}" class="public-tool-card">
+    <a href="/exchange-rates" class="public-tool-card">
       <i class="fas fa-money-bill-transfer"></i>
       <span>Exchange rates</span>
       <small>USD, GBP, AUD & more</small>
     </a>
-    <a href="{{ url_for('card_offers') }}" class="public-tool-card">
+    <a href="/offers" class="public-tool-card">
       <i class="fas fa-credit-card"></i>
       <span>CC offers</span>
       <small>Sri Lankan banks compared</small>
@@ -485,18 +583,37 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
       <div class="preview-card">
         <div class="preview-card-title">6-Month Trend</div>
         <div class="preview-bars">
-          {% for h in [30,45,35,60,50,70] %}
-          <div class="preview-bar" style="height:{{ h }}%;background:{% if loop.index == 6 %}#6366f1{% else %}rgba(99,102,241,0.3){% endif %};"></div>
-          <div class="preview-bar" style="height:{{ (h*0.6)|int }}%;background:{% if loop.index == 6 %}#ef4444{% else %}rgba(239,68,68,0.25){% endif %};"></div>
-          {% endfor %}
+          
+          <div class="preview-bar" style="height:30%;background:rgba(99,102,241,0.3);"></div>
+          <div class="preview-bar" style="height:18%;background:rgba(239,68,68,0.25);"></div>
+          
+          <div class="preview-bar" style="height:45%;background:rgba(99,102,241,0.3);"></div>
+          <div class="preview-bar" style="height:27%;background:rgba(239,68,68,0.25);"></div>
+          
+          <div class="preview-bar" style="height:35%;background:rgba(99,102,241,0.3);"></div>
+          <div class="preview-bar" style="height:21%;background:rgba(239,68,68,0.25);"></div>
+          
+          <div class="preview-bar" style="height:60%;background:rgba(99,102,241,0.3);"></div>
+          <div class="preview-bar" style="height:36%;background:rgba(239,68,68,0.25);"></div>
+          
+          <div class="preview-bar" style="height:50%;background:rgba(99,102,241,0.3);"></div>
+          <div class="preview-bar" style="height:30%;background:rgba(239,68,68,0.25);"></div>
+          
+          <div class="preview-bar" style="height:70%;background:#6366f1;"></div>
+          <div class="preview-bar" style="height:42%;background:#ef4444;"></div>
+          
         </div>
       </div>
       <div class="preview-card">
         <div class="preview-card-title">Goals · ඉලක්ක</div>
         <div class="preview-chart-lines">
-          {% for w,c in [(75,'#6366f1'),(45,'#10b981'),(90,'#f59e0b')] %}
-          <div class="preview-chart-line"><div class="preview-chart-line-fill" style="width:{{ w }}%;background:{{ c }};"></div></div>
-          {% endfor %}
+          
+          <div class="preview-chart-line"><div class="preview-chart-line-fill" style="width:75%;background:#6366f1;"></div></div>
+          
+          <div class="preview-chart-line"><div class="preview-chart-line-fill" style="width:45%;background:#10b981;"></div></div>
+          
+          <div class="preview-chart-line"><div class="preview-chart-line-fill" style="width:90%;background:#f59e0b;"></div></div>
+          
         </div>
       </div>
     </div>
@@ -506,18 +623,31 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
 <!-- ── STATS BAR ── -->
 <div class="stats-bar">
   <div class="stats-bar-inner">
-    {% for num, en, si_text in [
-      ('All', 'Banks in One Place', 'සියලුම බැංකු'),
-      ('6', 'Financial Tools', 'මූල්‍ය මෙවලම්'),
-      ('100%', 'Free to Use', 'නොමිලේ'),
-      ('AI', 'Powered Advisor', 'AI උපදේශක'),
-    ] %}
+    
     <div class="stats-bar-item">
-      <div class="stats-bar-num">{{ num }}</div>
-      <div class="stats-bar-en">{{ en }}</div>
-      <div class="stats-bar-si si">{{ si_text }}</div>
+      <div class="stats-bar-num">All</div>
+      <div class="stats-bar-en">Banks in One Place</div>
+      <div class="stats-bar-si si">සියලුම බැංකු</div>
     </div>
-    {% endfor %}
+    
+    <div class="stats-bar-item">
+      <div class="stats-bar-num">6</div>
+      <div class="stats-bar-en">Financial Tools</div>
+      <div class="stats-bar-si si">මූල්‍ය මෙවලම්</div>
+    </div>
+    
+    <div class="stats-bar-item">
+      <div class="stats-bar-num">100%</div>
+      <div class="stats-bar-en">Free to Use</div>
+      <div class="stats-bar-si si">නොමිලේ</div>
+    </div>
+    
+    <div class="stats-bar-item">
+      <div class="stats-bar-num">AI</div>
+      <div class="stats-bar-en">Powered Advisor</div>
+      <div class="stats-bar-si si">AI උපදේශක</div>
+    </div>
+    
   </div>
 </div>
 
@@ -532,19 +662,31 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
     <p class="section-sub">No complicated setup. Sign in with Google, add your wallets and start tracking — it's that simple.</p>
 
     <div class="steps">
-      {% for num, icon, en, si_text, desc in [
-        (1,'fas fa-user-plus','Create Account','ගිණුමක් සාදන්න','Sign in with your Google account in one click. No passwords, no forms.'),
-        (2,'fas fa-wallet','Add Your Wallets','ඔබේ පසුම්බි එකතු කරන්න','Add your bank accounts, cash wallets and credit cards to get started.'),
-        (3,'fas fa-chart-line','Track & Grow','නිරීක්ෂණය කරන්න','Log expenses, set goals, and let AI guide you toward financial freedom.'),
-      ] %}
+      
       <div class="step">
-        {% if not loop.last %}<div class="step-connector"><i class="fas fa-arrow-right"></i></div>{% endif %}
-        <div class="step-num">{{ num }}</div>
-        <h3>{{ en }}</h3>
-        <span class="si-label si">{{ si_text }}</span>
-        <p>{{ desc }}</p>
+        <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+        <div class="step-num">1</div>
+        <h3>Create Account</h3>
+        <span class="si-label si">ගිණුමක් සාදන්න</span>
+        <p>Sign in with your Google account in one click. No passwords, no forms.</p>
       </div>
-      {% endfor %}
+      
+      <div class="step">
+        <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+        <div class="step-num">2</div>
+        <h3>Add Your Wallets</h3>
+        <span class="si-label si">ඔබේ පසුම්බි එකතු කරන්න</span>
+        <p>Add your bank accounts, cash wallets and credit cards to get started.</p>
+      </div>
+      
+      <div class="step">
+        
+        <div class="step-num">3</div>
+        <h3>Track &amp; Grow</h3>
+        <span class="si-label si">නිරීක්ෂණය කරන්න</span>
+        <p>Log expenses, set goals, and let AI guide you toward financial freedom.</p>
+      </div>
+      
     </div>
   </div>
 </section>
@@ -573,35 +715,64 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
       </div>
 
       <!-- Small features -->
-      {% for icon, bg, color, en, si_text, desc in [
-        ('fas fa-chart-line','#eff6ff','#3b82f6','Smart Dashboard','ස්මාර්ට් උපකරණ පුවරුව','Net worth, savings rate, salary cycle, freedom score — all at a glance.'),
-        ('fas fa-gift','#fce7f3','#be185d','CC Offers Directory','ණය කාඩ් බැංකු','One-click access to every Sri Lankan bank credit card offers page — always current, straight from the source.'),
-        ('fas fa-chart-column','#f0fdf4','#16a34a','CSE Stocks Live','CSE කොටස් සජීවීව','Real-time Colombo Stock Exchange prices, top gainers and favourites.'),
-        ('fas fa-piggy-bank','#f5f3ff','#7c3aed','Savings Goals','ඉතිරි කිරීමේ ඉලක්ක','Set and track goals for emergency fund, house, car, education and more.'),
-      ] %}
+      
       <div class="bento-small">
-        <div class="bento-small-icon" style="background:{{ bg }};color:{{ color }};"><i class="{{ icon }}"></i></div>
-        <h3>{{ en }}</h3>
-        <span class="si-label si">{{ si_text }}</span>
-        <p>{{ desc }}</p>
+        <div class="bento-small-icon" style="background:#eff6ff;color:#3b82f6;"><i class="fas fa-chart-line"></i></div>
+        <h3>Smart Dashboard</h3>
+        <span class="si-label si">ස්මාර්ට් උපකරණ පුවරුව</span>
+        <p>Net worth, savings rate, salary cycle, freedom score — all at a glance.</p>
       </div>
-      {% endfor %}
+      
+      <div class="bento-small">
+        <div class="bento-small-icon" style="background:#fce7f3;color:#be185d;"><i class="fas fa-gift"></i></div>
+        <h3>CC Offers Directory</h3>
+        <span class="si-label si">ණය කාඩ් බැංකු</span>
+        <p>One-click access to every Sri Lankan bank credit card offers page — always current, straight from the source.</p>
+      </div>
+      
+      <div class="bento-small">
+        <div class="bento-small-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-chart-column"></i></div>
+        <h3>CSE Stocks Live</h3>
+        <span class="si-label si">CSE කොටස් සජීවීව</span>
+        <p>Real-time Colombo Stock Exchange prices, top gainers and favourites.</p>
+      </div>
+      
+      <div class="bento-small">
+        <div class="bento-small-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-piggy-bank"></i></div>
+        <h3>Savings Goals</h3>
+        <span class="si-label si">ඉතිරි කිරීමේ ඉලක්ක</span>
+        <p>Set and track goals for emergency fund, house, car, education and more.</p>
+      </div>
+      
     </div>
 
     <!-- More features grid -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px;">
-      {% for icon, bg, color, en, si_text in [
-        ('fas fa-money-bill-transfer','#ecfdf5','#10b981','Exchange Rates','විනිමය අනුපාත'),
-        ('fas fa-calculator','#fffbeb','#d97706','Financial Tools','මූල්‍ය මෙවලම්'),
-        ('fas fa-handshake','#fef2f2','#ef4444','Friend Debts','මිත්‍ර ණය'),
-        ('fas fa-file-pdf','#f5f3ff','#7c3aed','PDF Reports','PDF වාර්තා'),
-      ] %}
+      
       <div class="bento-small" style="padding:20px;">
-        <div class="bento-small-icon" style="background:{{ bg }};color:{{ color }};width:38px;height:38px;border-radius:10px;font-size:0.95rem;"><i class="{{ icon }}"></i></div>
-        <h3 style="font-size:0.85rem;margin-bottom:1px;">{{ en }}</h3>
-        <span class="si-label si" style="font-size:0.62rem;">{{ si_text }}</span>
+        <div class="bento-small-icon" style="background:#ecfdf5;color:#10b981;width:38px;height:38px;border-radius:10px;font-size:0.95rem;"><i class="fas fa-money-bill-transfer"></i></div>
+        <h3 style="font-size:0.85rem;margin-bottom:1px;">Exchange Rates</h3>
+        <span class="si-label si" style="font-size:0.62rem;">විනිමය අනුපාත</span>
       </div>
-      {% endfor %}
+      
+      <div class="bento-small" style="padding:20px;">
+        <div class="bento-small-icon" style="background:#fffbeb;color:#d97706;width:38px;height:38px;border-radius:10px;font-size:0.95rem;"><i class="fas fa-calculator"></i></div>
+        <h3 style="font-size:0.85rem;margin-bottom:1px;">Financial Tools</h3>
+        <span class="si-label si" style="font-size:0.62rem;">මූල්‍ය මෙවලම්</span>
+      </div>
+      
+      <div class="bento-small" style="padding:20px;">
+        <div class="bento-small-icon" style="background:#fef2f2;color:#ef4444;width:38px;height:38px;border-radius:10px;font-size:0.95rem;"><i class="fas fa-handshake"></i></div>
+        <h3 style="font-size:0.85rem;margin-bottom:1px;">Friend Debts</h3>
+        <span class="si-label si" style="font-size:0.62rem;">මිත්‍ර ණය</span>
+      </div>
+      
+      <div class="bento-small" style="padding:20px;">
+        <div class="bento-small-icon" style="background:#f5f3ff;color:#7c3aed;width:38px;height:38px;border-radius:10px;font-size:0.95rem;"><i class="fas fa-file-pdf"></i></div>
+        <h3 style="font-size:0.85rem;margin-bottom:1px;">PDF Reports</h3>
+        <span class="si-label si" style="font-size:0.62rem;">PDF වාර්තා</span>
+      </div>
+      
     </div>
   </div>
 </section>
@@ -619,21 +790,37 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
         FinanceOS AI knows your actual wallet balances, spending patterns, loans and goals — giving you real, personalised advice in seconds.
       </p>
       <div style="display:flex;flex-direction:column;gap:12px;">
-        {% for en, si_text in [
-          ('Knows your real financial data','ඔබේ සැබෑ මූල්‍ය දත්ත දනී'),
-          ('Answers in English and Sinhala','සිංහල හා ඉංග්‍රීසි දෙකෙන්ම පිළිතුරු'),
-          ('Available any time, any day','ඕනෑම වේලාවක'),
-        ] %}
+        
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:24px;height:24px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:50%;display:grid;place-items:center;flex-shrink:0;">
             <i class="fas fa-check" style="font-size:0.6rem;color:var(--indigo);"></i>
           </div>
           <div>
-            <div style="font-size:0.82rem;font-weight:600;color:var(--navy);">{{ en }}</div>
-            <div style="font-size:0.68rem;color:var(--muted);" class="si">{{ si_text }}</div>
+            <div style="font-size:0.82rem;font-weight:600;color:var(--navy);">Knows your real financial data</div>
+            <div style="font-size:0.68rem;color:var(--muted);" class="si">ඔබේ සැබෑ මූල්‍ය දත්ත දනී</div>
           </div>
         </div>
-        {% endfor %}
+        
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:24px;height:24px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:50%;display:grid;place-items:center;flex-shrink:0;">
+            <i class="fas fa-check" style="font-size:0.6rem;color:var(--indigo);"></i>
+          </div>
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;color:var(--navy);">Answers in English and Sinhala</div>
+            <div style="font-size:0.68rem;color:var(--muted);" class="si">සිංහල හා ඉංග්‍රීසි දෙකෙන්ම පිළිතුරු</div>
+          </div>
+        </div>
+        
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:24px;height:24px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:50%;display:grid;place-items:center;flex-shrink:0;">
+            <i class="fas fa-check" style="font-size:0.6rem;color:var(--indigo);"></i>
+          </div>
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;color:var(--navy);">Available any time, any day</div>
+            <div style="font-size:0.68rem;color:var(--muted);" class="si">ඕනෑම වේලාවක</div>
+          </div>
+        </div>
+        
       </div>
     </div>
 
@@ -668,26 +855,42 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
     <p class="section-sub">Verified installment plans, cashback offers and discounts from Sri Lanka's top banks — updated regularly.</p>
 
     <div class="offers-grid">
-      {% for bank, color, bg, type, type_bg, title, detail in [
-        ('Commercial Bank','#6366f1','#eff6ff','Installment','#ede9fe','0% Installment at Keells — 24 months','Min spend LKR 10,000 · Verified ✓'),
-        ('Sampath Bank','#10b981','#ecfdf5','Cashback','#dcfce7','5% Cashback on online purchases','Max LKR 2,500/month · Verified ✓'),
-        ('HNB','#f59e0b','#fffbeb','Special Rate','#fef3c7','0% Medical installment — Apollo Hospital','Up to 24 months · Verified ✓'),
-      ] %}
+      
       <div class="offer-card">
-        <div class="offer-bank" style="color:{{ color }};">{{ bank }}</div>
-        <div class="offer-title">{{ title }}</div>
-        <div style="font-size:0.72rem;color:var(--muted);">{{ detail }}</div>
+        <div class="offer-bank" style="color:#6366f1;">Commercial Bank</div>
+        <div class="offer-title">0% Installment at Keells — 24 months</div>
+        <div style="font-size:0.72rem;color:var(--muted);">Min spend LKR 10,000 · Verified ✓</div>
         <div class="offer-meta">
-          <span class="offer-chip" style="background:{{ bg }};color:{{ color }};">{{ type }}</span>
+          <span class="offer-chip" style="background:#eff6ff;color:#6366f1;">Installment</span>
           <span class="offer-chip" style="background:#f1f5f9;color:#64748b;"><i class="fas fa-thumbs-up" style="font-size:0.6rem;"></i> Verified</span>
         </div>
       </div>
-      {% endfor %}
+      
+      <div class="offer-card">
+        <div class="offer-bank" style="color:#10b981;">Sampath Bank</div>
+        <div class="offer-title">5% Cashback on online purchases</div>
+        <div style="font-size:0.72rem;color:var(--muted);">Max LKR 2,500/month · Verified ✓</div>
+        <div class="offer-meta">
+          <span class="offer-chip" style="background:#ecfdf5;color:#10b981;">Cashback</span>
+          <span class="offer-chip" style="background:#f1f5f9;color:#64748b;"><i class="fas fa-thumbs-up" style="font-size:0.6rem;"></i> Verified</span>
+        </div>
+      </div>
+      
+      <div class="offer-card">
+        <div class="offer-bank" style="color:#f59e0b;">HNB</div>
+        <div class="offer-title">0% Medical installment — Apollo Hospital</div>
+        <div style="font-size:0.72rem;color:var(--muted);">Up to 24 months · Verified ✓</div>
+        <div class="offer-meta">
+          <span class="offer-chip" style="background:#fffbeb;color:#f59e0b;">Special Rate</span>
+          <span class="offer-chip" style="background:#f1f5f9;color:#64748b;"><i class="fas fa-thumbs-up" style="font-size:0.6rem;"></i> Verified</span>
+        </div>
+      </div>
+      
     </div>
 
     <div style="text-align:center;margin-top:28px;">
-      <a href="{{ url_for('auth_signup') }}" style="color:var(--indigo);font-size:0.875rem;font-weight:700;text-decoration:none;">
-        View all {{ '14+' }} offers after signing in → <span class="si" style="font-weight:400;color:var(--muted);">සියලු දීමනා බලන්න</span>
+      <a href="/auth/signup" style="color:var(--indigo);font-size:0.875rem;font-weight:700;text-decoration:none;">
+        View all 14+ offers after signing in → <span class="si" style="font-weight:400;color:var(--muted);">සියලු දීමනා බලන්න</span>
       </a>
     </div>
   </div>
@@ -701,7 +904,7 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
     </h2>
     <div class="cta-h-si si">ස්මාර්ට් ක්‍රමයෙන් ඔබේ මුදල් කළමනාකරනය කරන්න</div>
     <p class="cta-sub">Join hundreds of Sri Lankans taking control of their financial future with FinanceOS.</p>
-    <a href="{{ url_for('auth_signup') }}" class="btn-cta">
+    <a href="/auth/signup" class="btn-cta">
       <i class="fas fa-rocket"></i> Get Started Free · නොමිලේ ආරම්භ කරන්න
     </a>
     <div class="cta-note">Free forever · ✓ No credit card · ✓ Google Sign-in · ✓ Your data is private</div>
@@ -733,17 +936,17 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
       </div>
       <div class="footer-col">
         <h4>Finance · මූල්‍ය</h4>
-        <a href="{{ url_for('auth_signup') }}">Dashboard</a>
-        <a href="{{ url_for('auth_signup') }}">CSE Stocks · CSE කොටස්</a>
-        <a href="{{ url_for('auth_signup') }}">Exchange Rates · විනිමය</a>
-        <a href="{{ url_for('auth_signup') }}">Financial Tools</a>
+        <a href="/auth/signup">Dashboard</a>
+        <a href="/auth/signup">CSE Stocks · CSE කොටස්</a>
+        <a href="/auth/signup">Exchange Rates · විනිමය</a>
+        <a href="/auth/signup">Financial Tools</a>
       </div>
       <div class="footer-col">
         <h4>Account · ගිණුම</h4>
-        <a href="{{ url_for('auth_signup') }}">Sign Up Free · නොමිලේ</a>
-        <a href="{{ url_for('auth_login') }}">Sign In · ඇතුල් වන්න</a>
-        <a href="{{ url_for('privacy') }}">Privacy Policy · පෞද්ගලිකත්වය</a>
-        <a href="{{ url_for('terms') }}">Terms of Use · කොන්දේසි</a>
+        <a href="/auth/signup">Sign Up Free · නොමිලේ</a>
+        <a href="/auth/login">Sign In · ඇතුල් වන්න</a>
+        <a href="/privacy">Privacy Policy · පෞද්ගලිකත්වය</a>
+        <a href="/terms">Terms of Use · කොන්දේසි</a>
       </div>
     </div>
     <div class="footer-bottom">
@@ -755,4 +958,11 @@ body { font-family: var(--font); background: #fff; color: var(--text); -webkit-f
     </div>
   </div>
 </footer>
-{% endblock %}
+
+</div>
+
+
+
+
+</body>
+</html>

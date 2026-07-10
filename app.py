@@ -4,7 +4,8 @@ from apscheduler.triggers.cron import CronTrigger
 import atexit
 from models import db, Transaction, FixedExpense, CreditCard, Loan, Wallet, WalletTransfer, \
     NetWorthHistory, BudgetPlanner, Goal, Notification, RecurringPayment, AppSettings, \
-    Investment, InvestmentIncome, Debt, FavouriteStock, Bank, Category
+    Investment, InvestmentIncome, Debt, FavouriteStock, Bank, Category, \
+    DailyTemplate, DailyTemplateItem
 import requests as req_lib
 from calendar import monthrange
 from datetime import datetime, date, timedelta, time
@@ -824,6 +825,7 @@ def dashboard():
         today_variable_spent=today_variable_spent,
         total_variable_spent=total_variable_spent,
         show_daily_popup=show_daily_popup,
+        daily_templates=DailyTemplate.query.filter_by(user_id=uid()).order_by(DailyTemplate.created_at).all(),
     )
 
 
@@ -4722,6 +4724,213 @@ def edit_income(income_id):
     update_networth_snapshot(user_id=uid())
     flash('Income updated.', 'success')
     return redirect(url_for('income'))
+
+
+@app.route("/migrate-to-email")
+def migrate_to_email():
+    email = "hiroshann@gmail.com"
+    old_ids = [
+        "auth0|6a1d58287f1bf67cfc7e872d",
+        "google-oauth2|103051075859000420599"
+    ]
+    models_list = [Transaction, Wallet, CreditCard, Loan, Goal,
+                   BudgetPlanner, FixedExpense, RecurringPayment,
+                   Investment, InvestmentIncome, Debt, AppSettings,
+                   Notification, NetWorthHistory, FavouriteStock]
+    total = 0
+    for old_id in old_ids:
+        for model in models_list:
+            try:
+                updated = model.query.filter_by(user_id=old_id).update({"user_id": email})
+                total += updated
+            except Exception:
+                pass
+    db.session.commit()
+    return f"✅ Migrated {total} records to {email}"
+
+
+
+# ─────────────────────────────────────────
+#  Daily Templates
+# ─────────────────────────────────────────
+@app.route('/daily-templates')
+@login_required
+def daily_templates():
+    templates = DailyTemplate.query.filter_by(user_id=uid()).order_by(DailyTemplate.created_at).all()
+    expense_categories = get_user_categories(uid(), 'expense')
+    wallets = Wallet.query.filter_by(user_id=uid()).all()
+    credit_cards = CreditCard.query.filter_by(user_id=uid()).all()
+    return render_template('daily_templates.html',
+        templates=templates,
+        expense_categories=expense_categories,
+        wallets=wallets,
+        credit_cards=credit_cards,
+        today=date.today(),
+    )
+
+
+@app.route('/daily-templates/add', methods=['POST'])
+@login_required
+def daily_template_add():
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Template name is required.', 'danger')
+        return redirect(url_for('daily_templates'))
+    existing = DailyTemplate.query.filter_by(user_id=uid(), name=name).first()
+    if existing:
+        flash(f'A template called "{name}" already exists.', 'danger')
+        return redirect(url_for('daily_templates'))
+    t = DailyTemplate(user_id=uid(), name=name)
+    db.session.add(t)
+    db.session.commit()
+    flash(f'✅ Template "{name}" created.', 'success')
+    return redirect(url_for('daily_templates'))
+
+
+@app.route('/daily-templates/<int:template_id>/delete', methods=['POST'])
+@login_required
+def daily_template_delete(template_id):
+    t = DailyTemplate.query.filter_by(id=template_id, user_id=uid()).first_or_404()
+    name = t.name
+    db.session.delete(t)
+    db.session.commit()
+    flash(f'Template "{name}" deleted.', 'info')
+    return redirect(url_for('daily_templates'))
+
+
+@app.route('/daily-templates/<int:template_id>/item/add', methods=['POST'])
+@login_required
+def daily_template_item_add(template_id):
+    t = DailyTemplate.query.filter_by(id=template_id, user_id=uid()).first_or_404()
+    description = request.form.get('description', '').strip()
+    amount_str = request.form.get('amount', '').strip()
+    category = request.form.get('category', 'General').strip()
+    if not description or not amount_str:
+        flash('Description and amount are required.', 'danger')
+        return redirect(url_for('daily_templates'))
+    try:
+        amount = float(amount_str)
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        flash('Amount must be a positive number.', 'danger')
+        return redirect(url_for('daily_templates'))
+    sort_order = len(t.items)
+    item = DailyTemplateItem(
+        template_id=t.id,
+        description=description,
+        amount=amount,
+        category=category,
+        sort_order=sort_order,
+    )
+    db.session.add(item)
+    db.session.commit()
+    return redirect(url_for('daily_templates'))
+
+
+@app.route('/daily-templates/item/<int:item_id>/delete', methods=['POST'])
+@login_required
+def daily_template_item_delete(item_id):
+    item = DailyTemplateItem.query.join(DailyTemplate).filter(
+        DailyTemplateItem.id == item_id,
+        DailyTemplate.user_id == uid()
+    ).first_or_404()
+    db.session.delete(item)
+    db.session.commit()
+    return redirect(url_for('daily_templates'))
+
+
+@app.route('/daily-templates/<int:template_id>/json')
+@login_required
+def daily_template_json(template_id):
+    """Return a template's items as JSON — called by the Apply modal in the
+    dashboard to pre-populate the editable review table before applying."""
+    t = DailyTemplate.query.filter_by(id=template_id, user_id=uid()).first_or_404()
+    return jsonify({
+        'id': t.id,
+        'name': t.name,
+        'items': [
+            {'id': i.id, 'description': i.description,
+             'amount': i.amount, 'category': i.category}
+            for i in t.items
+        ],
+        'total': sum(i.amount for i in t.items),
+    })
+
+
+@app.route('/daily-templates/<int:template_id>/apply', methods=['POST'])
+@login_required
+def daily_template_apply(template_id):
+    """Apply a daily template as real expense transactions.
+    Items come from the POST body (user may have edited amounts in the modal),
+    so we use submitted values rather than stored ones — allowing one-tap
+    (submitted values match stored) or edited (user changed something first).
+    Also checks if any item from this template was already posted today."""
+    t = DailyTemplate.query.filter_by(id=template_id, user_id=uid()).first_or_404()
+    today_date = date.today()
+
+    payment_method = request.form.get('payment_method', '')
+    wallet_id, credit_id = None, None
+    if payment_method.startswith('wallet_'):
+        wallet_id = int(payment_method.split('_')[1])
+    elif payment_method.startswith('credit_'):
+        credit_id = int(payment_method.split('_')[1])
+
+    # Duplicate check — look for any transaction today whose description
+    # matches any item in this template (case-insensitive)
+    template_descriptions = {i.description.lower() for i in t.items}
+    today_txns = Transaction.query.filter(
+        Transaction.user_id == uid(),
+        Transaction.trans_type == 'expense',
+        Transaction.date >= today_date,
+        Transaction.date < today_date + timedelta(days=1),
+    ).all()
+    already_posted = [
+        tx.description for tx in today_txns
+        if tx.description.lower() in template_descriptions
+    ]
+    if already_posted and not request.form.get('force'):
+        return jsonify({
+            'status': 'duplicate',
+            'already_posted': already_posted,
+            'message': f'Some items from this template were already posted today: '
+                       f'{", ".join(already_posted)}. Submit again to post anyway.'
+        }), 409
+
+    # Apply — items may have been edited in the modal, so read from POST
+    descriptions = request.form.getlist('description[]')
+    amounts = request.form.getlist('amount[]')
+    categories = request.form.getlist('category[]')
+
+    if not descriptions:
+        # Fallback: no form items sent, use stored template values as-is
+        descriptions = [i.description for i in t.items]
+        amounts = [str(i.amount) for i in t.items]
+        categories = [i.category for i in t.items]
+
+    posted = []
+    for desc, amt_str, cat in zip(descriptions, amounts, categories):
+        desc = desc.strip()
+        cat = cat.strip() or 'General'
+        try:
+            amt = float(amt_str)
+            if amt <= 0 or not desc:
+                continue
+        except (ValueError, TypeError):
+            continue
+        add_transaction(
+            amount=amt, description=desc, trans_type='expense',
+            wallet_id=wallet_id, linked_credit=credit_id,
+            date_obj=today_date, category=cat, user_id=uid()
+        )
+        posted.append({'description': desc, 'amount': amt})
+
+    return jsonify({
+        'status': 'ok',
+        'posted': len(posted),
+        'total': sum(p['amount'] for p in posted),
+        'items': posted,
+    })
 
 
 if __name__ == '__main__':

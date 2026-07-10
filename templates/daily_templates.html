@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Daily Templates{% endblock %}
+{% block page_title %}Daily Templates{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h2 style="font-size:1.4rem;font-weight:700;">Daily Expense Templates</h2>
+    <p class="text-muted text-sm">Save your regular daily expenses as a template — apply the whole list in one tap from the Add Expense button on your dashboard.</p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('newTemplateModal').classList.add('open')">
+    <i class="fas fa-plus"></i> New Template
+  </button>
+</div>
+
+{% if templates %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">
+  {% for t in templates %}
+  <div class="card" style="padding:0;overflow:hidden;">
+
+    <!-- Template header -->
+    <div style="padding:16px 18px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-weight:700;font-size:0.95rem;">{{ t.name }}</div>
+        <div class="text-muted text-sm">{{ t.items|length }} item{{ 's' if t.items|length != 1 }} · {{ currency_symbol }} {{ "{:,.0f}".format(t.items|sum(attribute='amount')) }} total</div>
+      </div>
+      <form method="POST" action="{{ url_for('daily_template_delete', template_id=t.id) }}" onsubmit="return confirm('Delete template \'{{ t.name }}\'?')">
+        <button class="btn btn-danger btn-icon btn-sm"><i class="fas fa-trash"></i></button>
+      </form>
+    </div>
+
+    <!-- Items list -->
+    {% if t.items %}
+    <div style="padding:0 18px;">
+      {% for item in t.items %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:0.85rem;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <span style="font-weight:500;color:var(--text);">{{ item.description }}</span>
+          <span class="badge-pill badge-accent" style="font-size:0.65rem;margin-left:6px;">{{ item.category }}</span>
+        </div>
+        <div class="font-mono font-bold" style="color:var(--orange);">{{ "{:,.0f}".format(item.amount) }}</div>
+        <form method="POST" action="{{ url_for('daily_template_item_delete', item_id=item.id) }}">
+          <button class="btn btn-ghost btn-icon" style="width:24px;height:24px;font-size:0.75rem;color:var(--text3);" title="Remove item">✕</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:16px 18px;text-align:center;color:var(--text2);font-size:0.82rem;">No items yet — add some below</div>
+    {% endif %}
+
+    <!-- Add item form inline -->
+    <div style="padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);">
+      <form method="POST" action="{{ url_for('daily_template_item_add', template_id=t.id) }}">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
+          <div class="form-group" style="margin-bottom:0;">
+            <input type="text" name="description" class="form-control" required placeholder="e.g. Tuktuk, Lunch..." style="font-size:0.82rem;">
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" step="0.01" name="amount" class="form-control" required placeholder="Amount" style="width:100px;font-size:0.82rem;">
+            <button type="submit" class="btn btn-primary btn-sm btn-icon" title="Add item"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:6px;margin-bottom:0;">
+          <select name="category" class="form-control" style="font-size:0.78rem;">
+            {% for cat in expense_categories %}
+            <option value="{{ cat.name }}">{{ cat.icon }} {{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card" style="text-align:center;padding:60px 20px;">
+  <div style="font-size:3rem;margin-bottom:16px;">📋</div>
+  <h3 style="font-weight:700;margin-bottom:8px;">No daily templates yet</h3>
+  <p style="color:var(--text2);font-size:0.875rem;max-width:400px;margin:0 auto 20px;">
+    Create a template with your regular daily expenses — Tuktuk 400, Breakfast 150, Lunch 300 — and apply the entire list in one tap from the dashboard.
+  </p>
+  <button class="btn btn-primary" onclick="document.getElementById('newTemplateModal').classList.add('open')">
+    <i class="fas fa-plus"></i> Create First Template
+  </button>
+</div>
+{% endif %}
+
+
+<!-- NEW TEMPLATE MODAL -->
+<div class="modal-overlay" id="newTemplateModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">📋 New Daily Template</div>
+    <form method="POST" action="{{ url_for('daily_template_add') }}">
+      <div class="form-group">
+        <label class="form-label">Template Name</label>
+        <input type="text" name="name" class="form-control" required placeholder="e.g. Weekday, Office Day, Rest Day...">
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Give it a name that reflects when you'd use it. You can have multiple templates for different types of days.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('newTemplateModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Template</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

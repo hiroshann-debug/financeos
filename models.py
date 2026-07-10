@@ -278,20 +278,26 @@ class Bank(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-class Category(db.Model):
-    """User's shared, authoritative category list — used by expenses,
-    income, budgets, fixed expenses and recurring payments alike, so
-    a single name always means the same thing everywhere."""
-    __tablename__ = 'category'
+class DailyTemplate(db.Model):
+    """A named daily expense template — e.g. 'Weekday' with items like
+    Tuktuk 400, Breakfast 150, Lunch 300. One tap applies the whole list
+    as real transactions without the user typing anything."""
+    __tablename__ = 'daily_template'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), nullable=True, index=True)
-    name = db.Column(db.String(100), nullable=False)
-    kind = db.Column(db.String(10), default="expense")  # "expense" or "income"
-    icon = db.Column(db.String(10), default="🏷️")
-    color = db.Column(db.String(20), default="#6366f1")
-    is_default = db.Column(db.Boolean, default=False)   # seeded preset, not user-created
+    user_id = db.Column(db.String(100), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)          # e.g. "Weekday", "Office Day"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    items = db.relationship('DailyTemplateItem', backref='template',
+                            cascade='all, delete-orphan', lazy=True,
+                            order_by='DailyTemplateItem.sort_order')
 
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'name', 'kind', name='uq_category_user_name_kind'),
-    )
+
+class DailyTemplateItem(db.Model):
+    """A single line item within a DailyTemplate."""
+    __tablename__ = 'daily_template_item'
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('daily_template.id'), nullable=False)
+    description = db.Column(db.String(100), nullable=False)   # e.g. "Tuktuk"
+    amount = db.Column(db.Float, nullable=False)              # e.g. 400.0
+    category = db.Column(db.String(100), default='General')
+    sort_order = db.Column(db.Integer, default=0)

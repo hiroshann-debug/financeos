@@ -823,6 +823,9 @@
     <a href="{{ url_for('fixed_expenses') }}" class="nav-link {% if request.endpoint in ['fixed_expenses','recurring_payments','expense_scheduler'] %}active{% endif %}">
       <span class="nav-icon"><i class="fas fa-calendar-check"></i></span> Payments
     </a>
+    <a href="{{ url_for('daily_templates') }}" class="nav-link {% if request.endpoint == 'daily_templates' %}active{% endif %}">
+      <span class="nav-icon"><i class="fas fa-list-check"></i></span> Daily Templates
+    </a>
 
 
     <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint in ['reports','download_report'] %}active{% endif %}">
